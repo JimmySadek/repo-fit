@@ -101,6 +101,16 @@ The setup is meant to be run through the [repo-fit skill](skill/repo-fit/SKILL.m
 - **Network:** `tools` asks npm for the latest Claude Code version when Claude Code was installed with npm (`--offline` skips it). `connect` talks to your Git host only through `gh` or `glab`; its dry run does one read-only name check. `claude update` runs only with `--update claude --apply`. Nothing else calls out.
 - **Your standing choices** (`repo-fit prefs`) live in `~/.config/repo-fit/preferences.json`, outside every repo.
 
+## Tests
+
+```bash
+node --test
+```
+
+43 automated tests, no dependencies. They run in a throwaway sandbox (a fake home folder, so nothing depends on your machine) and cover: every command on new and existing repos, dry runs writing nothing, undo, the safety rules (never overwrite, a token in a remote URL never printed), the session brief, autosave and the Stop and PreCompact hooks, and the stale-guidance warning. Each past bug has a test that fails without its fix.
+
+A GitHub Actions workflow (`.github/workflows/test.yml`) runs them on macOS, Linux and Windows with Node 18, 20 and 22. **Windows is marked experimental** and may fail until someone has looked at it. No CI result is recorded here yet.
+
 ## Scope, in one line
 
 A balanced foundation for **any** repo, technical or notes. **Not a second brain:** no semantic search, no wiki, no memory database. It should look at what a repo and a machine already have, adapt, and ask before using anything.
@@ -132,4 +142,4 @@ A balanced foundation for **any** repo, technical or notes. **Not a second brain
 - The terminal `claude` (2.1.270): its login had expired, so nothing ran there. Only 2.1.284 (desktop app) is proven.
 - Everything Codex-specific (hooks, trust review). Drafted from documentation only.
 - `connect` with a real GitLab host. Only the `gh` path ran for real.
-- Windows and Linux.
+- Windows, Linux and Node 18 or 20: the tests are set up to run there, but the first CI result is not in yet. So far the tests have run only on macOS with Node 23.

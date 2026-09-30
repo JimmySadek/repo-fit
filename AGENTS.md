@@ -23,7 +23,7 @@ A small, balanced foundation for any repository, technical or notes, for Claude 
 
 - Branch `dev`. The user's branch guard blocks commits on `main` and `master`. Commit locally. Never push unasked.
 - Node only, no dependencies. Test on throwaway copies. A pilot on a real repo needs the user's approval for the exact files.
-- After a change: re-run the fixture flows (dry run writes nothing, apply, edit, undo, undo conflict, update after drift, init on a fresh repo, autosave on `main`), then update README, CHANGELOG and the setup skill.
+- Before you commit: run `node --test` (no dependencies, about 40 seconds). Every bug you fix gets a test that fails without the fix. Then update README, CHANGELOG and the guidance if the change touches them.
 - Reports go in `claudedocs/`.
 
 ## Where things are

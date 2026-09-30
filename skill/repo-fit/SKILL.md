@@ -20,7 +20,7 @@ Find the playbook folder first (the one containing `bin/repo-fit.mjs`). All comm
 node bin/repo-fit.mjs guidance check
 ```
 
-If any file is overdue, run the **Refresh routine** below before setting anything up. If the user says to go ahead anyway, use `--allow-stale` and say in the recap which guidance was stale.
+If any file is past its review date, say so in one plain sentence and offer the **Refresh routine** below. Do not block the user on it: `init` warns and goes on. Mention in the recap which guidance was stale. Use `--strict` (which stops instead) only when you are maintaining the playbook itself.
 
 ## Step 0b. Detect first (read-only, always)
 

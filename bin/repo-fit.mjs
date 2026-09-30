@@ -13,7 +13,7 @@
 //                                                             no remote yet: dry run, then create an EMPTY PRIVATE remote. Never pushes
 //   repo-fit guidance check                                   which guidance files are due for a refresh
 //   repo-fit init <repo> [--name N] [--owner O] [--tool claude|codex|both] [--models a,b]
-//                        [--autosave on|off] [--no-hooks] [--allow-stale]
+//                        [--autosave on|off] [--no-hooks] [--strict]
 //                                                             add the Starter kit. Never overwrites a file.
 //   repo-fit status <repo>                                    is the repo behind this playbook?
 //   repo-fit update <repo> [--apply]                          show what would change (default), or apply it
@@ -26,7 +26,7 @@ import { defaultOwner, recordersFor, writeAll } from "../lib/apply.mjs";
 
 const here = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const version = readFileSync(join(here, "VERSION"), "utf8").trim();
-const today = () => new Date().toLocaleDateString("sv-SE");
+const today = () => process.env.REPO_FIT_TODAY ?? new Date().toLocaleDateString("sv-SE"); // REPO_FIT_TODAY fakes the date. Used by the tests.
 const fail = (msg, code = 1) => {
   console.error(msg);
   process.exit(code);
@@ -106,7 +106,11 @@ function* files(dir, base = dir) {
 function init(target, opt) {
   if (!target || !existsSync(target)) fail(`No such folder: ${target}`);
   const g = guidanceState();
-  if (g.overdue.length && !opt["allow-stale"]) fail(`Guidance is overdue (${g.overdue.join(", ")}). Refresh it first (see skill/repo-fit/SKILL.md), or pass --allow-stale.`);
+  if (g.overdue.length) {
+    const msg = `Guidance is past its review date (${g.overdue.join(", ")}). The notes on tools and models may be out of date, so check them before relying on them.`;
+    if (opt.strict) fail(`${msg} --strict stops here. Refresh it first (see "Refresh routine" in skill/repo-fit/SKILL.md).`);
+    console.log(`⚠️ ${msg} Setup goes on. Maintainers: see "Refresh routine" in skill/repo-fit/SKILL.md, or use --strict to stop instead.\n`);
+  }
   const tool = opt.tool ?? "both";
   if (!["claude", "codex", "both"].includes(tool)) fail("--tool must be claude, codex or both");
   const tools = tool === "both" ? ["claude-code", "codex"] : [tool === "claude" ? "claude-code" : "codex"];

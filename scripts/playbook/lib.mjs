@@ -1,8 +1,8 @@
 // Shared helpers for the playbook scripts. No dependencies.
 // Managed by repo-fit: change it there and run `repo-fit update`, not here.
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // scripts/playbook/lib.mjs -> repo root, whichever tool or folder started the session.
@@ -48,6 +48,8 @@ const DEFAULTS = {
   currentWordCap: 900,
   staleDays: 30,
   staleIsError: true,
+  staleNoteDays: 180, // a note untouched this long, with no review_after date ahead, goes on the review queue
+  reviewIgnore: [], // extra globs to keep out of the review queue
   recorders: ["Codex", "Claude Code", "Claude Cowork", "Claude app"],
 };
 
@@ -169,4 +171,107 @@ export function analyseBoard(rows, cfg) {
     }
   }
   return { errors, warnings, stale };
+}
+
+// The review queue: notes nothing links to, notes untouched for a long time, and notes whose `review_after` date has passed.
+// Same rules as `repo-fit audit` (F14 and F15). Archives, raw inputs, outputs, templates, folder READMEs and the
+// root files are expected to be unlinked, so they are never reported. Read-only.
+const EXPECTED_UNLINKED = /(^|\/)(source-archive|archive|archives|_archive|\.handoffs|raw|vendor|third_party|outputs|templates)\//;
+const ROOT_NAMES = new Set(["README.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md", "CHANGELOG.md", "LICENSE.md", "CONTRIBUTING.md", "SECURITY.md"]);
+const MD_CAP = 4000;
+
+export function markdownFiles() {
+  const out = [];
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (out.length >= MD_CAP) return;
+      if (e.name.startsWith(".") || e.name === "node_modules") continue;
+      const p = join(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (e.name.endsWith(".md")) out.push(relative(root, p).split("\\").join("/"));
+    }
+  };
+  walk(root);
+  return out.sort();
+}
+
+export function coverage(cfg = config()) {
+  const files = markdownFiles();
+  const set = new Set(files);
+  const byName = new Map(); // "note" -> every file called note.md, for [[wiki links]]
+  for (const f of files) {
+    const n = basename(f, ".md").toLowerCase();
+    byName.set(n, [...(byName.get(n) ?? []), f]);
+  }
+  const inbound = new Map(files.map((f) => [f, 0]));
+  const reviewAfter = new Map();
+  const hit = (f) => inbound.set(f, inbound.get(f) + 1);
+  for (const f of files) {
+    let text;
+    try {
+      if (statSync(join(root, f)).size > 1024 * 1024) continue;
+      text = readFileSync(join(root, f), "utf8");
+    } catch {
+      continue;
+    }
+    const date = text.replace(/\r\n?/g, "\n").match(/^---\n([\s\S]*?)\n---/)?.[1].match(/^review_after:\s*"?(\d{4}-\d{2}-\d{2})/m)?.[1];
+    if (date) reviewAfter.set(f, date);
+    let fenced = false;
+    for (const line of text.split(/\r?\n/)) {
+      if (line.trim().startsWith("```")) {
+        fenced = !fenced;
+        continue;
+      }
+      if (fenced) continue;
+      for (const m of line.matchAll(/\]\(([^)\s]+)\)/g)) {
+        const target = m[1];
+        if (/^(https?:|mailto:|#|<|data:)/.test(target) || target.includes("://")) continue;
+        let path = target.split("#")[0].split("?")[0];
+        try {
+          path = decodeURIComponent(path);
+        } catch {
+          /* keep the raw path */
+        }
+        if (!path) continue;
+        const abs = path.startsWith("/") ? join(root, path) : resolve(join(root, dirname(f)), path);
+        const rel = relative(root, abs).split("\\").join("/");
+        if (set.has(rel)) hit(rel);
+      }
+      for (const m of line.matchAll(/\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]/g)) {
+        const name = m[1].trim().replace(/\.md$/, "");
+        if (name.includes("/") && set.has(`${name}.md`)) hit(`${name}.md`);
+        else for (const t of byName.get(basename(name).toLowerCase()) ?? []) hit(t);
+      }
+    }
+  }
+  const roles = new Set(Object.values(paths()));
+  const skip = (f) => ROOT_NAMES.has(f) || EXPECTED_UNLINKED.test(f) || /(^|\/)README\.md$/i.test(f) || matchesAny(f, cfg.reviewIgnore ?? []);
+  const orphans = files.filter((f) => inbound.get(f) === 0 && !skip(f) && !roles.has(f));
+
+  // Last commit date per file, one git call. An uncommitted edit counts as today.
+  const changed = new Map();
+  let when = "";
+  for (const line of (git(["log", "--format=@%cs", "--name-only", "-n", "3000"]) ?? "").split("\n")) {
+    if (line.startsWith("@")) when = line.slice(1);
+    else if (line && !changed.has(line)) changed.set(line, when);
+  }
+  const dirty = new Set(changedFiles() ?? []);
+  const t = today();
+  const cutoff = new Date(Date.now() - cfg.staleNoteDays * 864e5).toLocaleDateString("sv-SE");
+  const stale = [];
+  const due = [];
+  for (const f of files) {
+    if (skip(f)) continue;
+    const review = reviewAfter.get(f);
+    if (review) {
+      if (review < t) due.push({ path: f, date: review }); // a planned review date replaces the age rule
+      continue;
+    }
+    if (dirty.has(f)) continue;
+    const last = changed.get(f);
+    if (last && last < cutoff) stale.push({ path: f, date: last });
+  }
+  stale.sort((a, b) => a.date.localeCompare(b.date) || a.path.localeCompare(b.path));
+  due.sort((a, b) => a.date.localeCompare(b.date) || a.path.localeCompare(b.path));
+  return { scanned: files.length, capped: files.length >= MD_CAP, orphans, stale, due, staleNoteDays: cfg.staleNoteDays };
 }

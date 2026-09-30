@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 (draft)
+
+**Connecting the dots: a review queue, adopted from the maintainer's own knowledge repos**
+
+- **`check` and the session brief now carry a review queue:** notes nothing links to, notes untouched for `staleNoteDays` (default 180) with no planned review, and notes whose `review_after: YYYY-MM-DD` has passed. Warnings, never failures. Archives, outputs, templates, folder READMEs and the root files are left out; `reviewIgnore` adds globs. Wiki-style `[[links]]` count as links. Same rules as the audit's F14 and F15, so daily checks and the one-time audit agree.
+- **The core block's "Absorb" rule** now says to start at the topic's hub (the folder README, or a mapped hubs folder) and to work the review queue when touching a topic. The audit maps an existing `hubs` folder into `paths.hubs`.
+- **Version stamp moves to 0.4.0.** The vendored scripts and the core block changed, so adopted repos show "behind" until `repo-fit update` (dry run first).
+- Not built, by design: the AI checker that reads new input for repeats and contradictions (a vendor feature). See the README.
+- 9 new tests (53 in all).
 
 **Stale guidance no longer stops setup, and there are automated tests**
 

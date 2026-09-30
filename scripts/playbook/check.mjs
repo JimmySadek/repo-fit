@@ -2,7 +2,7 @@
 //   node scripts/playbook/check.mjs
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
-import { root, config, readBoard, analyseBoard, paths } from "./lib.mjs";
+import { root, config, readBoard, analyseBoard, paths, coverage } from "./lib.mjs";
 
 const cfg = config();
 const P = paths();
@@ -100,6 +100,14 @@ if (existsSync(outputs)) {
     if (index && !index.includes(e.name)) outLevel.push(`${P.outputs}/README.md does not list ${e.name}`);
   }
 }
+
+// The review queue: notes nothing links to, notes untouched for a long time, notes past their review_after date.
+// Warnings, never failures: on a content-heavy repo the counts are leads to look at, not faults.
+const cov = coverage(cfg);
+const names = (xs, n = 5) => xs.slice(0, n).join(", ") + (xs.length > n ? ` and ${xs.length - n} more` : "");
+if (cov.orphans.length) warnings.push(`${cov.orphans.length} note(s) nothing links to: ${names(cov.orphans)}`);
+if (cov.stale.length) warnings.push(`${cov.stale.length} note(s) untouched for ${cov.staleNoteDays}+ days: ${names(cov.stale.map((s) => `${s.path} (${s.date})`))}`);
+if (cov.due.length) warnings.push(`${cov.due.length} note(s) due for review: ${names(cov.due.map((s) => `${s.path} (${s.date})`))}`);
 
 // Unknown recorder names are a warning, not a failure.
 for (const file of docs) {

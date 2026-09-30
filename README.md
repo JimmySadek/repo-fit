@@ -81,10 +81,19 @@ The setup is meant to be run through the [repo-fit skill](skill/repo-fit/SKILL.m
 
 | Script | Job | Runs |
 |---|---|---|
-| `brief.mjs` | Prints where things stand: branch, board (active, blocked, inbox, stale), open questions, gaps. Read-only | SessionStart hook, or by hand |
-| `check.mjs` | Required files, board rules, stale rows, broken links, folder indexes, current-view word cap | By hand or in CI |
+| `brief.mjs` | Prints where things stand: branch, board (active, blocked, inbox, stale), open questions, the review queue, gaps. Read-only | SessionStart hook, or by hand |
+| `check.mjs` | Required files, board rules, stale rows, broken links, folder indexes, current-view word cap, the review queue (as warnings) | By hand or in CI |
 | `autosave.mjs` | Level 2 autosave of allow-listed files to a `wip/` branch, then a once-per-session reminder for anything left | Stop and PreCompact hooks, or `--report` by hand |
 | `lib.mjs` | Shared helpers | Imported |
+
+## Connecting the dots: the review queue
+
+Adopted from the maintainer's own knowledge repos, where it is the part that keeps notes from going stale. No database, no search index, no vendor.
+
+- **The absorb rule** (in the core block): start at the topic's hub, search every spelling, merge into the note that exists, keep conflicts with dates, then connect (hub, current view, questions, decisions).
+- **The hub** is the folder README that lists every note beside it (`check` enforces the listing). A repo that already has a hubs folder gets it mapped under `paths.hubs`.
+- **The review queue**, in every session brief and in `check` as warnings: notes nothing links to, notes untouched for `staleNoteDays` (default 180) with no planned review, and notes whose `review_after: YYYY-MM-DD` date has passed. Archives, outputs, templates and folder READMEs are left out. `reviewIgnore` takes extra globs. Wiki-style `[[links]]` count.
+- **Not built, by design:** an AI checker that reads the *meaning* of new input and asks whether it repeats or contradicts a note. The maintainer's repos do that with a paid vendor. Here the assistant makes that judgment itself while absorbing, so nothing in a session is lost; what is missing is an automated second opinion outside a session. It would fit as an optional add-on later.
 
 ## Level 2 autosave: the rules
 
@@ -110,7 +119,7 @@ The setup is meant to be run through the [repo-fit skill](skill/repo-fit/SKILL.m
 node --test
 ```
 
-44 automated tests, no dependencies. They run in a throwaway sandbox (a fake home folder, so nothing depends on your machine) and cover: every command on new and existing repos, dry runs writing nothing, undo, the safety rules (never overwrite, a token in a remote URL never printed), the session brief, autosave and the Stop and PreCompact hooks, and the stale-guidance warning. Each past bug has a test that fails without its fix.
+53 automated tests, no dependencies. They run in a throwaway sandbox (a fake home folder, so nothing depends on your machine) and cover: every command on new and existing repos, dry runs writing nothing, undo, the safety rules (never overwrite, a token in a remote URL never printed), the session brief, autosave and the Stop and PreCompact hooks, and the stale-guidance warning. Each past bug has a test that fails without its fix.
 
 A GitHub Actions workflow (`.github/workflows/test.yml`) runs them on macOS, Linux and Windows with Node 18, 20 and 22. First run, 30 Sep 2026: **macOS and Linux green** on all three Node versions. **Windows failed 2 of 43** for one reason, Windows line endings in the guidance dates. That is fixed, but the Windows job is still allowed to fail until a run confirms it.
 
@@ -137,7 +146,7 @@ A balanced foundation for **any** repo, technical or notes. **Not a second brain
 **Not built yet:**
 - Board adapters (Backlog.md, GitHub or GitLab issues). Deferred on purpose: none of the audited repos uses one.
 - Job-studio profile (creative-studio repos) and delivery profile (client-delivery repos). Today's kit is the knowledge-base profile. Repos organized differently (job folders, numbered specs, their own scripts) are adopted through the `paths` mapping (audit, then apply), which reuses the files they already have.
-- Working kit and Shared kit: topic hubs, hashed source archive, identity gate, entity register, CI.
+- Shared kit: hashed source archive, identity gate, entity register, CI. (The Working kit's coverage check and review queue are built; see "Connecting the dots".)
 - Automatic drift detection of guidance sources. Today: dates, a weekly report-only refresh, and a manual routine.
 
 **Not yet proven:**

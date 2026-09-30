@@ -4,7 +4,7 @@
 //   node scripts/playbook/brief.mjs --hook --format codex   Codex SessionStart hook (JSON, format untested)
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { root, git, config, readBoard, analyseBoard, paths } from "./lib.mjs";
+import { root, git, config, readBoard, analyseBoard, paths, coverage } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const hook = args.includes("--hook");
@@ -67,6 +67,14 @@ if (existsSync(oq)) {
   }
   if (n) out.push(`❓ Open questions: ${n} (${P.questions})`);
 }
+
+// 🧹 review queue: notes nothing links to, notes untouched for a long time, notes past their review_after date
+const cov = coverage(cfg);
+const queue = [];
+if (cov.orphans.length) queue.push(`${cov.orphans.length} nobody links to (${list(cov.orphans, (p) => short(p, 45))})`);
+if (cov.stale.length) queue.push(`${cov.stale.length} untouched ${cov.staleNoteDays}+ days (${list(cov.stale, (s) => `${short(s.path, 45)} ${s.date}`)})`);
+if (cov.due.length) queue.push(`${cov.due.length} due for review (${list(cov.due, (s) => `${short(s.path, 45)} ${s.date}`)})`);
+if (queue.length) out.push(`🧹 Review queue: ${queue.join(" · ")}. Link, merge, archive, or add a review_after date.`);
 
 // 📝 log and current view
 const logPath = join(root, P.log);

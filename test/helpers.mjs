@@ -29,7 +29,7 @@ export const sandboxed = (fn) => async (t) => {
   }
 };
 
-export const git = (sb, cwd, args) => spawnSync("git", args, { cwd, env: sb.env, encoding: "utf8" });
+export const git = (sb, cwd, args, env = {}) => spawnSync("git", args, { cwd, env: { ...sb.env, ...env }, encoding: "utf8" });
 
 // A small Git repo with its own identity. `files` maps a relative path to its content.
 export function repo(sb, name, { branch = "main", files = {}, commit = false } = {}) {

@@ -1,0 +1,338 @@
+#!/usr/bin/env node
+// repo-fit: install, update and check the playbook in a repository. No dependencies.
+//   repo-fit detect <repo> [--json]                           read-only: machine, repo, existing tools, what it would ask
+//   repo-fit audit <repo> [--area <folder>] [--json] [--out <file>]
+//                                                             read-only report and plan for an existing repo
+//   repo-fit apply <repo> [--steps A-01,...] [--tool ..] [--hooks all|brief|none] [--autosave on|off] [--apply]
+//                                                             dry run by default; --apply writes, backs up, and writes a receipt
+//   repo-fit undo <repo> [--receipt <file>] [--apply]         put back what the last apply changed (dry run by default)
+//   repo-fit tools <repo> [--json] [--offline] [--update claude [--apply]]
+//                                                             version limits vs what runs here; optional official update
+//   repo-fit prefs [set <key> <value> | unset <key>]          your standing choices (kept outside repos)
+//   repo-fit connect <repo> [--host github|gitlab] [--owner O] [--name N] [--apply]
+//                                                             no remote yet: dry run, then create an EMPTY PRIVATE remote. Never pushes
+//   repo-fit guidance check                                   which guidance files are due for a refresh
+//   repo-fit init <repo> [--name N] [--owner O] [--tool claude|codex|both] [--models a,b]
+//                        [--autosave on|off] [--no-hooks] [--allow-stale]
+//                                                             add the Starter kit. Never overwrites a file.
+//   repo-fit status <repo>                                    is the repo behind this playbook?
+//   repo-fit update <repo> [--apply]                          show what would change (default), or apply it
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { basename, dirname, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { defaultOwner, recordersFor, writeAll } from "../lib/apply.mjs";
+
+const here = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const version = readFileSync(join(here, "VERSION"), "utf8").trim();
+const today = () => new Date().toLocaleDateString("sv-SE");
+const fail = (msg, code = 1) => {
+  console.error(msg);
+  process.exit(code);
+};
+
+function parse(argv) {
+  const pos = [];
+  const opt = {};
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a.startsWith("--")) {
+      const v = argv[i + 1];
+      if (v !== undefined && !v.startsWith("--")) {
+        opt[a.slice(2)] = v;
+        i++;
+      } else opt[a.slice(2)] = true;
+    } else pos.push(a);
+  }
+  return { pos, opt };
+}
+
+// ---------- guidance layer ----------
+const guidanceDir = join(here, "guidance");
+function frontMatter(text) {
+  const m = text.match(/^---\n([\s\S]*?)\n---/);
+  const meta = {};
+  if (m) for (const line of m[1].split("\n")) {
+    const kv = line.match(/^([a-z_]+):\s*(.*)$/);
+    if (kv) meta[kv[1]] = kv[2];
+  }
+  return meta;
+}
+function guidanceState() {
+  const t = today();
+  const files = readdirSync(guidanceDir).filter((f) => f.endsWith(".md") && f !== "README.md").sort();
+  const rows = files.map((file) => {
+    const meta = frontMatter(readFileSync(join(guidanceDir, file), "utf8"));
+    const left = Math.round((Date.parse(meta.review_after) - Date.parse(t)) / 864e5);
+    return { file, meta, left };
+  });
+  return {
+    rows,
+    overdue: rows.filter((r) => Number.isNaN(r.left) || r.left < 0).map((r) => r.file),
+    reviewed: rows.map((r) => r.meta.retrieved ?? "").sort().pop() ?? "",
+    models: new Set(rows.flatMap((r) => (r.meta.models ?? "").split(",").map((m) => m.trim()).filter(Boolean))),
+  };
+}
+function guidanceCheck() {
+  const g = guidanceState();
+  console.log("File                 Retrieved    Review after  Status");
+  for (const r of g.rows) {
+    const status = Number.isNaN(r.left) ? "❌ no review_after date" : r.left < 0 ? `❌ overdue by ${-r.left} days` : r.left <= 7 ? `⚠️ due in ${r.left} days` : `✅ ${r.left} days left`;
+    console.log(`${r.file.padEnd(20)} ${(r.meta.retrieved ?? "?").padEnd(12)} ${(r.meta.review_after ?? "?").padEnd(13)} ${status}`);
+  }
+  if (g.overdue.length) {
+    console.log(`\nRefresh needed: ${g.overdue.join(", ")}. See "Refresh routine" in skill/repo-fit/SKILL.md.`);
+    process.exit(1);
+  }
+}
+
+// ---------- kit ----------
+const fill = (text, v) =>
+  text.replaceAll("{{version}}", version).replaceAll("{{name}}", v.name ?? "").replaceAll("{{owner}}", v.owner ?? "").replaceAll("{{date}}", today());
+const BLOCK_RE = /<!-- playbook:core v\S+ begin[^>]*-->[\s\S]*?<!-- playbook:core end -->/;
+const coreBlock = () => fill(readFileSync(join(here, "core/AGENTS.core.md"), "utf8"), {}).trimEnd();
+const VENDORED = ["lib.mjs", "brief.mjs", "check.mjs", "autosave.mjs"];
+const vendoredSource = (f) => readFileSync(join(here, "scripts/playbook", f), "utf8");
+function* files(dir, base = dir) {
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, e.name);
+    if (e.name === ".DS_Store") continue;
+    if (e.isDirectory()) yield* files(p, base);
+    else yield relative(base, p);
+  }
+}
+
+function init(target, opt) {
+  if (!target || !existsSync(target)) fail(`No such folder: ${target}`);
+  const g = guidanceState();
+  if (g.overdue.length && !opt["allow-stale"]) fail(`Guidance is overdue (${g.overdue.join(", ")}). Refresh it first (see skill/repo-fit/SKILL.md), or pass --allow-stale.`);
+  const tool = opt.tool ?? "both";
+  if (!["claude", "codex", "both"].includes(tool)) fail("--tool must be claude, codex or both");
+  const tools = tool === "both" ? ["claude-code", "codex"] : [tool === "claude" ? "claude-code" : "codex"];
+  const models = typeof opt.models === "string" ? opt.models.split(",").map((s) => s.trim()).filter(Boolean) : [];
+  const v = { name: typeof opt.name === "string" ? opt.name : basename(resolve(target)), owner: defaultOwner(opt.owner, target) };
+  const made = [];
+  const skipped = [];
+  const items = [];
+  const put = (rel, content) => {
+    if (existsSync(join(target, rel))) return skipped.push(rel);
+    items.push({ step: "init", type: "create", path: rel, content });
+    made.push(rel);
+  };
+
+  for (const rel of files(join(here, "kits/starter"))) {
+    let text = fill(readFileSync(join(here, "kits/starter", rel), "utf8"), v);
+    if (rel === "AGENTS.md") text = text.replace("<!-- playbook:core -->", coreBlock());
+    put(rel, text);
+  }
+  for (const t of tools) {
+    for (const rel of files(join(here, "kits/tools", t))) {
+      if (opt["no-hooks"] && /settings\.json$|hooks\.json$/.test(rel)) continue;
+      put(rel, fill(readFileSync(join(here, "kits/tools", t, rel), "utf8"), v));
+    }
+  }
+  for (const f of VENDORED) put(`scripts/playbook/${f}`, vendoredSource(f));
+  put("playbook.json", `${JSON.stringify({
+    playbook: version, profile: "knowledge", tools, models, guidance: { reviewed: g.reviewed },
+    autosave: opt.autosave !== "off",
+    autosaveAllow: ["docs/**", "outputs/**/README.md", "LEARNINGS.md"], autosaveMaxFileMB: 5,
+    protectedBranches: ["main", "master"], currentWordCap: 900, staleDays: 30, staleIsError: true,
+    recorders: recordersFor(v.owner),
+  }, null, 2)}\n`);
+
+  const dry = Boolean(opt["dry-run"]);
+  const written = dry ? null : writeAll(resolve(target), items);
+  console.log(`${dry ? "DRY RUN, nothing written. " : ""}Playbook ${version} (guidance reviewed ${g.reviewed}) → ${target}\nTools: ${tools.join(", ")}. Models: ${models.join(", ") || "none named"}.`);
+  console.log(`\n${dry ? "Would create" : "Created"} (${made.length}):\n${made.map((f) => `  ${f}`).join("\n")}`);
+  if (written) console.log(`\nReceipt: ${written.receipt}. Undo with: node bin/repo-fit.mjs undo ${target} --apply`);
+  if (dry) console.log("\nRun again without --dry-run to write these files. Nothing existing is ever overwritten.");
+  if (skipped.length) console.log(`\nAlready there, left alone (${skipped.length}):\n${skipped.map((f) => `  ${f}`).join("\n")}`);
+  const unknown = models.filter((m) => !g.models.has(m));
+  if (unknown.length) console.log(`\n⚠️ No guidance yet for: ${unknown.join(", ")}. Add it under guidance/ after this setup.`);
+  if (skipped.includes("AGENTS.md")) console.log('\n⚠️ AGENTS.md already exists. Run "repo-fit update <repo> --apply" to add the managed core block.');
+  if (tools.includes("codex") && !opt["no-hooks"]) console.log("\n⏳ Codex: the hooks in .codex/hooks.json do nothing until you review and trust them with /hooks. They are untested.");
+  if (tools.includes("claude-code")) console.log("\n💡 Claude Code: run /context and confirm CLAUDE.md is listed. /doctor prompt-audit works on 2.1.283 or later (see `repo-fit tools`).");
+}
+
+// What `update` manages: the AGENTS.md core block, the vendored scripts, and the version stamps in playbook.json.
+function plan(target) {
+  const g = guidanceState();
+  const changes = [];
+  const agents = join(target, "AGENTS.md");
+  const block = coreBlock();
+  if (existsSync(agents)) {
+    const cur = readFileSync(agents, "utf8");
+    const next = BLOCK_RE.test(cur) ? cur.replace(BLOCK_RE, () => block) : `${cur.trimEnd()}\n\n${block}\n`;
+    if (next !== cur) changes.push({ rel: "AGENTS.md", old: cur, next });
+  } // No AGENTS.md: update never creates one. init or apply does, when the user chooses to.
+  for (const f of VENDORED) {
+    const rel = `scripts/playbook/${f}`;
+    const cur = existsSync(join(target, rel)) ? readFileSync(join(target, rel), "utf8") : "";
+    if (cur !== vendoredSource(f)) changes.push({ rel, old: cur, next: vendoredSource(f) });
+  }
+  const pjPath = join(target, "playbook.json");
+  if (existsSync(pjPath)) {
+    const cur = readFileSync(pjPath, "utf8");
+    const pj = JSON.parse(cur);
+    const next = `${JSON.stringify({ ...pj, playbook: version, guidance: { ...(pj.guidance ?? {}), reviewed: g.reviewed } }, null, 2)}\n`;
+    if (next !== cur) changes.push({ rel: "playbook.json", old: cur, next });
+  }
+  return changes;
+}
+
+function hookNotes(target) {
+  const pjPath = join(target, "playbook.json");
+  const tools = existsSync(pjPath) ? JSON.parse(readFileSync(pjPath, "utf8")).tools ?? [] : [];
+  const notes = [];
+  const has = (rel) => existsSync(join(target, rel)) && readFileSync(join(target, rel), "utf8").includes("scripts/playbook/");
+  if (tools.includes("claude-code") && !has(".claude/settings.json")) notes.push("Claude Code hooks are not set up: merge kits/tools/claude-code/.claude/settings.json into .claude/settings.json.");
+  if (tools.includes("codex") && !has(".codex/hooks.json")) notes.push("Codex hooks are not set up: see kits/tools/codex/.codex/hooks.json (needs /hooks trust).");
+  // guidance/claude-code.md C1: with a CLAUDE.md present, Claude Code reads only that file, so it must import AGENTS.md.
+  const claudeMd = join(target, "CLAUDE.md");
+  if (tools.includes("claude-code") && existsSync(claudeMd) && existsSync(join(target, "AGENTS.md")) && !/(^|\s)@AGENTS\.md\b/.test(readFileSync(claudeMd, "utf8"))) {
+    notes.push("CLAUDE.md does not import AGENTS.md, so Claude Code will not read the rulebook. Add a line `@AGENTS.md` to CLAUDE.md (guidance C1).");
+  }
+  return notes;
+}
+
+function status(target) {
+  if (!target || !existsSync(join(target, "playbook.json"))) fail(`${target}: no playbook.json. Run "repo-fit init" first.`, 2);
+  const pj = JSON.parse(readFileSync(join(target, "playbook.json"), "utf8"));
+  const g = guidanceState();
+  console.log(`Repo:     playbook ${pj.playbook}, guidance reviewed ${pj.guidance?.reviewed ?? "never"}, tools ${(pj.tools ?? []).join(", ")}, models ${(pj.models ?? []).join(", ") || "none named"}`);
+  console.log(`Playbook: ${version}, guidance reviewed ${g.reviewed}${g.overdue.length ? ` (⚠️ overdue: ${g.overdue.join(", ")})` : ""}`);
+  const changes = plan(target);
+  const notes = hookNotes(target);
+  if (!changes.length && !notes.length) return console.log("✅ Up to date.");
+  if (changes.length) console.log(`⏳ Behind. Files that would change: ${changes.map((c) => c.rel).join(", ")}`);
+  for (const n of notes) console.log(`⚠️ ${n}`);
+  process.exitCode = 1;
+}
+
+function showDiff(rel, oldText, newText) {
+  const dir = mkdtempSync(join(tmpdir(), "playbook-"));
+  writeFileSync(join(dir, "old"), oldText);
+  writeFileSync(join(dir, "new"), newText);
+  const r = spawnSync("diff", ["-u", "-L", `${rel} (repo)`, "-L", `${rel} (playbook ${version})`, join(dir, "old"), join(dir, "new")], { encoding: "utf8" });
+  rmSync(dir, { recursive: true });
+  return r.stdout;
+}
+
+function update(target, apply) {
+  if (!target || !existsSync(join(target, "playbook.json"))) fail(`${target}: no playbook.json. Run "repo-fit init" first (it never overwrites files).`, 2);
+  const changes = plan(target);
+  for (const n of hookNotes(target)) console.log(`⚠️ ${n}`);
+  if (!changes.length) return console.log("✅ Up to date. Nothing to change.");
+  for (const c of changes) console.log(showDiff(c.rel, c.old, c.next));
+  if (!apply) return console.log(`Dry run: ${changes.length} file(s) would change. Run again with --apply after review.`);
+  const w = writeAll(resolve(target), changes.map((c) => ({ step: "update", type: existsSync(join(target, c.rel)) ? "edit" : "create", path: c.rel, old: c.old, content: c.next })));
+  console.log(`Applied ${changes.length} file(s). Nothing was committed. Receipt: ${w.receipt}. Backups: .playbook/backups/${w.ts}/. Undo with: node bin/repo-fit.mjs undo ${target} --apply`);
+}
+
+const HELP = `repo-fit ${version}: a small foundation for any repo, new or existing. Nothing here changes a repo unless you add --apply (or run init without --dry-run).
+
+Look (read-only):
+  detect <repo> [--json]                     machine, repo, existing tools, what it would ask
+  audit <repo> [--area <folder>] [--json] [--out <file>]
+                                             report and plan for an existing repo
+  tools <repo> [--json] [--offline]          tool versions vs the limits in guidance/gates.json
+  status <repo>                              is the repo behind this playbook?
+  guidance check                             which guidance is due for a refresh
+
+Change (dry run first):
+  init <repo> [--dry-run] [--tool claude|codex|both] [--models a,b] [--autosave on|off] [--no-hooks] [--name N] [--owner O]
+  apply <repo> [--steps A-01,...] [--tool ..] [--hooks all|brief|none] [--autosave on|off] [--claude-link merge] [--apply]
+  update <repo> [--apply]                    bring the managed parts up to this playbook version
+  undo <repo> [--receipt <file>] [--apply]   put back what the last apply, init or update changed
+  connect <repo> [--host github|gitlab] [--owner O] [--name N] [--apply]
+                                             no remote yet: create an EMPTY PRIVATE remote. Never pushes
+  tools <repo> --update claude [--apply]     run Claude Code's own updater
+  prefs [set <key> <value> | unset <key>]    your standing choices, kept outside repos
+
+Any command that writes accepts --pin <version>: it refuses to run unless this playbook copy is that version.
+Setup by an agent: see INSTALL.md.`;
+if (typeof opt0(process.argv) === "string" && ["init", "update", "apply"].includes(process.argv[2]) && opt0(process.argv).replace(/^v/, "") !== version) fail(`Pinned to ${opt0(process.argv)}, but this playbook copy is ${version}. Check out the matching tag (git checkout v${opt0(process.argv).replace(/^v/, "")}) or drop --pin.`);
+function opt0(argv) {
+  const i = argv.indexOf("--pin");
+  return i >= 0 ? argv[i + 1] : undefined;
+}
+const { pos, opt } = parse(process.argv.slice(3));
+switch (process.argv[2]) {
+  case "tools": {
+    if (!pos[0]) fail("Usage: repo-fit tools <repo> [--json] [--offline] [--update claude [--apply]]");
+    const { tools } = await import("../lib/tools.mjs");
+    const res = tools(pos[0], { offline: Boolean(opt.offline), update: typeof opt.update === "string" ? opt.update : undefined, apply: Boolean(opt.apply) });
+    console.log(opt.json && res.data ? JSON.stringify(res.data, null, 2) : res.text);
+    if (!res.ok) process.exitCode = 1;
+    break;
+  }
+  case "prefs": {
+    const { readPrefs, setPref, prefsPath } = await import("../lib/prefs.mjs");
+    if (pos[0] === "set" && pos[1] && pos[2] !== undefined) console.log(`Saved to ${setPref(pos[1], pos[2]).path}\n${JSON.stringify(readPrefs(), null, 2)}`);
+    else if (pos[0] === "unset" && pos[1]) console.log(`Saved to ${setPref(pos[1], null).path}\n${JSON.stringify(readPrefs(), null, 2)}`);
+    else console.log(`${prefsPath()}\n${JSON.stringify(readPrefs(), null, 2)}\n\nSet: repo-fit prefs set autoUpdate.claude-code when-required   (update Claude Code by itself only when a repo truly needs it)\nUnset: repo-fit prefs unset autoUpdate.claude-code`);
+    break;
+  }
+  case "connect": {
+    if (!pos[0]) fail("Usage: repo-fit connect <repo> [--host github|gitlab] [--owner <group-or-org>] [--name <repo-name>] [--apply]");
+    const { connect } = await import("../lib/connect.mjs");
+    const res = connect(pos[0], { host: typeof opt.host === "string" ? opt.host : undefined, owner: typeof opt.owner === "string" ? opt.owner : undefined, name: typeof opt.name === "string" ? opt.name : undefined, apply: Boolean(opt.apply) });
+    console.log(res.text);
+    if (!res.ok) process.exitCode = 1;
+    break;
+  }
+  case "apply": {
+    if (!pos[0]) fail("Usage: repo-fit apply <repo> [--steps A-01,A-10,...] [--tool claude|codex|both] [--hooks all|brief|none] [--autosave on|off] [--claude-link merge] [--models a,b] [--apply]");
+    const { apply } = await import("../lib/apply.mjs");
+    const list = (v) => (typeof v === "string" ? v.split(",").map((s) => s.trim()).filter(Boolean) : null);
+    const res = apply(pos[0], {
+      steps: list(opt.steps), tool: typeof opt.tool === "string" ? opt.tool : "both", hooks: typeof opt.hooks === "string" ? opt.hooks : "all",
+      autosave: opt.autosave !== "off", claudeLink: opt["claude-link"], models: list(opt.models) ?? [], name: typeof opt.name === "string" ? opt.name : undefined,
+      owner: typeof opt.owner === "string" ? opt.owner : undefined, dry: !opt.apply,
+    });
+    console.log(res.text);
+    if (!res.ok) process.exitCode = 1;
+    break;
+  }
+  case "undo": {
+    if (!pos[0]) fail("Usage: repo-fit undo <repo> [--receipt <file>] [--apply]");
+    const { undo } = await import("../lib/apply.mjs");
+    const res = undo(pos[0], { receipt: typeof opt.receipt === "string" ? opt.receipt : undefined, dry: !opt.apply });
+    console.log(res.text);
+    if (!res.ok) process.exitCode = 1;
+    break;
+  }
+  case "audit": {
+    if (!pos[0]) fail("Usage: repo-fit audit <repo> [--area <folder>] [--json] [--out <file>]");
+    const { audit, markdown } = await import("../lib/audit.mjs");
+    const a = audit(pos[0], { area: typeof opt.area === "string" ? opt.area : undefined });
+    const text = opt.json ? JSON.stringify(a, null, 2) : markdown(a);
+    if (typeof opt.out === "string") {
+      writeFileSync(opt.out, `${text}\n`);
+      console.log(`Audit written to ${opt.out}`);
+    } else console.log(text);
+    break;
+  }
+  case "detect": {
+    if (!pos[0]) fail("Usage: repo-fit detect <repo> [--json]");
+    const { detect, format } = await import("../lib/detect.mjs");
+    const d = detect(pos[0]);
+    console.log(opt.json ? JSON.stringify(d, null, 2) : format(d));
+    break;
+  }
+  case "guidance":
+    if (pos[0] === "check") guidanceCheck();
+    else fail("Usage: repo-fit guidance check");
+    break;
+  case "init": init(pos[0], opt); break;
+  case "status": status(pos[0]); break;
+  case "update": update(pos[0], Boolean(opt.apply)); break;
+  case "help":
+  case "--help":
+  case undefined:
+    console.log(HELP);
+    break;
+  default:
+    fail(`Unknown command "${process.argv[2]}".\n\n${HELP}`, 2);
+}

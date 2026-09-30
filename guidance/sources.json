@@ -1,0 +1,20 @@
+{
+  "note": "Every source the guidance layer relies on. 'read' = read in full or verbatim, 'summary' = small-model summary only, 'snippet' = search text only.",
+  "sources": [
+    { "url": "https://code.claude.com/docs/en/memory", "vendor": "anthropic", "type": "primary", "read": "read", "used_by": "claude-code.md", "retrieved": "2026-09-29" },
+    { "url": "https://code.claude.com/docs/en/best-practices", "vendor": "anthropic", "type": "primary", "read": "read", "used_by": "claude-code.md", "retrieved": "2026-09-29" },
+    { "url": "https://code.claude.com/docs/en/hooks", "vendor": "anthropic", "type": "primary", "read": "summary", "used_by": "claude-code.md", "retrieved": "2026-09-29" },
+    { "url": "https://platform.claude.com/docs/en/models/overview", "vendor": "anthropic", "type": "primary", "read": "read", "used_by": "models-claude.md", "retrieved": "2026-09-29" },
+    { "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5-5", "vendor": "anthropic", "type": "primary", "read": "read", "used_by": "models-claude.md", "retrieved": "2026-09-29" },
+    { "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5-5", "vendor": "anthropic", "type": "primary", "read": "read", "used_by": "models-claude.md", "retrieved": "2026-09-29" },
+    { "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1", "vendor": "anthropic", "type": "primary", "read": "not-read", "used_by": "models-claude.md", "retrieved": "2026-09-29" },
+    { "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices", "vendor": "anthropic", "type": "primary", "read": "partly", "used_by": "models-claude.md", "retrieved": "2026-09-29" },
+    { "url": "https://learn.chatgpt.com/docs/agent-configuration/agents-md", "vendor": "openai", "type": "primary", "read": "summary", "used_by": "codex.md", "retrieved": "2026-09-29" },
+    { "url": "https://learn.chatgpt.com/docs/hooks", "vendor": "openai", "type": "primary", "read": "summary", "used_by": "codex.md", "retrieved": "2026-09-29" },
+    { "url": "https://learn.chatgpt.com/guides/best-practices", "vendor": "openai", "type": "primary", "read": "summary", "used_by": "codex.md", "retrieved": "2026-09-29" },
+    { "url": "https://github.com/openai/codex/issues/17532", "vendor": "openai", "type": "third-party", "read": "snippet", "used_by": "codex.md", "retrieved": "2026-09-29" },
+    { "url": "https://developers.openai.com/api/docs/models", "vendor": "openai", "type": "primary", "read": "snippet", "used_by": "models-openai.md", "retrieved": "2026-09-29" },
+    { "url": "https://help.openai.com/en/articles/9624314-model-release-notes", "vendor": "openai", "type": "primary", "read": "snippet", "used_by": "models-openai.md", "retrieved": "2026-09-29" },
+    { "url": "https://developers.openai.com/api/docs/guides/prompt-guidance", "vendor": "openai", "type": "primary", "read": "summary", "used_by": "models-openai.md", "retrieved": "2026-09-29" }
+  ]
+}

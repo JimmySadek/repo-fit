@@ -1,0 +1,8 @@
+.DS_Store
+node_modules/
+.local/
+.env
+.env.*
+*.mp4
+*.mov
+*.zip

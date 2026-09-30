@@ -1,0 +1,36 @@
+VoltAgent/awesome-design-md	118735	2026-09-29	A collection of DESIGN.md files analysis by popular brand design systems. Drop one into your project and let c
+google-labs-code/design.md	28158	2026-09-29	A format specification for describing a visual identity to coding agents. DESIGN.md gives agents a persistent,
+agentsmd/agents.md	24671	2026-09-29	AGENTS.md — a simple, open format for guiding coding agents
+microsoft/SkillOpt	17846	2026-09-29	SkillOpt is a text-space optimizer that trains reusable natural-language skills for frozen LLM agents through 
+wasp-lang/open-saas	16022	2026-09-29	A 100% free modern JS SaaS boilerplate (React, NodeJS, Prisma). Full-featured: Auth (email, google, github, sl
+MrLesk/Backlog.md	6887	2026-09-29	Backlog.md - A tool for managing project collaboration between humans and AI Agents in a git ecosystem
+gadievron/raptor	3835	2026-09-29	Raptor turns Claude Code into a general-purpose AI offensive/defensive security agent. By using Claude.md and 
+microsoft/skills	3064	2026-09-29	Skills, MCP servers, Custom Agents, Agents.md for SDKs to ground Coding Agents
+jsynowiec/node-typescript-boilerplate	2957	2026-09-29	Production-ready Node.js TypeScript boilerplate: ESM, Vitest, ESLint, Prettier, GitHub Actions, Mise, and AGEN
+ciembor/agent-rules-books	2885	2026-09-29	AGENTS.md rules / skills for AI coding agents: Codex, Cursor & Claude Code. Inspired by Clean Code, Refactorin
+Piebald-AI/tweakcc	2527	2026-09-29	Customize Claude Code's system prompts, create custom toolsets, input pattern highlighters, themes/thinking ve
+skalesapp/skales	1925	2026-09-29	Personal AI agent for macOS, Windows, Linux, Android & iOS. Set a goal, it works alone: coding (Skales Code), 
+BayramAnnakov/claude-reflect	1703	2026-09-28	A self-learning system for Claude Code that captures corrections, positive feedback, and preferences — then sy
+agent0ai/dox	1471	2026-09-29	Self-documenting AGENTS.md
+twostraws/SwiftAgents	1445	2026-09-29	An AGENTS.md file for Swift and SwiftUI projects.
+sceneview/sceneview	1329	2026-09-29	3D & AR SDK for Android (Jetpack Compose + Filament), Apple (SwiftUI + RealityKit), Web, Flutter and React Nat
+kunchenguid/backpass	1289	2026-09-29	You don't write AGENTS.md. You train it with gradient descent.
+gamedev-skills/awesome-gamedev-agent-skills	1223	2026-09-29	74 game-dev skills for AI coding agents — Godot, Unity, Unreal, Phaser, PixiJS, three.js, Bevy, pygame, LÖVE, 
+GPTomics/bioSkills	1209	2026-09-27	a set of SKILLS.md for doing bioinformatics with agents like claude code
+michaelshimeles/skills	1178	2026-09-29	Agent skills and an AGENTS.md workflow template — isolate in worktrees, build to a service layer, prove with e
+lucasrosati/claude-code-memory-setup	999	2026-09-29	Up to 71.5x fewer tokens per session on Claude Code with Obsidian + Graphify. Persistent memory, codebase know
+OWASP/secure-agent-playbook	181	2026-09-29	OWASP Secure Agent Playbook Project
+bingbing-gui/dotnet-agent-playbook	162	2026-09-23	一个面向 .NET + AI Agent 开发的实践型仓库，涵盖 Web、云原生与微服务场景，聚焦智能应用的工程化落地。
+cloudnative-co/claude-code-starter-kit	151	2026-09-13	One-command setup of a complete Claude Code development environment with interactive wizard
+pavrus117/ai-os-maps-guide	97	2026-09-29	Free MAPS guide: set up your own AI operating system on Claude Code (Memory, Agent, Pulse, Screen) — one promp
+josipjelic/orchestrated-project-template	95	2026-09-08	A Claude Code project template with pre-configured specialist agents, living documentation, Conventional Commi
+UnpaidAttention/fable5-methodology	92	2026-09-18	A transferable, self-enforcing software-engineering methodology for AI coding agents — playbook, skills, contr
+zhaono1/agent-playbook	80	2026-09-23	
+Durafen/Claude-code-memory	75	2026-09-22	🧠 Universal semantic indexer providing persistent memory for Claude Code through knowledge   graphs, Tree-sitt
+kuitos/opencode-claude-memory	63	2026-09-27	OpenCode plugin for Claude Code memory: persistent local Markdown memory shared with Claude Code, zero config,
+DominikTobureto/awesome-grok-build	63	2026-09-27	Grok Build resources, reusable .grok/skills, AGENTS.md templates, hooks, prompts, and starter workflows.
+ccsk-org/ccsk-cli	54	2026-09-18	Claude Code Starter Kit CLI — scaffold Claude-ready projects
+debugtheworldbot/msync	53	2026-09-14	Sync Claude Code memories to Claude clients (claude.ai / Claude App)
+MadAppGang/mnemex	45	2026-09-09	Claude code memory, or maybe not code. 
+binarshina/agents-md-templates	43	2026-09-15	Этот репозиторий содержит в себе готовые темплейты agents.md(спецификации для ии-агентов по работе с кодовой б
+hudrazine/claude-code-memory-bank	42	2026-09-15	Memory management optimized for Claude Code, based on the Cline Memory Bank.

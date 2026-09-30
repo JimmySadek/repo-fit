@@ -1,0 +1,40 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/playbook/brief.mjs\" --hook",
+            "timeout": 10,
+            "statusMessage": "Reading the session brief"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/playbook/autosave.mjs\" --event stop --host \"Claude Code\"",
+            "timeout": 30,
+            "statusMessage": "Checking the capture pass"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/playbook/autosave.mjs\" --event precompact --host \"Claude Code\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

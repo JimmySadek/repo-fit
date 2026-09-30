@@ -1,0 +1,24 @@
+{
+  "note": "Version limits the playbook checks against. Part of the guidance layer: update this file at every refresh, from the pages named in each source.",
+  "retrieved": "2026-09-29",
+  "review_after": "2026-10-29",
+  "confidence": "primary, read (memory page); the prompt-audit gate is from the same page",
+  "gates": [
+    {
+      "id": "claude-native-agents-md",
+      "tool": "claude-code",
+      "feature": "Claude Code reads AGENTS.md by itself when no CLAUDE.md exists",
+      "since": "2.1.277",
+      "needed_when": "The repo has AGENTS.md, no CLAUDE.md, and Claude Code is a chosen tool. A thin CLAUDE.md that imports AGENTS.md works on every version and removes the need.",
+      "source": "https://code.claude.com/docs/en/memory"
+    },
+    {
+      "id": "claude-doctor-prompt-audit",
+      "tool": "claude-code",
+      "feature": "/doctor prompt-audit (finds instructions written for older models)",
+      "since": "2.1.283",
+      "needed_when": "Never. Optional.",
+      "source": "https://code.claude.com/docs/en/memory"
+    }
+  ]
+}

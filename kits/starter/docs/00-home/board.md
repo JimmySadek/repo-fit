@@ -10,4 +10,4 @@ The only place status lives. One row per task, job, question or idea. IDs never 
 
 | ID | Kind | Item | Status | Owner | Next step | Trigger | Evidence | Verified | Updated |
 |---|---|---|---|---|---|---|---|---|---|
-| B-001 | task | Fill in the README, people page and current view | active | {{owner}} | Write the one-sentence purpose in README.md | | docs/00-home/current.md | {{date}} | {{date}} |
+| B-001 | task | Fill in the README, people page and current view | active | {{owner}} | Write the one-sentence purpose in README.md | | {{current}} | {{date}} | {{date}} |

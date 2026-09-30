@@ -89,7 +89,7 @@ function guidanceCheck() {
 
 // ---------- kit ----------
 const fill = (text, v) =>
-  text.replaceAll("{{version}}", version).replaceAll("{{name}}", v.name ?? "").replaceAll("{{owner}}", v.owner ?? "").replaceAll("{{date}}", today());
+  text.replaceAll("{{version}}", version).replaceAll("{{name}}", v.name ?? "").replaceAll("{{owner}}", v.owner ?? "").replaceAll("{{current}}", "docs/00-home/current.md").replaceAll("{{date}}", today());
 const BLOCK_RE = /<!-- playbook:core v\S+ begin[^>]*-->[\s\S]*?<!-- playbook:core end -->/;
 const coreBlock = () => fill(readFileSync(join(here, "core/AGENTS.core.md"), "utf8"), {}).trimEnd();
 const VENDORED = ["lib.mjs", "brief.mjs", "check.mjs", "autosave.mjs"];

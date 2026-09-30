@@ -8,6 +8,12 @@
 - Step 3 told agents to run `init` on an existing repo. `init` writes starter files at default paths, so a repo that keeps its notes elsewhere would get a duplicate set. Existing repos now go audit, then `apply --steps`, which reuses the files they already have.
 - The interview asks fewer questions on an existing repo: tools and models, then which audit steps to apply.
 
+**Code fixes found by a dry run on a real existing repo (non-vendored files only: no "behind" in adopted repos)**
+
+- **New files go beside their siblings.** A repo that keeps `current.md` and `log.md` in `00-home/` at its root used to get the new board and people page in a second folder, `docs/00-home/`. They now go into `00-home/`. The rule is narrow: only next to an existing file that already uses this tool's own file name. Otherwise the default path is used. The new location is written to `paths`, `autosaveAllow` and `required` in `playbook.json`, also when the file is added in a later run.
+- **The first board row no longer points at a file that may not exist.** It named `docs/00-home/current.md` in every repo, so `check` failed after setup when the current view lives elsewhere or does not exist yet. It now points at the real current view, or at `README.md` when there is none.
+- **Files made from a template drop links to files that will not exist.** Applying only some steps used to leave a `current.md` with broken links to `log.md`, `open-questions.md` and `decisions.md`.
+
 ## 0.3.2 (draft)
 
 **No personal defaults in the code.** Before this, `init` and `apply` wrote a fixed owner name into every new repo and allowed it in the log.

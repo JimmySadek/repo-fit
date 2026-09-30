@@ -30,7 +30,13 @@ node bin/repo-fit.mjs audit /path/to/your/repo
 
 **With an AI agent:** open the repo you want to set up in Claude Code or Codex and say: *"Read INSTALL.md in the repo-fit folder at `<path to your clone>` and set up the playbook in this repository. Show me a dry run before you write anything."*
 
-**As a Claude Code skill (optional, untested outside the maintainer's machine):** copy `skill/repo-fit` to `~/.claude/skills/repo-fit`. The skill asks where your clone is.
+**As a skill (optional, untested outside the maintainer's machine):** copy `skill/repo-fit` to your tool's skills folder (`~/.claude/skills/repo-fit` for Claude Code, `~/.codex/skills/repo-fit` for Codex), or add it to whatever syncs your skills between tools. Then tell the skill where your clone is, once:
+
+```bash
+node bin/repo-fit.mjs prefs set home /path/to/your/repo-fit
+```
+
+After a `git pull`, copy the skill again so the installed copy stays current.
 
 **Tip:** `node bin/repo-fit.mjs prefs set owner "Your Name"` sets who new repos name as owner. Without it, repo-fit uses `--owner`, then the repo's `git user.name`, then the word "Owner".
 

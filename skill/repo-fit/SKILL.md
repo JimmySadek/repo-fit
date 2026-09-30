@@ -12,7 +12,7 @@ The playbook sets up any repository so work can start at any time and nothing is
 - **The kit** (files and small scripts) that goes into a repo.
 - **The guidance layer** (`guidance/`), dated notes from official Anthropic and OpenAI sources that decide how the kit is set up for a given tool and model. It expires on purpose and is refreshed.
 
-Find the playbook folder first (the one containing `bin/repo-fit.mjs`). All commands below run from it.
+Find the playbook folder first (the one containing `bin/repo-fit.mjs`). All commands below run from it. If it is not the current folder or a folder the user named, read `home` from `~/.config/repo-fit/preferences.json` (the user sets it once with `node bin/repo-fit.mjs prefs set home <path>`; `REPO_FIT_CONFIG` can move that file). If there is no `home`, ask where the clone is. Never download or install it yourself.
 
 ## Step 0. Guidance freshness (always first)
 

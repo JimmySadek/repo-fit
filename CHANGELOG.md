@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+**Skill and INSTALL.md only. No kit change, so no version bump and no "behind" in adopted repos.**
+
+- The interview no longer asks "what kind of repo is it?" or "is it shared?". Two of its three answers used the same kit, so they were not real choices. It now states plainly what exists: one kit, with the `paths` mapping for repos organized differently.
+- Step 3 told agents to run `init` on an existing repo. `init` writes starter files at default paths, so a repo that keeps its notes elsewhere would get a duplicate set. Existing repos now go audit, then `apply --steps`, which reuses the files they already have.
+- The interview asks fewer questions on an existing repo: tools and models, then which audit steps to apply.
+
 ## 0.3.2 (draft)
 
 **No personal defaults in the code.** Before this, `init` and `apply` wrote a fixed owner name into every new repo and allowed it in the log.

@@ -91,12 +91,18 @@ Add `--apply` only after the user approves that exact dry run. It creates an **e
 
 Use AskUserQuestion. One decision per question, plain options, a recommended one first. Pre-fill each question from the detect output.
 
+**Do not ask what kind of repo it is.** `detect` and `audit` already say, and the answer would change nothing: there is one kit today.
+
+**Be honest about what exists.** The kit is the Starter kit: notes, a board, a log, a session brief and safe autosave. It also works as the documentation side of a code repo. A repo that organizes work in its own way (job folders, numbered specs, its own scripts) does not get a different kit. The `paths` mapping points the foundation at the files it already has. Working and Shared kits, and separate job-studio and delivery profiles, are **not built**. If the user asks for one, say so in one sentence and carry on with the foundation.
+
 1. **Which tools will work in this repo?** Claude Code, Codex, or both. Recommend both when the user switches between them.
 2. **Which models will they mostly use?** List the models named in `guidance/models-*.md`. Allow several. If they name a model with no guidance file, say so and offer to add one after the setup.
-3. **What kind of repo is it?** Knowledge base (supported now), job studio or delivery (not built yet: say so, and offer the knowledge kit plus a note of what is missing).
-4. **Is it shared with other people or CI?** If yes, tell them the Shared kit items that are not built yet (hashed source archive, identity gate, entity register, CI).
-5. **How automatic should saving be?** Level 2 autosave is the default (small `wip:` commits of allow-listed knowledge files to a session branch, never on `main` or `master`, never pushed). Level 1 asks the assistant to commit. Level 3 is manual.
-6. **Where do big files live?** Video, large images and decks stay out of Git. Ask where, and write it in the repo's README.
+3. **How automatic should saving be?** Level 2 autosave is the default (small `wip:` commits of allow-listed knowledge files to a session branch, never on `main` or `master`, never pushed). Level 1 asks the assistant to commit. Level 3 is manual. If other people commit here, or the repo has its own commit rules ("commit only when asked"), recommend Level 1 or off, with `--hooks brief`.
+4. **Where do big files live?** Video, large images and decks stay out of Git. Ask where, and write it in the repo's README.
+
+**New or empty repo:** ask all four.
+
+**Existing repo:** ask 1 and 2 (skip what `playbook.json` already answers). Ask 3 only if the plan includes the scripts or autosave. Ask 4 only if the audit flags heavy files (F16). Then ask which plan steps to apply, one decision at a time (Step 0c). Do not ask what the repo "is".
 
 ## Step 2. Read the guidance for the answers
 
@@ -104,16 +110,22 @@ Open the files that match the answers: `guidance/claude-code.md` and/or `guidanc
 
 ## Step 3. Apply (dry run first)
 
-New repo (always show `--dry-run` first; `init` never overwrites and now writes a receipt, so `undo` works on it):
+**New or empty repo** (always show `--dry-run` first; `init` never overwrites and writes a receipt, so `undo` works on it):
 
 ```sh
 node bin/repo-fit.mjs init <repo> --dry-run --name "Name" --owner "Owner" --tool both --models claude-opus-5-5,gpt-6-sol
 ```
 
-Existing repo. `init` is additive: it never overwrites a file and lists what it left alone. Then `update` adds the managed core block to an existing `AGENTS.md`:
+**Existing repo: do not use `init`.** It writes the starter files at their default paths. A repo that keeps its notes elsewhere (for example `00-home/` at the root) would get a second, duplicate set. Use the plan from Step 0c instead:
 
 ```sh
-node bin/repo-fit.mjs init <repo> --name "Name" --tool both     # adds only what is missing
+node bin/repo-fit.mjs apply <repo> --steps <ids> --tool both --hooks brief --autosave off    # dry run: every file and diff
+node bin/repo-fit.mjs apply <repo> --steps <ids> ... --apply                                  # only after the user says yes to exactly that dry run
+```
+
+`apply` reads the `paths` mapping, so the files a repo already has are used as they are and nothing is moved. Adding the managed core block to `AGENTS.md` (D-01) and linking `CLAUDE.md` (D-02) are decisions: show each diff and ask, one by one. Afterwards `update` keeps the block and the scripts current:
+
+```sh
 node bin/repo-fit.mjs update <repo>                              # dry run, prints the diff
 node bin/repo-fit.mjs update <repo> --apply                      # only after the user approves the diff
 ```

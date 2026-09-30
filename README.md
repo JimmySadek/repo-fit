@@ -123,7 +123,7 @@ A balanced foundation for **any** repo, technical or notes. **Not a second brain
 
 **Not built yet:**
 - Board adapters (Backlog.md, GitHub or GitLab issues). Deferred on purpose: none of the audited repos uses one.
-- Job-studio profile (creative-studio repos) and delivery profile (client-delivery repos). Today's kit is the knowledge-base profile.
+- Job-studio profile (creative-studio repos) and delivery profile (client-delivery repos). Today's kit is the knowledge-base profile. Repos organized differently (job folders, numbered specs, their own scripts) are adopted through the `paths` mapping (audit, then apply), which reuses the files they already have.
 - Working kit and Shared kit: topic hubs, hashed source archive, identity gate, entity register, CI.
 - Automatic drift detection of guidance sources. Today: dates, a weekly report-only refresh, and a manual routine.
 

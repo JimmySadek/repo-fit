@@ -22,7 +22,7 @@ A small, balanced foundation for any repository, technical or notes: a rulebook 
 1. **Look first (read-only).** `detect <repo>`. It reports the tools installed, whether `gh` and `glab` are logged in, the Git host, the repo kind, existing rule files and task tools, and what it would ask. Change nothing yet.
 2. **Existing repo? Audit it (read-only).** `audit <repo>`. Show the user the verdict and top gaps in plain words. Work delta-first: only the areas the user names.
 3. **Check the tools.** `tools <repo> --json`. Follow `skill/repo-fit/SKILL.md`, step 0d, for what to do with a needed or an optional update. Never install a missing tool. Never log in for the user.
-4. **Ask, only about what was found.** Which tools (Claude Code, Codex, both), which models, what kind of repo, shared or not, how automatic saving should be, where big files live. One decision per question, with a recommended option. Do not ask about a tool that is not there.
+4. **Ask, only about what was found.** Which tools (Claude Code, Codex, both), which models, how automatic saving should be, and where big files live (only if the audit found heavy files). Do **not** ask what kind of repo it is: `detect` says, and there is one kit. For an existing repo, then ask which plan steps to apply, one decision at a time. One decision per question, with a recommended option. Do not ask about a tool that is not there.
 5. **Show a dry run.**
    - New repo: `init <repo> --dry-run --tool ... --models ...`
    - Existing repo: `apply <repo> --steps <ids> --tool ... --hooks ... --autosave ...` (dry run is the default)

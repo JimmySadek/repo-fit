@@ -7,6 +7,8 @@
 - **`init` warns instead of failing when guidance is past its review date.** Before, every user got an error once a guidance file expired, until the maintainer refreshed it by hand. Now `init` prints one warning and goes on. `--strict` brings the old stopping behavior back for maintainers. `guidance check` still exits 1 when something is overdue. The `--allow-stale` flag is gone (it has no effect now).
 - **43 automated tests** (`node --test`, no dependencies) in `test/`, and a GitHub Actions workflow that runs them on macOS, Linux and Windows with Node 18, 20 and 22. Windows is allowed to fail until verified. Checked by putting eight old bugs back one at a time in a scratch copy: every one is caught by a test.
 - `REPO_FIT_TODAY` (YYYY-MM-DD) fakes today's date. The tests use it to make guidance expire.
+- **Found by the first CI run:** on Windows, Git checks files out with `\r\n` line endings, and the guidance dates read as missing, so every file looked overdue. The parser now reads both endings, a `.gitattributes` keeps this repo's own files on `\n` everywhere, and a test converts the guidance to Windows endings and checks again. macOS and Linux were green on Node 18, 20 and 22 in that run.
+- The README now says **public beta** at the top.
 
 Skill and INSTALL.md only, earlier in this release:
 

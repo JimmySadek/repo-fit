@@ -51,7 +51,8 @@ function parse(argv) {
 // ---------- guidance layer ----------
 const guidanceDir = join(here, "guidance");
 function frontMatter(text) {
-  const m = text.match(/^---\n([\s\S]*?)\n---/);
+  // Windows checkouts have \r\n line endings. Read them like \n.
+  const m = text.replace(/\r\n?/g, "\n").match(/^---\n([\s\S]*?)\n---/);
   const meta = {};
   if (m) for (const line of m[1].split("\n")) {
     const kv = line.match(/^([a-z_]+):\s*(.*)$/);

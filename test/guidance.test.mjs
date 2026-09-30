@@ -1,8 +1,21 @@
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { cpSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { ROOT, cli, has, repo, sandboxed } from "./helpers.mjs";
+
+// Found by CI on Windows: Git there checks files out with \r\n line endings, and the dates in the guidance files read as missing.
+test("guidance check reads files that have Windows line endings", sandboxed((sb) => {
+  const copy = join(sb.dir, "copy");
+  cpSync(ROOT, copy, { recursive: true, filter: (src) => !/[\\/](\.git|claudedocs|test|node_modules)([\\/]|$)/.test(src) });
+  for (const f of readdirSync(join(copy, "guidance")).filter((f) => f.endsWith(".md"))) {
+    const p = join(copy, "guidance", f);
+    writeFileSync(p, readFileSync(p, "utf8").replace(/\r?\n/g, "\r\n"));
+  }
+  const r = spawnSync(process.execPath, [join(copy, "bin", "repo-fit.mjs"), "guidance", "check"], { env: { ...sb.env, REPO_FIT_TODAY: retrieved }, encoding: "utf8" });
+  assert.equal(r.status, 0, `${r.stdout}${r.stderr}`);
+}));
 
 // The newest `retrieved` date in the guidance files: on that day nothing can be overdue.
 const dir = join(ROOT, "guidance");

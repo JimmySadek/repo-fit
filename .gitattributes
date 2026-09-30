@@ -1,0 +1,2 @@
+# Check out with Unix line endings on every platform. The scripts are Node, and the parsers expect \n.
+* text=auto eol=lf

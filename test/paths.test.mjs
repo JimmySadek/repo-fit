@@ -104,7 +104,7 @@ test("audit finds a word cap the repo already states and apply keeps it", sandbo
   write(d, "AGENTS.md", "# Rules\n\nKeep `00-home/current.md` under 1500 words.\n");
   write(d, "00-home/current.md", `# Current\n\n${words(1200)}\n`);
   const a = JSON.parse(cli(sb, ["audit", d, "--json"]).stdout);
-  assert.deepEqual(a.details.current, { words: 1202, cap: 1500, capSource: "AGENTS.md:3" });
+  assert.deepEqual(a.details.current, { words: 1202, cap: 1500, capSource: "AGENTS.md:3", playbookCap: null });
   assert.equal(a.checks.find((c) => c.id === "F5").status, "ok");
   assert.equal(apply(sb, d, "A-01", ["--apply"]).status, 0);
   assert.equal(json(d, "playbook.json").currentWordCap, 1500);
@@ -114,7 +114,7 @@ test("with no stated cap, a long current view is flagged and --word-cap sets the
   const d = ownLayout(sb);
   write(d, "00-home/current.md", `---\nid: x\n---\n# Current\n\n${words(1000)}\n`);
   const audit = cli(sb, ["audit", d]);
-  assert.match(audit.out, /\| F5 \| Current-state page \| ⚠️ \| 00-home\/current\.md, body 1002 words; no word cap stated, default 900 \| .*--word-cap/);
+  assert.match(audit.out, /\| F5 \| Current-state page \| ⚠️ \| 00-home\/current\.md, body 1002 words; word cap 900 \(no cap stated, default\) \| .*--word-cap/);
   assert.match(apply(sb, d, "A-01").out, /body of 1002 words, over the word cap of 900/);
   assert.equal(apply(sb, d, "A-01", ["--word-cap", "1200", "--apply"]).status, 0);
   assert.equal(json(d, "playbook.json").currentWordCap, 1200);

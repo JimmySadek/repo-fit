@@ -47,16 +47,23 @@ node bin/repo-fit.mjs audit <repo>                    # whole repo
 node bin/repo-fit.mjs audit <repo> --area <folder>    # delta-first: only the area the user names
 ```
 
-Show the user the **Verdict** and the top gaps in plain words, then the plan in two groups:
-- **Safe to do now:** steps that only add files.
-- **Needs your decision:** every edit, move, delete or outward step, one by one. Never bundle them.
+**Assess first, then adapt.** Walk the user through the report in this order, in plain words:
+
+1. **Verdict.** 🔁 means "covered by an equivalent the repo already has" and counts as in place.
+2. **Leave as is.** What the repo already does for itself: its own checks and hooks, its word cap and recorder list, its decision lifecycle, how it saves raw input, its protected (append-only or read-only) paths, and steps skipped earlier with their reasons. repo-fit adapts to these. Say so, and do not propose replacing them.
+3. **Conflicts with the core block.** Where the full block would contradict the repo's rules. `apply` writes a slim block that defers to the repo's rule on each topic listed.
+4. **Worth improving.** Safe steps (add only), then every edit, move, delete or outward step, one by one. Never bundle them.
+
+For each step the user declines, record it so it is not offered again: `node bin/repo-fit.mjs skip <repo> <ID> --reason "..."` (a dry run; add `--apply` after the yes). `audit`, `status` and `update` then leave it out and show the reason.
 
 Rules:
 - The audit changes nothing. Do not save its output into the audited repo unless the user asks. `--out` writes only where the user points.
 - Treat counts as leads, not facts, until checked. Broken-link and unlinked-note counts can be noisy on content folders.
 - Never read or print the contents of a secret-like file. The audit lists names only. If one is found, say so plainly and recommend rotating the secret.
 - Apply only steps the user approved, one decision at a time: `node bin/repo-fit.mjs apply <repo> --steps <ids> ...` is a dry run that prints every file and diff. Add `--apply` only after the user says yes to exactly that dry run. Every apply writes a backup and a receipt, and `undo` reverses it.
-- For repos with their own commit rules (for example "commit only when asked"), use `--autosave off` and `--hooks brief`. Never add the core rules block if it would contradict the repo's own rules.
+- For repos with their own commit rules (for example "commit only when asked"), use `--autosave off` and `--hooks brief`. Show the Conflicts table before D-01: the block defers to those rules, and if the user still prefers no block, record a skip.
+- When the repo already runs its own hooks or checks, A-10 is a decision. Recommend skipping it when theirs cover the same ground; otherwise `--hooks none` (scripts only) or `--hooks brief` next to theirs. Never let two checks disagree about one rule: A-01 copies the repo's own word cap and recorder list.
+- Paths the repo marks append-only or read-only, and delivered outputs, are listed only. Never offer to fix, move or archive anything inside them. A repo can add more with `protectedPaths` in `playbook.json`.
 - For a `CLAUDE.md` that is a near copy of `AGENTS.md`, prefer `--claude-link merge` and show the user the diff. A plain import would load the same rules twice.
 - Moves, deletes, secrets, big files and adding a remote are never automated. Explain the options and let the user do or approve them.
 
@@ -96,7 +103,7 @@ Use AskUserQuestion. One decision per question, plain options, a recommended one
 **Be honest about what exists.** The kit is the Starter kit: notes, a board, a log, a session brief and safe autosave. It also works as the documentation side of a code repo. A repo that organizes work in its own way (job folders, numbered specs, its own scripts) does not get a different kit. The `paths` mapping points the foundation at the files it already has. Working and Shared kits, and separate job-studio and delivery profiles, are **not built**. If the user asks for one, say so in one sentence and carry on with the foundation.
 
 1. **Which tools will work in this repo?** Claude Code, Codex, or both. Recommend both when the user switches between them.
-2. **Which models will they mostly use?** List the models named in `guidance/models-*.md`. Allow several. If they name a model with no guidance file, say so and offer to add one after the setup.
+2. **Which models will they mostly use?** List the models named in `guidance/models-*.md`. Allow several. If they name a model with no guidance file, say so and offer to add one after the setup. Do not recommend an OpenAI model while `guidance/models-openai.md` lists the model-name conflict as open: list them as unconfirmed.
 3. **How automatic should saving be?** Level 2 autosave is the default (small `wip:` commits of allow-listed knowledge files to a session branch, never on `main` or `master`, never pushed). Level 1 asks the assistant to commit. Level 3 is manual. If other people commit here, or the repo has its own commit rules ("commit only when asked"), recommend Level 1 or off, with `--hooks brief`.
 4. **Where do big files live?** Video, large images and decks stay out of Git. Ask where, and write it in the repo's README.
 
@@ -113,7 +120,7 @@ Open the files that match the answers: `guidance/claude-code.md` and/or `guidanc
 **New or empty repo** (always show `--dry-run` first; `init` never overwrites and writes a receipt, so `undo` works on it):
 
 ```sh
-node bin/repo-fit.mjs init <repo> --dry-run --name "Name" --owner "Owner" --tool both --models claude-opus-5-5,gpt-6-sol
+node bin/repo-fit.mjs init <repo> --dry-run --name "Name" --owner "Owner" --tool both --models claude-opus-5-5
 ```
 
 **Existing repo: do not use `init`.** It writes the starter files at their default paths. A repo that keeps its notes elsewhere (for example `00-home/` at the root) would get a second, duplicate set. Use the plan from Step 0c instead:
@@ -123,7 +130,7 @@ node bin/repo-fit.mjs apply <repo> --steps <ids> --tool both --hooks brief --aut
 node bin/repo-fit.mjs apply <repo> --steps <ids> ... --apply                                  # only after the user says yes to exactly that dry run
 ```
 
-`apply` reads the `paths` mapping, so the files a repo already has are used as they are and nothing is moved. The core block names those paths. If the audit's F5 says the current view is over the default word cap of 900 and no cap is written down, ask the user for a cap and pass it as `--word-cap <N>` with A-01. If F10 picked the wrong people file, set `paths.people` in `playbook.json`. Adding the managed core block to `AGENTS.md` (D-01) and linking `CLAUDE.md` (D-02) are decisions: show each diff and ask, one by one. Afterwards `update` keeps the block and the scripts current:
+`apply` reads the `paths` mapping, so the files a repo already has are used as they are and nothing is moved. The core block names those paths and leaves out any role the repo does not have. A-01 copies the repo's own word cap and recorder list when its scripts or rules state them. If F5 says the current view is over the default cap of 900 and no cap is written down, ask the user for one and pass it as `--word-cap <N>` with A-01. If F10 picked the wrong people file, set `paths.people` in `playbook.json`. The dry run prints new config files in full and the first lines of other new files (`--show` prints everything). Adding the managed core block to `AGENTS.md` (D-01) and linking `CLAUDE.md` (D-02) are decisions: show each diff and ask, one by one. Afterwards `update` keeps the adopted parts current. It never adds a part that was not adopted; `status` lists those as "not adopted" or "skipped on purpose", not as "behind":
 
 ```sh
 node bin/repo-fit.mjs update <repo>                              # dry run, prints the diff
@@ -138,7 +145,7 @@ Later, to see which repos are behind the playbook: `node bin/repo-fit.mjs status
 
 In the target repo:
 
-- `node scripts/playbook/check.mjs` passes.
+- `node scripts/playbook/check.mjs` passes, if the scripts were adopted. If the repo has its own checks, run those too and report both.
 - `node scripts/playbook/brief.mjs --text` prints a sensible brief.
 - `node scripts/playbook/autosave.mjs --report --host "<tool>"` runs.
 - **Claude Code:** run `/context` and confirm `CLAUDE.md` is listed. Run `/doctor prompt-audit` only if `repo-fit tools` shows it as available (2.1.283 or later), and report its findings.

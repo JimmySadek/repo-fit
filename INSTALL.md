@@ -20,7 +20,7 @@ A small, balanced foundation for any repository, technical or notes: a rulebook 
 ## Steps
 
 1. **Look first (read-only).** `detect <repo>`. It reports the tools installed, whether `gh` and `glab` are logged in, the Git host, the repo kind, existing rule files and task tools, and what it would ask. Change nothing yet.
-2. **Existing repo? Audit it (read-only).** `audit <repo>`. Show the user the verdict and top gaps in plain words. Work delta-first: only the areas the user names.
+2. **Existing repo? Audit it (read-only).** `audit <repo>`. Walk the user through it in this order: the verdict, **Leave as is** (what the repo already covers: repo-fit adapts to it), **Conflicts with the core block**, then **Worth improving**, one decision at a time. Work delta-first: only the areas the user names. For a step the user declines, record why: `skip <repo> <ID> --reason "..."` (dry run, then `--apply`).
 3. **Check the tools.** `tools <repo> --json`. Follow `skill/repo-fit/SKILL.md`, step 0d, for what to do with a needed or an optional update. Never install a missing tool. Never log in for the user.
 4. **Ask, only about what was found.** Which tools (Claude Code, Codex, both), which models, how automatic saving should be, and where big files live (only if the audit found heavy files). Do **not** ask what kind of repo it is: `detect` says, and there is one kit. For an existing repo, then ask which plan steps to apply, one decision at a time. One decision per question, with a recommended option. Do not ask about a tool that is not there.
 5. **Show a dry run.**
@@ -37,7 +37,7 @@ A small, balanced foundation for any repository, technical or notes: a rulebook 
 - **Never overwrite** a file. `init` skips what exists. Edits are backed up first.
 - **Never commit, never push.** Autosave commits only to a `wip/` branch, only allow-listed files, and only if the user chose it.
 - **Moves, deletes, secrets, big files and adding a remote are never automated.** Explain the options. `connect` creates an empty private remote only after the user approves the exact dry run, and never pushes.
-- **Respect the repo's own rules.** If it says "commit only when asked", use `--autosave off --hooks brief` and do not add the core rules block if it would contradict them.
+- **Respect the repo's own rules.** If it says "commit only when asked", use `--autosave off --hooks brief`. The core block that `apply` writes defers to the repo's own rules wherever the audit lists a conflict; if the user wants no block at all, record a skip. Paths the repo marks append-only or read-only are never offered for fixing, moving or archiving.
 - **Match the tools.** Put shared rules in `AGENTS.md`. If `CLAUDE.md` exists it must import `AGENTS.md` (`@AGENTS.md`). Do not create a second rulebook for one tool.
 - **Say what you could not verify.** Do not claim a hook works until you have seen it fire.
 

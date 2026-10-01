@@ -50,6 +50,7 @@ const DEFAULTS = {
   staleIsError: true,
   staleNoteDays: 180, // a note untouched this long, with no review_after date ahead, goes on the review queue
   reviewIgnore: [], // extra globs to keep out of the review queue
+  protectedPaths: [], // folders ("source-archive/") or globs the repo never edits: kept out of the review queue too
   recorders: ["Codex", "Claude Code", "Claude Cowork", "Claude app"],
 };
 
@@ -248,7 +249,7 @@ export function coverage(cfg = config()) {
     }
   }
   const roles = new Set(Object.values(paths()));
-  const skip = (f) => ROOT_NAMES.has(f) || EXPECTED_UNLINKED.test(f) || /(^|\/)README\.md$/i.test(f) || matchesAny(f, cfg.reviewIgnore ?? []);
+  const skip = (f) => ROOT_NAMES.has(f) || /(^|\/)(AGENTS|CLAUDE|GEMINI)\.md$/.test(f) || EXPECTED_UNLINKED.test(f) || /(^|\/)README\.md$/i.test(f) || matchesAny(f, cfg.reviewIgnore ?? []) || matchesAny(f, (cfg.protectedPaths ?? []).map((p) => (p.endsWith("/") ? `${p}**` : p)));
   const orphans = files.filter((f) => inbound.get(f) === 0 && !skip(f) && !roles.has(f));
 
   // Last commit date per file, one git call. An uncommitted edit counts as today.

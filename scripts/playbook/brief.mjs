@@ -1,7 +1,7 @@
 // Session brief. Read-only: it never writes, commits or contacts anything.
 //   node scripts/playbook/brief.mjs --text                  for a person, or Codex without hooks
 //   node scripts/playbook/brief.mjs --hook                  Claude Code SessionStart hook (JSON)
-//   node scripts/playbook/brief.mjs --hook --format codex   Codex SessionStart hook (JSON, format untested)
+//   node scripts/playbook/brief.mjs --hook --format codex   Codex SessionStart hook (JSON)
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { root, git, config, readBoard, analyseBoard, paths, coverage } from "./lib.mjs";
@@ -92,9 +92,8 @@ if (!hook) {
   console.log(text);
 } else {
   const forModel = `${text}\n\nSession brief, read from files. Show the top of it to the user in 3 to 5 lines before starting, and refresh Git facts before relying on it.`;
-  const payload =
-    format === "codex"
-      ? { systemMessage: text, additionalContext: forModel }
-      : { systemMessage: text, hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: forModel } };
+  // Both tools read hookSpecificOutput.additionalContext. Codex shows systemMessage as a warning, so it gets none.
+  const context = { hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: forModel } };
+  const payload = format === "codex" ? context : { systemMessage: text, ...context };
   console.log(JSON.stringify(payload));
 }

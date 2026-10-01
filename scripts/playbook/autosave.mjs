@@ -125,6 +125,5 @@ emit({
   decision: "block",
   reason:
     `${savedNote ? `${savedNote} ` : ""}Capture pass not finished: ${[...left.values()].join("; ")}. ` +
-    'Follow "Capture by default" in AGENTS.md: update the board, current.md, log.md and open questions, ' +
-    "run node scripts/playbook/check.mjs, then commit. If something should stay uncommitted, tell the user what and why.",
+    'Follow "Capture by default" in AGENTS.md, including its checks, then commit. If something should stay uncommitted, tell the user what and why.',
 });

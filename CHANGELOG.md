@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.5.0 (draft)
+
+**Adapt first: assess a repo, say what to leave as is, and fit repo-fit's pieces around what is already there.** From the setup of a mature notes repo on 1 Oct 2026 (it has its own checks, hooks, decision lifecycle, append-only archive and people register).
+
+- **The audit sorts its findings.** A new "Leave as is" section lists what the repo already covers in its own way, with the line it came from. A new status, 🔁 "covered by an equivalent", counts as in place in the verdict (for example work tracked in the current view and open questions instead of a board; the board then becomes an optional decision).
+- **Conflicts with the core block are listed before D-01** (checks, commits, decisions, raw input, status, word cap), and D-01 is marked "⚠️ conflicts with existing rules". `apply` writes a **slim block** that defers to the repo's own rule on each of those topics, and names `scripts/playbook/` only when the scripts are there. `update` renders the same block, so it stays stable.
+- **Protected paths.** Folders the rules call append-only or read-only, `protectedPaths` in `playbook.json` (A-01 writes the detected ones), and delivered outputs are listed only: never offered for fixing, moving or archiving, and kept out of the review queue.
+- **Dry runs show new file contents:** config files in full, other new files their first 12 lines, vendored scripts as one line. `--show` prints everything.
+- **`status` and `update` manage only adopted parts.** `update` never adds the block or the scripts; `status` lists them as "not adopted" or "skipped on purpose" instead of "Behind". A version-stamp-only difference is not "Behind" either. `apply` records `adopted` steps (and `hooks` mode) in `playbook.json`. New `repo-fit skip <repo> <ID> --reason "..." [--remove]` (dry run, receipt, undo).
+- **One rule, one cap.** The word cap comes from the repo's own check script or rules first, then `playbook.json`, then 900; two caps that disagree are flagged. `check` counts the body only (0.4.1). The recorder list is copied from the repo's scripts; the owner is added only with `--owner`.
+- **A-10 is a decision when the repo runs its own hooks or checks**, and the dry run lists them ("repo already has ..."). Existing hooks are kept, as before.
+- **Big files (F16):** a written policy (a "Big files" or "Media" heading, or Git LFS) counts, and tracked files are told apart from ignored ones (local only) and loose ones. D-05 is offered only for tracked files with no policy.
+- **Less noise:** dot folders (`.claude/`, `.github/`, ...), templates and nested projects' `AGENTS.md`/`CLAUDE.md` are no longer counted as unlinked notes. In the audit and in the review queue alike.
+- **`undo --force`** takes back files changed since repo-fit wrote them; your version is moved to `.playbook/undone/` first, nothing is deleted. Fixed: an undo that left files in place used to mark its receipt as done, so nothing could finish it.
+- **Codex hooks, checked against the official hooks page (read in a browser, 1 Oct 2026).** The file format matches. Fixed: the session brief sent its context at the top level in Codex mode; Codex reads `hookSpecificOutput.additionalContext`. The Codex brief no longer sends `systemMessage` (Codex shows it as a warning). The Stop hook's reason no longer names the board or `check.mjs`.
+- **No OpenAI model is named in examples or recommendations** while `guidance/models-openai.md` lists the model-name conflict as open.
+- **Deferred, with reasons:** (1) a live Codex session against the hooks: running `codex exec` from this session was not permitted, so the Codex hooks stay "untested" until someone runs one (the guidance says how). (2) The `models-openai.md` refresh is due 6 Oct 2026 and needs the OpenAI pages read in a browser; not done in this release.
+- **Version stamp moves to 0.5.0.** The vendored scripts and the core block changed, so adopted repos show "behind" for the parts they adopted until `repo-fit update` (dry run first).
+- 20 new tests (84 in all), on a fixture shaped like a mature notes repo with generic names. 18 of them fail on 0.4.1; the other 2 guard behavior that must not change.
+
 ## 0.4.1 (draft)
 
 **Fixes found on 1 Oct 2026 while auditing a real notes repo that keeps its files in its own places**

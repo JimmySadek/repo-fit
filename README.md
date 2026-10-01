@@ -65,20 +65,22 @@ node bin/repo-fit.mjs audit <repo> --out report.md   # also --json; you choose w
 node bin/repo-fit.mjs apply <repo> --steps A-01,A-10 --tool claude --hooks brief --autosave off   # dry run: shows every file and diff
 node bin/repo-fit.mjs apply <repo> --steps A-01,A-10 ... --apply                                 # writes, backs up, writes a receipt
 node bin/repo-fit.mjs apply <repo> --steps A-01 --word-cap 1500 ...                             # a cap for the current view, if the repo has none written down
+node bin/repo-fit.mjs skip <repo> D-01 --reason "our rules cover it"                      # dry run; --apply records it in playbook.json
 node bin/repo-fit.mjs undo <repo>                    # dry run; add --apply to put back what the last apply changed
+node bin/repo-fit.mjs undo <repo> --force --apply    # also takes back files you changed since; your version is kept in .playbook/undone/
 node bin/repo-fit.mjs connect <repo> --host github   # no remote yet: dry run; --apply creates an EMPTY PRIVATE remote. Never pushes
 node bin/repo-fit.mjs tools <repo>                   # tool versions vs the limits in guidance/gates.json; --update claude [--apply]
 node bin/repo-fit.mjs prefs                          # your standing choices, kept outside repos
 node bin/repo-fit.mjs prefs set owner "Your Name"     # who new repos name as owner (else --owner, else git user.name, else "Owner")
 node bin/repo-fit.mjs guidance check                 # which guidance is due for a refresh
 node bin/repo-fit.mjs help                           # every command
-node bin/repo-fit.mjs init <repo> --dry-run --name "Name" --owner "Owner" --tool both --models claude-opus-5-5,gpt-6-sol
+node bin/repo-fit.mjs init <repo> --dry-run --name "Name" --owner "Owner" --tool both --models claude-opus-5-5
 node bin/repo-fit.mjs status <repo>                  # is the repo behind the playbook?
 node bin/repo-fit.mjs update <repo>                  # dry run: prints the diff
 node bin/repo-fit.mjs update <repo> --apply          # writes it, commits nothing
 ```
 
-`init` never overwrites a file, so it is safe on an existing repo. `update` manages only three things: the core block in `AGENTS.md`, the vendored scripts, and the version stamps in `playbook.json`. The core block is written with the repo's own paths (see `paths` below), so it never names a file the repo does not have.
+`init` never overwrites a file, so it is safe on an existing repo. `update` manages only what the repo adopted: the core block (when `AGENTS.md` has it), the vendored scripts (when `scripts/playbook/` exists) and the version stamps in `playbook.json`. It never adds a part; `status` lists missing parts as "not adopted" or "skipped on purpose" (`repo-fit skip`), not as "behind". The core block is written with the repo's own paths (see `paths` below), so it never names a file the repo does not have.
 
 **Setup by an agent:** give it [INSTALL.md](INSTALL.md) (it names the steps, the approvals and the undo). Any writing command accepts `--pin <version>`.
 
@@ -92,6 +94,17 @@ The setup is meant to be run through the [repo-fit skill](skill/repo-fit/SKILL.m
 | `check.mjs` | Required files, board rules, stale rows, broken links, folder indexes, current-view word cap (the body only: frontmatter does not count), the review queue (as warnings) | By hand or in CI |
 | `autosave.mjs` | Level 2 autosave of allow-listed files to a `wip/` branch, then a once-per-session reminder for anything left | Stop and PreCompact hooks, or `--report` by hand |
 | `lib.mjs` | Shared helpers | Imported |
+
+## Adapting to a repo that already has its own system
+
+On an existing repo, `audit` assesses first and then sorts what it found:
+
+- **Leave as is:** what the repo already covers in its own way. Its own check scripts and hooks, a word cap or recorder list in its scripts, a decision lifecycle (`decisions/proposed`, `accepted`), how it saves raw input, a written big-files policy, and work tracked in the current view instead of a board (🔁, counted as in place).
+- **Conflicts with the core block:** where the full block would contradict the repo's rules (checks, commits, decisions, raw input, status, word cap). `apply --steps D-01` writes a **slim block** that defers to the repo's rule on each of those topics, so the repo keeps one definition of done.
+- **Protected paths:** folders the rules call append-only or read-only, `protectedPaths` in `playbook.json`, and delivered outputs. Findings inside are listed only, never offered for fixing, moving or archiving.
+- **Worth improving:** the plan. A-10 becomes a decision when the repo runs its own hooks or checks. A-01 copies the repo's own word cap and recorder list.
+
+`repo-fit skip <repo> <ID> --reason "..."` records a step you leave out on purpose, so `audit`, `status` and `update` stop offering it. The detection is pattern matching on rule files and scripts, so every finding quotes the line it came from: check it before you rely on it.
 
 ## Connecting the dots: the review queue
 
@@ -126,7 +139,7 @@ Adopted from the maintainer's own knowledge repos, where it is the part that kee
 node --test
 ```
 
-53 automated tests, no dependencies. They run in a throwaway sandbox (a fake home folder, so nothing depends on your machine) and cover: every command on new and existing repos, dry runs writing nothing, undo, the safety rules (never overwrite, a token in a remote URL never printed), the session brief, autosave and the Stop and PreCompact hooks, and the stale-guidance warning. Each past bug has a test that fails without its fix.
+84 automated tests, no dependencies. They run in a throwaway sandbox (a fake home folder, so nothing depends on your machine) and cover: every command on new and existing repos, dry runs writing nothing, undo, the safety rules (never overwrite, a token in a remote URL never printed), the session brief, autosave and the Stop and PreCompact hooks, and the stale-guidance warning. Each past bug has a test that fails without its fix.
 
 A GitHub Actions workflow (`.github/workflows/test.yml`) runs them on macOS, Linux and Windows with Node 18, 20 and 22. First run, 30 Sep 2026: **macOS and Linux green** on all three Node versions. **Windows failed 2 of 43** for one reason, Windows line endings in the guidance dates. That is fixed, but the Windows job is still allowed to fail until a run confirms it.
 

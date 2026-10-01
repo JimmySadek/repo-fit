@@ -37,7 +37,7 @@ sources:
 
 - Read `developers.openai.com/api/docs/models` and the release notes in a browser. Confirm the lineup, the retirement date, and which model Codex uses by default.
 - Read the prompt-guidance page directly. Confirm which models it covers.
-- Resolve the Astra, Sol, Luna conflict before naming any model in a recommendation.
+- Resolve the Astra, Sol, Luna conflict before naming any model in a recommendation. Until then, repo-fit's README, skill and examples name no OpenAI model (since 0.5.0).
 
 ## Changed since last review
 

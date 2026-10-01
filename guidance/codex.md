@@ -2,12 +2,12 @@
 topic: Codex AGENTS.md, hooks and best practices
 tool: codex
 models: gpt-6-astra, gpt-6-sol, gpt-6-luna
-retrieved: 2026-09-29
+retrieved: 2026-10-01
 review_after: 2026-10-13
-confidence: medium (primary pages, but only small-model summaries; one search snippet; one GitHub issue not verified)
+confidence: medium (the hooks page was read in full in a browser on 1 Oct 2026; the other pages are small-model summaries; one GitHub issue not verified)
 sources:
   - https://learn.chatgpt.com/docs/agent-configuration/agents-md (primary, summary)
-  - https://learn.chatgpt.com/docs/hooks (primary, summary)
+  - https://learn.chatgpt.com/docs/hooks (primary, read in full in a browser, 1 Oct 2026)
   - https://learn.chatgpt.com/guides/best-practices (primary, summary)
   - https://github.com/openai/codex/issues/17532 (snippet only, status unknown)
 ---
@@ -28,10 +28,10 @@ The old `developers.openai.com/codex/...` links now redirect to `learn.chatgpt.c
 
 ## Open checks
 
-- The `.codex/hooks.json` entry format was not read directly. The playbook's Codex hook file follows the Claude Code shape (event, matcher group, command handlers). **Untested.** Read the hooks page in a browser and run one real session before trusting it.
+- **Format checked against the hooks page (1 Oct 2026):** `.codex/hooks.json` uses event, matcher group and `command` handlers with `timeout` (seconds) and `statusMessage`, and the page recommends `$(git rev-parse --show-toplevel)` for repo-local hooks. The kit's file matches. SessionStart matcher values are `startup`, `resume`, `clear` and `compact`. SessionStart context goes in `hookSpecificOutput.additionalContext` (the same shape as Claude Code; the brief used a top-level `additionalContext` before 0.5.0, now fixed). Stop expects JSON when it exits 0 and continues the turn on `decision: "block"`; `systemMessage` shows as a warning. **Still untested in a real session:** run one (the hooks need `/hooks` trust, or `--dangerously-bypass-hook-trust` for a one-off) before calling the Codex hooks working.
 - A GitHub issue reports that hooks configured in a repo-local `.codex/config.toml` did not fire in interactive sessions. Status unknown. The kit uses `hooks.json` and the setup checks that a hook actually fires.
 - The best-practices page ties reasoning levels to model names (Astra, Sol, Luna) in a way that conflicts with other sources. Not used. See `models-openai.md`.
 
 ## Changed since last review
 
-First review (29 Sep 2026). Nothing to compare yet.
+- 1 Oct 2026: read the hooks page in full. Confirmed the file shape and trust flow, found that SessionStart context must sit in `hookSpecificOutput` (kit fixed in 0.5.0). Also new on the page: `SessionEnd`, `Interrupt`, `PostCompact`, `SubagentStart` and `SubagentStop` events, `async` handlers, and `additionalContextLimit` (default about 2,500 tokens).

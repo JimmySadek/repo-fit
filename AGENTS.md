@@ -31,7 +31,7 @@ A small, balanced foundation for any repository, technical or notes, for Claude 
 | Path | What |
 |---|---|
 | `bin/repo-fit.mjs` | The command: `init`, `status`, `update`, `detect`, `audit`, `apply`, `undo`, `connect`, `tools`, `prefs`, `guidance check` |
-| `lib/` | `detect`, `audit`, `apply`, `connect`, `tools`, `versions`, `prefs`. Not copied into repos |
+| `lib/` | `detect`, `audit`, `apply`, `core` (renders the core block with the repo's paths), `connect`, `tools`, `versions`, `prefs`. Not copied into repos |
 | `scripts/playbook/` | `brief`, `check`, `autosave`, `lib`. Copied into every repo, version-stamped |
 | `kits/` | Starter kit and per-tool files |
 | `core/AGENTS.core.md` | The managed rules block |

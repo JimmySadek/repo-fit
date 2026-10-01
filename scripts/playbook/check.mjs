@@ -2,7 +2,7 @@
 //   node scripts/playbook/check.mjs
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
-import { root, config, readBoard, analyseBoard, paths, coverage } from "./lib.mjs";
+import { root, config, readBoard, analyseBoard, paths, coverage, bodyWords } from "./lib.mjs";
 
 const cfg = config();
 const P = paths();
@@ -13,11 +13,11 @@ const warnings = [];
 const full = ["README.md", "AGENTS.md", P.lessons, "playbook.json", P.current, P.board, P.log, P.questions, P.people, P.decisions];
 for (const f of cfg.required ?? full) if (!existsSync(join(root, f))) errors.push(`missing ${f}`);
 
-// The current view has a word cap so it stays a front door, not a log.
+// The current view has a word cap so it stays a front door, not a log. Only the body counts, not the frontmatter.
 const cur = join(root, P.current);
 if (existsSync(cur)) {
-  const words = readFileSync(cur, "utf8").split(/\s+/).filter(Boolean).length;
-  if (words > cfg.currentWordCap) errors.push(`${P.current} is ${words} words, over the cap of ${cfg.currentWordCap}`);
+  const words = bodyWords(readFileSync(cur, "utf8"));
+  if (words > cfg.currentWordCap) errors.push(`${P.current} body is ${words} words, over the cap of ${cfg.currentWordCap}`);
 }
 
 // Setup not finished: placeholders left in the front-door files.

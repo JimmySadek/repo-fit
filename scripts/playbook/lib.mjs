@@ -63,6 +63,9 @@ export function config() {
   }
 }
 
+// Words in a Markdown file's body. YAML frontmatter at the top is metadata, so it does not count toward a word cap.
+export const bodyWords = (text) => text.replace(/^\uFEFF?---\r?\n(?:[\s\S]*?\r?\n)?---[ \t]*(?:\r?\n|$)/, "").split(/\s+/).filter(Boolean).length;
+
 export const paths = () => ({ ...PATH_DEFAULTS, ...Object.fromEntries(Object.entries(config().paths ?? {}).filter(([, v]) => v)) });
 
 // Minimal glob: `**` crosses folders, `*` stays inside one folder.

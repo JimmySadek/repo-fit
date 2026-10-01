@@ -123,7 +123,7 @@ node bin/repo-fit.mjs apply <repo> --steps <ids> --tool both --hooks brief --aut
 node bin/repo-fit.mjs apply <repo> --steps <ids> ... --apply                                  # only after the user says yes to exactly that dry run
 ```
 
-`apply` reads the `paths` mapping, so the files a repo already has are used as they are and nothing is moved. Adding the managed core block to `AGENTS.md` (D-01) and linking `CLAUDE.md` (D-02) are decisions: show each diff and ask, one by one. Afterwards `update` keeps the block and the scripts current:
+`apply` reads the `paths` mapping, so the files a repo already has are used as they are and nothing is moved. The core block names those paths. If the audit's F5 says the current view is over the default word cap of 900 and no cap is written down, ask the user for a cap and pass it as `--word-cap <N>` with A-01. If F10 picked the wrong people file, set `paths.people` in `playbook.json`. Adding the managed core block to `AGENTS.md` (D-01) and linking `CLAUDE.md` (D-02) are decisions: show each diff and ask, one by one. Afterwards `update` keeps the block and the scripts current:
 
 ```sh
 node bin/repo-fit.mjs update <repo>                              # dry run, prints the diff

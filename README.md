@@ -64,6 +64,7 @@ node bin/repo-fit.mjs audit <repo> --area docs/brand # only that area for notes,
 node bin/repo-fit.mjs audit <repo> --out report.md   # also --json; you choose where the file goes
 node bin/repo-fit.mjs apply <repo> --steps A-01,A-10 --tool claude --hooks brief --autosave off   # dry run: shows every file and diff
 node bin/repo-fit.mjs apply <repo> --steps A-01,A-10 ... --apply                                 # writes, backs up, writes a receipt
+node bin/repo-fit.mjs apply <repo> --steps A-01 --word-cap 1500 ...                             # a cap for the current view, if the repo has none written down
 node bin/repo-fit.mjs undo <repo>                    # dry run; add --apply to put back what the last apply changed
 node bin/repo-fit.mjs connect <repo> --host github   # no remote yet: dry run; --apply creates an EMPTY PRIVATE remote. Never pushes
 node bin/repo-fit.mjs tools <repo>                   # tool versions vs the limits in guidance/gates.json; --update claude [--apply]
@@ -77,7 +78,7 @@ node bin/repo-fit.mjs update <repo>                  # dry run: prints the diff
 node bin/repo-fit.mjs update <repo> --apply          # writes it, commits nothing
 ```
 
-`init` never overwrites a file, so it is safe on an existing repo. `update` manages only three things: the core block in `AGENTS.md`, the vendored scripts, and the version stamps in `playbook.json`.
+`init` never overwrites a file, so it is safe on an existing repo. `update` manages only three things: the core block in `AGENTS.md`, the vendored scripts, and the version stamps in `playbook.json`. The core block is written with the repo's own paths (see `paths` below), so it never names a file the repo does not have.
 
 **Setup by an agent:** give it [INSTALL.md](INSTALL.md) (it names the steps, the approvals and the undo). Any writing command accepts `--pin <version>`.
 
@@ -88,7 +89,7 @@ The setup is meant to be run through the [repo-fit skill](skill/repo-fit/SKILL.m
 | Script | Job | Runs |
 |---|---|---|
 | `brief.mjs` | Prints where things stand: branch, board (active, blocked, inbox, stale), open questions, the review queue, gaps. Read-only | SessionStart hook, or by hand |
-| `check.mjs` | Required files, board rules, stale rows, broken links, folder indexes, current-view word cap, the review queue (as warnings) | By hand or in CI |
+| `check.mjs` | Required files, board rules, stale rows, broken links, folder indexes, current-view word cap (the body only: frontmatter does not count), the review queue (as warnings) | By hand or in CI |
 | `autosave.mjs` | Level 2 autosave of allow-listed files to a `wip/` branch, then a once-per-session reminder for anything left | Stop and PreCompact hooks, or `--report` by hand |
 | `lib.mjs` | Shared helpers | Imported |
 
@@ -142,7 +143,7 @@ A balanced foundation for **any** repo, technical or notes. **Not a second brain
 | `detect` | Read-only look at the machine (CLIs, `gh` and `glab` logins), the Git host, repo kind, rule files, task tools, commands, big files |
 | `audit` | Read-only report on an existing repo: 19 foundation checks, a map of files it already has, and a plan (add only, then edit, move, delete or outward decisions) |
 | `apply` and `undo` | Applies chosen plan steps. Adds files, links `CLAUDE.md` to `AGENTS.md` by case, drafts a Dev, test and lint section, merges hooks. Never overwrites |
-| `paths` in `playbook.json` | Points each role (current view, board, log, ...) at a file the repo already has, so nothing has to move |
+| `paths` in `playbook.json` | Points each role (current view, board, log, ...) at a file the repo already has, so nothing has to move. The core block names these paths and leaves out a role the repo does not have. A role can point at any file, for example `paths.people` at a JSON register. The audit also finds a people or entity register (`people.json`, `entity-register/registry.json` and similar), a note template and a raw-input folder |
 | `connect` | For a repo with no remote: creates an **empty private** remote after approval. Never pushes |
 | `tools`, `prefs`, `guidance/gates.json` | Checks the Claude Code version that really ran in the repo against dated limits. Updates only with `--apply`, and automatically only if you opted in |
 | `INSTALL.md`, `init --dry-run`, `--pin`, `help` | One file an agent can follow, a dry run for new repos, version pinning, a command list |

@@ -5,28 +5,28 @@
 
 ### Start of every session
 1. Run `git status --short` and `git branch --show-current`. Fresh Git facts beat any saved note.
-2. Read the session brief. Hooks print it where the tool supports them; otherwise run `node scripts/playbook/brief.mjs --text`. Tell the user its top lines in 3 to 5 lines. Then read `docs/00-home/current.md` and the notes it links for the topic.
-3. Read `docs/decisions.md` before proposing anything that could conflict with an agreed choice.
+2. Read the session brief. Hooks print it where the tool supports them; otherwise run `node scripts/playbook/brief.mjs --text`. Tell the user its top lines in 3 to 5 lines. Then read {{#current}}`{{current}}` and the notes it links{{/current}}{{^current}}the notes{{/current}} for the topic.
+3. {{#decisions}}Read `{{decisions}}` before proposing anything that could conflict with an agreed choice.{{/decisions}}
 
 ### Search before saying "unknown"
-Search `docs/00-home/people.md` and the whole repository (every spelling, Arabic too) before saying a person, fact or earlier discussion is unknown. Say what you searched. A missing record may mean it was said in a chat that was never saved: say so and ask.
+Search {{#people}}`{{people}}` and {{/people}}the whole repository (every spelling, Arabic too) before saying a person, fact or earlier discussion is unknown. Say what you searched. A missing record may mean it was said in a chat that was never saved: say so and ask.
 
 ### Capture by default
 Capture without being asked: after a meaningful moment, before switching topics and before ending.
-1. Exact wording of direction, corrections and approvals goes to `docs/sources/founder-input/YYYY-MM-DD-topic.md` (speaker, date, channel).
-2. Update the topic note, or start one from `docs/templates/note.md` and list it in its folder README.
-3. Board: add, move or close rows in `docs/00-home/board.md`. Questions go to `open-questions.md`, one question in one place.
-4. `current.md`: update the topic block (word cap in `playbook.json`). `log.md`: add one dated line, newest first.
+1. Exact wording of direction, corrections and approvals goes to {{#inputs}}`{{inputs}}YYYY-MM-DD-topic.md`{{/inputs}}{{^inputs}}a dated source file (name its folder as `inputs` under `paths` in `playbook.json`){{/inputs}} (speaker, date, channel).
+2. Update the topic note, or start one{{#template}} from `{{template}}`{{/template}} and list it in its folder README.
+3. {{#board}}Board: add, move or close rows in `{{board}}`. {{/board}}{{#questions}}Questions go to `{{questions}}`, one question in one place.{{/questions}}
+4. {{#current}}`{{current}}`: update the topic block (word cap in `playbook.json`). {{/current}}{{#log}}`{{log}}`: add one dated line, newest first.{{/log}}
 5. Run `node scripts/playbook/check.mjs`. Commit. Say "saved" only after the commit exists.
 
 ### Absorb, do not just file
 Save the source. Start at the topic's hub (its folder README, or the hubs folder named under `paths` in `playbook.json`) and search what exists, every spelling. Merge into the existing note; make a new note only for a new topic. If input repeats a known point, add the new source and date. If it contradicts one, keep both with dates, mark the conflict and add a board row; only the owner resolves it. Label every point: fact, reported, hypothesis, idea or decision. Check primary sources for claims a decision depends on. Report back in 2 or 3 lines: what is new, what merged, which conflicts, which questions. The session brief's review queue lists notes nothing links to, notes untouched for a long time and notes past their `review_after` date: link, merge, archive or re-date them when you touch that topic.
 
-### Board
-`docs/00-home/board.md` is the only place status lives. One row per task, job, question or idea, with a stable ID. Statuses: inbox, clarified, active, parked, blocked, done. Every open row has an owner and a next step. `active` and `blocked` rows also need evidence links and a verified date. A row is stale when its evidence changed after that date: re-check it before trusting it. Finish every open row before saying a long task is done.
+{{#board}}### Board
+`{{board}}` is the only place status lives. One row per task, job, question or idea, with a stable ID. Statuses: inbox, clarified, active, parked, blocked, done. Every open row has an owner and a next step. `active` and `blocked` rows also need evidence links and a verified date. A row is stale when its evidence changed after that date: re-check it before trusting it. Finish every open row before saying a long task is done.
 
-### Approval
-A decision is binding only when recorded in `docs/decisions.md` with who decided and their words. Capturing an idea approves nothing. A passing check approves nothing. Never invent attendees, owners, dates or agreements. Ask first before: recording a decision without the owner's words, pushing, deploying, sending anything outside the repo, buying, deleting source material or history.
+{{/board}}### Approval
+A decision is binding only when recorded in {{#decisions}}`{{decisions}}`{{/decisions}}{{^decisions}}the repository{{/decisions}} with who decided and their words. Capturing an idea approves nothing. A passing check approves nothing. Never invent attendees, owners, dates or agreements. Ask first before: recording a decision without the owner's words, pushing, deploying, sending anything outside the repo, buying, deleting source material or history.
 
 ### Commits and branches
 Stage only intended files. Never push unasked. Never commit on `main` or `master`. Autosave (see `playbook.json`) commits allow-listed paths to a `wip/<date>-<tool>` branch with a `Host:` trailer; the owner merges or squashes.

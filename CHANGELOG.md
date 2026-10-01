@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.1 (draft)
+
+**Fixes found on 1 Oct 2026 while auditing a real notes repo that keeps its files in its own places**
+
+- **The core block now names the repo's own files.** `apply --steps D-01` (and A-11, `update` and `status`) wrote `docs/00-home/current.md`, `docs/decisions.md`, `docs/00-home/board.md` and other Starter kit paths into `AGENTS.md`, even when `paths` pointed elsewhere. The block is now written from the mapping. When a role has no file (for example no board), the sentence about it is left out or reworded, so the block never points at a missing file. `update` uses the same paths, so it does not put the old ones back.
+- **`check` counts only the body of the current view against `currentWordCap`.** YAML frontmatter is metadata and no longer counts. On an existing repo, the audit reads a cap the repo already states (in the current view, or on a line of `AGENTS.md`, `CLAUDE.md` or `README.md` that names it) and A-01 keeps it. With no stated cap and a body over 900 words, F5 says so and `apply --word-cap <N>` sets the cap.
+- **A people or entity register counts as the people record (F10).** The audit now finds `people.json`, `contacts.yaml`, `entity-register/registry.json` and similar files (archives and tests left out), so such a repo is no longer told to add a second people page. Any role in `playbook.json` `paths` can point at any file, and the audit respects it.
+- The audit also maps a note template and a raw-input folder (`paths.template`, `paths.inputs`) for the core block.
+- **Version stamp moves to 0.4.1.** The vendored `check.mjs` and `lib.mjs` and the core block changed, so adopted repos show "behind" until `repo-fit update` (dry run first).
+- 11 new tests (64 in all). The 8 that cover the three fixes fail on 0.4.0.
+
 ## 0.4.0 (draft)
 
 **Connecting the dots: a review queue, adopted from the maintainer's own knowledge repos**

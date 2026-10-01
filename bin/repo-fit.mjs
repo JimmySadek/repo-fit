@@ -23,6 +23,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defaultOwner, recordersFor, writeAll } from "../lib/apply.mjs";
+import { coreBlock, repoCoreVars } from "../lib/core.mjs";
 
 const here = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const version = readFileSync(join(here, "VERSION"), "utf8").trim();
@@ -92,7 +93,6 @@ function guidanceCheck() {
 const fill = (text, v) =>
   text.replaceAll("{{version}}", version).replaceAll("{{name}}", v.name ?? "").replaceAll("{{owner}}", v.owner ?? "").replaceAll("{{current}}", "docs/00-home/current.md").replaceAll("{{date}}", today());
 const BLOCK_RE = /<!-- playbook:core v\S+ begin[^>]*-->[\s\S]*?<!-- playbook:core end -->/;
-const coreBlock = () => fill(readFileSync(join(here, "core/AGENTS.core.md"), "utf8"), {}).trimEnd();
 const VENDORED = ["lib.mjs", "brief.mjs", "check.mjs", "autosave.mjs"];
 const vendoredSource = (f) => readFileSync(join(here, "scripts/playbook", f), "utf8");
 function* files(dir, base = dir) {
@@ -165,8 +165,8 @@ function plan(target) {
   const g = guidanceState();
   const changes = [];
   const agents = join(target, "AGENTS.md");
-  const block = coreBlock();
   if (existsSync(agents)) {
+    const block = coreBlock(repoCoreVars(target)); // written with this repo's own paths
     const cur = readFileSync(agents, "utf8");
     const next = BLOCK_RE.test(cur) ? cur.replace(BLOCK_RE, () => block) : `${cur.trimEnd()}\n\n${block}\n`;
     if (next !== cur) changes.push({ rel: "AGENTS.md", old: cur, next });
@@ -247,7 +247,7 @@ Look (read-only):
 
 Change (dry run first):
   init <repo> [--dry-run] [--tool claude|codex|both] [--models a,b] [--autosave on|off] [--no-hooks] [--name N] [--owner O]
-  apply <repo> [--steps A-01,...] [--tool ..] [--hooks all|brief|none] [--autosave on|off] [--claude-link merge] [--apply]
+  apply <repo> [--steps A-01,...] [--tool ..] [--hooks all|brief|none] [--autosave on|off] [--claude-link merge] [--word-cap N] [--apply]
   update <repo> [--apply]                    bring the managed parts up to this playbook version
   undo <repo> [--receipt <file>] [--apply]   put back what the last apply, init or update changed
   connect <repo> [--host github|gitlab] [--owner O] [--name N] [--apply]
@@ -288,13 +288,15 @@ switch (process.argv[2]) {
     break;
   }
   case "apply": {
-    if (!pos[0]) fail("Usage: repo-fit apply <repo> [--steps A-01,A-10,...] [--tool claude|codex|both] [--hooks all|brief|none] [--autosave on|off] [--claude-link merge] [--models a,b] [--apply]");
+    if (!pos[0]) fail("Usage: repo-fit apply <repo> [--steps A-01,A-10,...] [--tool claude|codex|both] [--hooks all|brief|none] [--autosave on|off] [--claude-link merge] [--models a,b] [--word-cap N] [--apply]");
+    const wordCap = opt["word-cap"] === undefined ? undefined : Number(opt["word-cap"]);
+    if (wordCap !== undefined && !(Number.isInteger(wordCap) && wordCap > 0)) fail("--word-cap must be a whole number of words, for example --word-cap 1500");
     const { apply } = await import("../lib/apply.mjs");
     const list = (v) => (typeof v === "string" ? v.split(",").map((s) => s.trim()).filter(Boolean) : null);
     const res = apply(pos[0], {
       steps: list(opt.steps), tool: typeof opt.tool === "string" ? opt.tool : "both", hooks: typeof opt.hooks === "string" ? opt.hooks : "all",
       autosave: opt.autosave !== "off", claudeLink: opt["claude-link"], models: list(opt.models) ?? [], name: typeof opt.name === "string" ? opt.name : undefined,
-      owner: typeof opt.owner === "string" ? opt.owner : undefined, dry: !opt.apply,
+      owner: typeof opt.owner === "string" ? opt.owner : undefined, dry: !opt.apply, wordCap,
     });
     console.log(res.text);
     if (!res.ok) process.exitCode = 1;

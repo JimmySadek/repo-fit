@@ -1,8 +1,59 @@
 # repo-fit
 
-**Fit any repository for work.** One small foundation for starting or tidying any repo, so work can begin at any time and nothing is dropped. Improve it here once, and every repo can pick the change up.
+[![Tests](https://github.com/JimmySadek/repo-fit/actions/workflows/test.yml/badge.svg)](https://github.com/JimmySadek/repo-fit/actions/workflows/test.yml) [![Version](https://img.shields.io/github/v/tag/JimmySadek/repo-fit?label=version&color=blue)](CHANGELOG.md) [![License: MIT](https://img.shields.io/github/license/JimmySadek/repo-fit)](LICENSE) [![Node 18+](https://img.shields.io/badge/node-18%2B-brightgreen)](#get-it)
 
-**Status: public beta.** Built and tested by one person, on macOS. Automated tests run on Linux and Windows too. Proven live only with Claude Code. Codex and GitLab are untested. Read the Status section below before relying on it.
+**Fit any repository for work.** Point it at a repo, brand new or ten years old. It finds what is missing, adds only that, and leaves you with a board, a session brief and safe autosave that Claude Code and Codex both follow. Nothing is written without a dry run and your yes. Everything it writes can be undone.
+
+```bash
+git clone https://github.com/JimmySadek/repo-fit.git && node repo-fit/bin/repo-fit.mjs audit /path/to/your/repo
+```
+
+That first command is read-only: it prints a report and changes nothing.
+
+## See it in 30 seconds
+
+**1. Audit a repo that grew without structure.** Real output, trimmed:
+
+```text
+Verdict
+**3 of 16** foundation checks are in place, **3** partly, **10** missing.
+Biggest gaps: No secrets in Git: .env exists and is not ignored; Off-machine backup: no remote ...
+
+| F8  | Tracked work (tasks, jobs, questions) | ❌ | no board or task tool            | Add a board |
+| F17 | No secrets in Git                     | ❌ | .env exists and is not ignored   | Untrack, add to .gitignore and rotate the secret |
+| F18 | Off-machine backup (a remote)         | ❌ | no remote: commits exist only on this machine | Add a private remote (needs your approval) |
+| F19 | Work happens off main                 | ⚠️ | on main, 2 uncommitted           | Work on a branch; autosave uses wip/ |
+```
+
+**2. Apply only the steps you approve.** Every apply is a dry run first, with every file and diff shown. `--apply` writes with a backup and a receipt; `undo` reverses it.
+
+```text
+# Dry run: acme-notes
+Nothing is written yet. Review, then run again with --apply.
+- **A-02** ➕ create `docs/00-home/board.md` (13 lines)
+- **A-06** ➕ create `docs/00-home/open-questions.md` (7 lines)
+- **A-10** ➕ create `scripts/playbook/brief.mjs` ... and the hook file for your tool
+```
+
+**3. Every session starts with a brief**, printed by a hook before the assistant says a word:
+
+```text
+📍 acme-notes · main · 7 uncommitted · last commit 2026-10-02
+⚠️ On main: the playbook rule is never to commit here. Work on a branch.
+🔄 Active (1): B-001 Fill in the README, people page and current view → Write the one-sentence purpose
+➡️ Suggested start: B-001
+🧹 Review queue: 4 nobody links to (notes/launch-plan.md · notes/meetings/2026-09-12-acme-call.md · +2 more)
+```
+
+## Who is this for
+
+- **Builders and founders who keep notes, research and decisions in Git** and want AI assistants to pick up where they left off, with nothing dropped.
+- **Anyone with an existing repo that grew without structure.** It maps what you already have, moves nothing, and adds the missing pieces one approved step at a time.
+- **People who switch between Claude Code and Codex** and want one rulebook both tools read.
+
+**Not for:** a second brain. No semantic search, no wiki, no database. See "Scope" below.
+
+**Status: public beta.** Built and tested by one person on macOS; automated tests run on macOS, Linux and Windows. Proven live only with Claude Code. Codex and GitLab are untested. Read the Status section at the end before relying on it.
 
 It has two halves:
 
@@ -21,12 +72,7 @@ cd repo-fit
 node bin/repo-fit.mjs help
 ```
 
-Try it on any repo. These two are read-only:
-
-```bash
-node bin/repo-fit.mjs detect /path/to/your/repo
-node bin/repo-fit.mjs audit /path/to/your/repo
-```
+Two read-only commands to start with: `detect <repo>` (what the machine and the repo have) and `audit <repo>` (the report above).
 
 **With an AI agent:** open the repo you want to set up in Claude Code or Codex and say: *"Read INSTALL.md in the repo-fit folder at `<path to your clone>` and set up the playbook in this repository. Show me a dry run before you write anything."*
 
@@ -147,7 +193,7 @@ A GitHub Actions workflow (`.github/workflows/test.yml`) runs them on macOS, Lin
 
 A balanced foundation for **any** repo, technical or notes. **Not a second brain:** no semantic search, no wiki, no memory database. It should look at what a repo and a machine already have, adapt, and ask before using anything.
 
-## Status (draft 0.3.2)
+## Status (beta, 0.5.0)
 
 **Built and tested** (each writing command is a dry run first, backs up before editing, writes a receipt, and can be undone):
 

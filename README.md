@@ -4,224 +4,94 @@
 
 # repo-fit
 
-[![Tests](https://github.com/JimmySadek/repo-fit/actions/workflows/test.yml/badge.svg)](https://github.com/JimmySadek/repo-fit/actions/workflows/test.yml) [![Version](https://img.shields.io/github/v/tag/JimmySadek/repo-fit?label=version&color=blue)](CHANGELOG.md) [![License: MIT](https://img.shields.io/github/license/JimmySadek/repo-fit)](LICENSE) [![Node 18+](https://img.shields.io/badge/node-18%2B-brightgreen)](#get-it)
+[![Tests](https://github.com/JimmySadek/repo-fit/actions/workflows/test.yml/badge.svg)](https://github.com/JimmySadek/repo-fit/actions/workflows/test.yml) [![Version](https://img.shields.io/github/v/tag/JimmySadek/repo-fit?label=version&color=blue)](CHANGELOG.md) [![License: MIT](https://img.shields.io/github/license/JimmySadek/repo-fit)](LICENSE)
 
-**Fit any repository for work.** Point it at a repo, brand new or ten years old. It finds what is missing, adds only that, and leaves you with a board, a session brief and safe autosave that Claude Code and Codex both follow. Nothing is written without a dry run and your yes. Everything it writes can be undone.
+**Give your project a memory, so every work session starts where the last one stopped.**
 
-```bash
-git clone https://github.com/JimmySadek/repo-fit.git && node repo-fit/bin/repo-fit.mjs audit /path/to/your/repo
-```
+repo-fit is for people who do real work with an AI assistant such as Claude Code or Codex: notes, research, plans, decisions, client work, a product, a company. It sets up your project folder so that nothing gets lost between sessions, your assistant always knows what is open, and your work is saved safely as you go.
 
-That first command is read-only: it prints a report and changes nothing.
+It works with a brand-new project and with one you have had for years. It looks at what you already have, suggests only what is missing, and changes nothing without showing you first.
 
-## See it in 30 seconds
+## Is this for you?
 
-**1. Audit a repo that grew without structure.** Real output, trimmed:
+- You are a **founder, product manager, designer, marketer or consultant**, and you use an AI assistant to think and write, not only to code.
+- You keep **notes, research and decisions** for a project, and you are tired of re-explaining everything at the start of each session.
+- You have a **project folder that grew without structure**, and you want order without moving or rewriting anything.
+- You work with **both Claude Code and Codex**, and you want them to follow the same rules.
 
-```text
-Verdict
-**3 of 16** foundation checks are in place, **3** partly, **10** missing.
-Biggest gaps: No secrets in Git: .env exists and is not ignored; Off-machine backup: no remote ...
+You do not need to be a developer. You need an AI assistant and about 10 minutes.
 
-| F8  | Tracked work (tasks, jobs, questions) | ❌ | no board or task tool            | Add a board |
-| F17 | No secrets in Git                     | ❌ | .env exists and is not ignored   | Untrack, add to .gitignore and rotate the secret |
-| F18 | Off-machine backup (a remote)         | ❌ | no remote: commits exist only on this machine | Add a private remote (needs your approval) |
-| F19 | Work happens off main                 | ⚠️ | on main, 2 uncommitted           | Work on a branch; autosave uses wip/ |
-```
+**It is not** a second brain or a search engine. It does not read the internet, it does not build a database, and it does not replace your assistant. It gives your assistant a tidy place to work.
 
-**2. Apply only the steps you approve.** Every apply is a dry run first, with every file and diff shown. `--apply` writes with a backup and a receipt; `undo` reverses it.
+## What you get
 
-```text
-# Dry run: acme-notes
-Nothing is written yet. Review, then run again with --apply.
-- **A-02** ➕ create `docs/00-home/board.md` (13 lines)
-- **A-06** ➕ create `docs/00-home/open-questions.md` (7 lines)
-- **A-10** ➕ create `scripts/playbook/brief.mjs` ... and the hook file for your tool
-```
+| In plain words | What it looks like |
+|---|---|
+| **A briefing at the start of every session** | Before your assistant says a word, it reads a short summary: where you are, what is open, what to do next. |
+| **One list of everything open** | Tasks, questions and ideas live in one place, each with an owner and a next step. Nothing is "somewhere in a chat". |
+| **Your work saved automatically, safely** | Small automatic saves while you work. Never on your main version, never sent anywhere. You stay in control. |
+| **A memory that does not rot** | Your assistant gets reminded of notes nobody links to and notes that went quiet, so they get merged, linked or archived. |
+| **The same rules for every assistant** | One short rulebook that Claude Code and Codex both read: capture by default, search before saying "unknown", ask before deciding. |
+| **It fits what you already have** | Your own files stay where they are. repo-fit points at them instead of making copies. |
 
-**3. Every session starts with a brief**, printed by a hook before the assistant says a word:
+Here is a real briefing from a small test project (two lines left out to keep it short):
 
 ```text
 📍 acme-notes · main · 7 uncommitted · last commit 2026-10-02
-⚠️ On main: the playbook rule is never to commit here. Work on a branch.
-🔄 Active (1): B-001 Fill in the README, people page and current view → Write the one-sentence purpose
-➡️ Suggested start: B-001
+🔄 Active (1): B-001 Fill in the README, people page and current view → Write the one-sentence purpose in README.md
+➡️ Suggested start: B-001 Write the one-sentence purpose in README.md
 🧹 Review queue: 4 nobody links to (notes/launch-plan.md · notes/meetings/2026-09-12-acme-call.md · +2 more)
 ```
 
-## Who is this for
-
-- **Builders and founders who keep notes, research and decisions in Git** and want AI assistants to pick up where they left off, with nothing dropped.
-- **Anyone with an existing repo that grew without structure.** It maps what you already have, moves nothing, and adds the missing pieces one approved step at a time.
-- **People who switch between Claude Code and Codex** and want one rulebook both tools read.
-
-**Not for:** a second brain. No semantic search, no wiki, no database. See "Scope" below.
-
-**Status: public beta.** Built and tested by one person on macOS; automated tests run on macOS, Linux and Windows. Proven live only with Claude Code. Codex and GitLab are untested. Read the Status section at the end before relying on it.
-
-It has two halves:
-
-| Half | What it is | Changes how |
-|---|---|---|
-| **The kit** | Files and four small scripts that go into a repo | Versioned. `update` shows a diff first |
-| **The guidance layer** | Dated notes from official Anthropic and OpenAI pages: Claude Code, Codex, each model | Refreshed on a schedule. See [guidance/](guidance/README.md) |
-
-## Get it
-
-You need [Node.js](https://nodejs.org) 18 or later and Git. There is nothing to install: no dependencies, no build step.
-
-```bash
-git clone https://github.com/JimmySadek/repo-fit.git
-cd repo-fit
-node bin/repo-fit.mjs help
-```
-
-Two read-only commands to start with: `detect <repo>` (what the machine and the repo have) and `audit <repo>` (the report above).
-
-**With an AI agent:** open the repo you want to set up in Claude Code or Codex and say: *"Read INSTALL.md in the repo-fit folder at `<path to your clone>` and set up the playbook in this repository. Show me a dry run before you write anything."*
-
-**As a skill (optional, untested outside the maintainer's machine):** copy `skill/repo-fit` to your tool's skills folder (`~/.claude/skills/repo-fit` for Claude Code, `~/.codex/skills/repo-fit` for Codex), or add it to whatever syncs your skills between tools. Then tell the skill where your clone is, once:
-
-```bash
-node bin/repo-fit.mjs prefs set home /path/to/your/repo-fit
-```
-
-After a `git pull`, copy the skill again so the installed copy stays current.
-
-**Tip:** `node bin/repo-fit.mjs prefs set owner "Your Name"` sets who new repos name as owner. Without it, repo-fit uses `--owner`, then the repo's `git user.name`, then the word "Owner".
-
-## What a repo gets
+## How it works
 
 ```
-<repo>/
-├─ README.md · AGENTS.md (managed core block) · LEARNINGS.md · playbook.json
-├─ CLAUDE.md                  only if Claude Code is a chosen tool: 3 lines, imports AGENTS.md
-├─ .claude/settings.json      Claude Code hooks: session brief, autosave, capture check
-├─ .codex/hooks.json          Codex hooks (untested, needs /hooks trust)
-├─ scripts/playbook/          brief · check · autosave · lib (vendored, version-stamped)
-├─ docs/00-home/              current · board · log · open-questions · people
-├─ docs/decisions.md · docs/sources/founder-input/ · docs/research/ · docs/templates/
-└─ outputs/                   one folder per output, each with a README
+1. LOOK          2. CHOOSE                3. WORK
+It reads your    It suggests what is      Every session: briefing,
+project and      missing. You say yes     one open list, automatic
+reports. It      or no to each step.      saves, reminders.
+changes nothing. Nothing is overwritten.
 ```
 
-## Commands
+Every change is shown to you first, keeps a backup, and can be undone with one command. It never uploads your files anywhere.
 
-```sh
-node bin/repo-fit.mjs detect <repo>                  # read-only: machine, repo, existing tools, what it would ask
-node bin/repo-fit.mjs detect <repo> --json           # the same, for scripts
-node bin/repo-fit.mjs audit <repo>                   # read-only report and plan for an existing repo (prints Markdown)
-node bin/repo-fit.mjs audit <repo> --area docs/brand # only that area for notes, links and old documents
-node bin/repo-fit.mjs audit <repo> --out report.md   # also --json; you choose where the file goes
-node bin/repo-fit.mjs apply <repo> --steps A-01,A-10 --tool claude --hooks brief --autosave off   # dry run: shows every file and diff
-node bin/repo-fit.mjs apply <repo> --steps A-01,A-10 ... --apply                                 # writes, backs up, writes a receipt
-node bin/repo-fit.mjs apply <repo> --steps A-01 --word-cap 1500 ...                             # a cap for the current view, if the repo has none written down
-node bin/repo-fit.mjs skip <repo> D-01 --reason "our rules cover it"                      # dry run; --apply records it in playbook.json
-node bin/repo-fit.mjs undo <repo>                    # dry run; add --apply to put back what the last apply changed
-node bin/repo-fit.mjs undo <repo> --force --apply    # also takes back files you changed since; your version is kept in .playbook/undone/
-node bin/repo-fit.mjs connect <repo> --host github   # no remote yet: dry run; --apply creates an EMPTY PRIVATE remote. Never pushes
-node bin/repo-fit.mjs tools <repo>                   # tool versions vs the limits in guidance/gates.json; --update claude [--apply]
-node bin/repo-fit.mjs prefs                          # your standing choices, kept outside repos
-node bin/repo-fit.mjs prefs set owner "Your Name"     # who new repos name as owner (else --owner, else git user.name, else "Owner")
-node bin/repo-fit.mjs guidance check                 # which guidance is due for a refresh
-node bin/repo-fit.mjs help                           # every command
-node bin/repo-fit.mjs init <repo> --dry-run --name "Name" --owner "Owner" --tool both --models claude-opus-5-5
-node bin/repo-fit.mjs status <repo>                  # is the repo behind the playbook?
-node bin/repo-fit.mjs update <repo>                  # dry run: prints the diff
-node bin/repo-fit.mjs update <repo> --apply          # writes it, commits nothing
-```
+## Start in 10 minutes
 
-`init` never overwrites a file, so it is safe on an existing repo. `update` manages only what the repo adopted: the core block (when `AGENTS.md` has it), the vendored scripts (when `scripts/playbook/` exists) and the version stamps in `playbook.json`. It never adds a part; `status` lists missing parts as "not adopted" or "skipped on purpose" (`repo-fit skip`), not as "behind". The core block is written with the repo's own paths (see `paths` below), so it never names a file the repo does not have.
+The easiest way is through your AI assistant. You will not type any command yourself.
 
-**Setup by an agent:** give it [INSTALL.md](INSTALL.md) (it names the steps, the approvals and the undo). Any writing command accepts `--pin <version>`.
+**1. Get repo-fit onto your computer.** Click the green **Code** button at the top of this page, then **Download ZIP**, and unzip it somewhere you will remember (for example a folder called `tools`). If you already use Git, `git clone` works too.
 
-The setup is meant to be run through the [repo-fit skill](skill/repo-fit/SKILL.md), which asks which tools and models the repo is for, reads the matching guidance, applies the kit, and verifies it.
+**2. Make sure Node.js is installed.** It is a free program that repo-fit's small scripts run on. If you are not sure, your assistant can check and tell you. Download: [nodejs.org](https://nodejs.org), version 18 or newer.
 
-## The four scripts
+**3. Open your project in Claude Code or Codex**, and paste this sentence, with the path to the unzipped folder:
 
-| Script | Job | Runs |
-|---|---|---|
-| `brief.mjs` | Prints where things stand: branch, board (active, blocked, inbox, stale), open questions, the review queue, gaps. Read-only | SessionStart hook, or by hand |
-| `check.mjs` | Required files, board rules, stale rows, broken links, folder indexes, current-view word cap (the body only: frontmatter does not count), the review queue (as warnings) | By hand or in CI |
-| `autosave.mjs` | Level 2 autosave of allow-listed files to a `wip/` branch, then a once-per-session reminder for anything left | Stop and PreCompact hooks, or `--report` by hand |
-| `lib.mjs` | Shared helpers | Imported |
+> Read INSTALL.md in the repo-fit folder at `/path/to/repo-fit` and set up this project with it. Show me what you would change before you change anything, and explain it in plain words.
 
-## Adapting to a repo that already has its own system
+The assistant will look at your project, tell you what is already fine, suggest what to add, and ask for your yes on each step. Say no to anything you do not want. That is the whole setup.
 
-On an existing repo, `audit` assesses first and then sorts what it found:
+**4. Next session**, open the project again. The briefing appears by itself.
 
-- **Leave as is:** what the repo already covers in its own way. Its own check scripts and hooks, a word cap or recorder list in its scripts, a decision lifecycle (`decisions/proposed`, `accepted`), how it saves raw input, a written big-files policy, and work tracked in the current view instead of a board (🔁, counted as in place).
-- **Conflicts with the core block:** where the full block would contradict the repo's rules (checks, commits, decisions, raw input, status, word cap). `apply --steps D-01` writes a **slim block** that defers to the repo's rule on each of those topics, so the repo keeps one definition of done.
-- **Protected paths:** folders the rules call append-only or read-only, `protectedPaths` in `playbook.json`, and delivered outputs. Findings inside are listed only, never offered for fixing, moving or archiving.
-- **Worth improving:** the plan. A-10 becomes a decision when the repo runs its own hooks or checks. A-01 copies the repo's own word cap and recorder list.
+Prefer to run things yourself? See the [technical reference](docs/reference.md).
 
-`repo-fit skip <repo> <ID> --reason "..."` records a step you leave out on purpose, so `audit`, `status` and `update` stop offering it. The detection is pattern matching on rule files and scripts, so every finding quotes the line it came from: check it before you rely on it.
+## A few words on safety
 
-## Connecting the dots: the review queue
+- **It changes nothing without showing you first.** Every step is a preview, then your yes.
+- **Everything it writes can be undone.** It keeps a backup and a receipt of each change.
+- **Your files never leave your computer.** It does not upload, publish, or send anything. The one exception is optional and asks first: creating an empty, private backup location for your project on GitHub or GitLab.
+- **It never reads the contents of files that look like secrets** (passwords, keys). It only warns you if such a file is in a risky place.
 
-Adopted from the maintainer's own knowledge repos, where it is the part that keeps notes from going stale. No database, no search index, no vendor.
+The [full list of what it reads and when it uses the network](docs/reference.md#security-and-privacy) is in the reference.
 
-- **The absorb rule** (in the core block): start at the topic's hub, search every spelling, merge into the note that exists, keep conflicts with dates, then connect (hub, current view, questions, decisions).
-- **The hub** is the folder README that lists every note beside it (`check` enforces the listing). A repo that already has a hubs folder gets it mapped under `paths.hubs`.
-- **The review queue**, in every session brief and in `check` as warnings: notes nothing links to, notes untouched for `staleNoteDays` (default 180) with no planned review, and notes whose `review_after: YYYY-MM-DD` date has passed. Archives, outputs, templates and folder READMEs are left out. `reviewIgnore` takes extra globs. Wiki-style `[[links]]` count.
-- **Not built, by design:** an AI checker that reads the *meaning* of new input and asks whether it repeats or contradicts a note. The maintainer's repos do that with a paid vendor. Here the assistant makes that judgment itself while absorbing, so nothing in a session is lost; what is missing is an automated second opinion outside a session. It would fit as an optional add-on later.
+## Where this stands
 
-## Level 2 autosave: the rules
+**Public beta, version 0.5.0.** Built and used by one person so far, on a Mac, with Claude Code. Automated tests pass on Mac, Linux and Windows. Codex support is written to the official documentation but has not been tried live yet. If you try it, [tell us what happened](https://github.com/JimmySadek/repo-fit/issues): that is the most useful thing you can do right now.
 
-- Never commits on `main` or `master`. On a protected branch it switches to `wip/<date>-<tool>`.
-- Commits only allow-listed paths (`playbook.json`, default `docs/**`, output READMEs, `LEARNINGS.md`). Skips secret-looking names and files over 5 MB.
-- Commits with `--only`, so anything else you staged stays staged.
-- Adds a `Host:` trailer naming the tool.
-- Never pushes.
-- The Stop hook blocks at most once per session for the same set of reasons. It does not depend on `stop_hook_active`. Claude Code's docs do not list it, though 2.1.284 was seen sending it.
+## For developers
 
-## Security and privacy
+Everything technical lives in one page: commands, the four scripts, how it adapts to a repo that has its own system, the review queue, autosave rules, security details, tests, and what is not built yet.
 
-- **Nothing is written without `--apply`.** Every writing command is a dry run first, backs up what it edits, writes a receipt and can be undone.
-- **It never pushes, never installs a tool, never logs in for you.** `connect` can create an *empty private* remote, only after you approve the exact command.
-- **What it reads:** the repo you point it at (file names and sizes, rule files, Git remotes with any password or token stripped from the URL, secret-like file *names* but never their contents); which accounts `gh` and `glab` are logged in to (never tokens); and, for `tools`, the version number in the newest Claude Code session log under `~/.claude/projects`.
-- **One side effect to know about:** to see what is installed, `detect` runs `--version` on the tools it looks for (git, gh, glab, node, python3, jq, claude, codex, gemini and a few more) and `auth status` on `gh` and `glab`. repo-fit writes nothing itself, but some of those tools create their own config or temp files in your home folder when they run. The tests saw `glab` and `gemini` do this.
-- **Network:** `tools` asks npm for the latest Claude Code version when Claude Code was installed with npm (`--offline` skips it). `connect` talks to your Git host only through `gh` or `glab`; its dry run does one read-only name check. `claude update` runs only with `--update claude --apply`. Nothing else calls out.
-- **Your standing choices** (`repo-fit prefs`) live in `~/.config/repo-fit/preferences.json`, outside every repo.
+- [Technical reference](docs/reference.md)
+- [INSTALL.md](INSTALL.md): the step-by-step an AI assistant follows
+- [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md)
 
-## Tests
-
-```bash
-node --test
-```
-
-84 automated tests, no dependencies. They run in a throwaway sandbox (a fake home folder, so nothing depends on your machine) and cover: every command on new and existing repos, dry runs writing nothing, undo, the safety rules (never overwrite, a token in a remote URL never printed), the session brief, autosave and the Stop and PreCompact hooks, and the stale-guidance warning. Each past bug has a test that fails without its fix.
-
-A GitHub Actions workflow (`.github/workflows/test.yml`) runs them on macOS, Linux and Windows with Node 18, 20 and 22. First run, 30 Sep 2026: **macOS and Linux green** on all three Node versions. **Windows failed 2 of 43** for one reason, Windows line endings in the guidance dates. That is fixed, but the Windows job is still allowed to fail until a run confirms it.
-
-## Scope, in one line
-
-A balanced foundation for **any** repo, technical or notes. **Not a second brain:** no semantic search, no wiki, no memory database. It should look at what a repo and a machine already have, adapt, and ask before using anything.
-
-## Status (beta, 0.5.0)
-
-**Built and tested** (each writing command is a dry run first, backs up before editing, writes a receipt, and can be undone):
-
-| Piece | What it does |
-|---|---|
-| `detect` | Read-only look at the machine (CLIs, `gh` and `glab` logins), the Git host, repo kind, rule files, task tools, commands, big files |
-| `audit` | Read-only report on an existing repo: 19 foundation checks, a map of files it already has, and a plan (add only, then edit, move, delete or outward decisions) |
-| `apply` and `undo` | Applies chosen plan steps. Adds files, links `CLAUDE.md` to `AGENTS.md` by case, drafts a Dev, test and lint section, merges hooks. Never overwrites |
-| `paths` in `playbook.json` | Points each role (current view, board, log, ...) at a file the repo already has, so nothing has to move. The core block names these paths and leaves out a role the repo does not have. A role can point at any file, for example `paths.people` at a JSON register. The audit also finds a people or entity register (`people.json`, `entity-register/registry.json` and similar), a note template and a raw-input folder |
-| `connect` | For a repo with no remote: creates an **empty private** remote after approval. Never pushes |
-| `tools`, `prefs`, `guidance/gates.json` | Checks the Claude Code version that really ran in the repo against dated limits. Updates only with `--apply`, and automatically only if you opted in |
-| `INSTALL.md`, `init --dry-run`, `--pin`, `help` | One file an agent can follow, a dry run for new repos, version pinning, a command list |
-
-**Proven live:** the session-brief hook in a real Claude Code session (a studio repo), a thin `CLAUDE.md` import (a bot repo), a real private GitHub remote (on a real project, then on repo-fit itself), and the **Stop-hook autosave** in a real Claude Code 2.1.284 desktop session (a throwaway repo: it switched off a protected branch to `wip/<date>-claude-code`, committed one file with a `Host:` trailer, pushed nothing), the **Stop block** with its once-per-session guard, and the **PreCompact** autosave (it committed a file edited outside the session, just before the compact).
-
-**Not built yet:**
-- Board adapters (Backlog.md, GitHub or GitLab issues). Deferred on purpose: none of the audited repos uses one.
-- Job-studio profile (creative-studio repos) and delivery profile (client-delivery repos). Today's kit is the knowledge-base profile. Repos organized differently (job folders, numbered specs, their own scripts) are adopted through the `paths` mapping (audit, then apply), which reuses the files they already have.
-- Shared kit: hashed source archive, identity gate, entity register, CI. (The Working kit's coverage check and review queue are built; see "Connecting the dots".)
-- Automatic drift detection of guidance sources. Today: dates, a weekly report-only refresh, and a manual routine.
-
-**Not yet proven:**
-- The Stop block was seen for one reason only: uncommitted files outside the autosave list. The other two (autosave failed, no log line today) were not triggered live.
-- The terminal `claude` (2.1.270): its login had expired, so nothing ran there. Only 2.1.284 (desktop app) is proven.
-- Everything Codex-specific (hooks, trust review). Drafted from documentation only.
-- `connect` with a real GitLab host. Only the `gh` path ran for real.
-- Windows. The tests pass on macOS and Linux (Node 18, 20, 22) in CI. On Windows, 41 of 43 passed before the line-ending fix; the run after the fix is not in yet.
+MIT licence. Made by [Jimmy Sadek](https://github.com/JimmySadek).

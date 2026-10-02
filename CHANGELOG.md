@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **README rewritten for non-technical readers** (founders, product, design, commercial; non-native English). What it is, who it is for, what you get, how to start through an AI assistant, safety, status. All technical content moved to `docs/reference.md`, unchanged.
 - **Windows:** the audit's Markdown walk, its link resolver, the big-files scan and the receipt's folder list built paths with backslashes, so a tracked file was not recognized as tracked and protected paths did not match. All four now use forward slashes, like Git. Found by CI on 0.5.0 (3 of 84 tests failed on Windows only).
 
 ## 0.5.0 (draft)

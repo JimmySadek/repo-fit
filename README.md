@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.png" alt="repo-fit: fit any repository for work. From chaos to progress." width="100%">
+</p>
+
 # repo-fit
 
 [![Tests](https://github.com/JimmySadek/repo-fit/actions/workflows/test.yml/badge.svg)](https://github.com/JimmySadek/repo-fit/actions/workflows/test.yml) [![Version](https://img.shields.io/github/v/tag/JimmySadek/repo-fit?label=version&color=blue)](CHANGELOG.md) [![License: MIT](https://img.shields.io/github/license/JimmySadek/repo-fit)](LICENSE) [![Node 18+](https://img.shields.io/badge/node-18%2B-brightgreen)](#get-it)

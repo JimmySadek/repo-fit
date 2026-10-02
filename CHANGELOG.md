@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Windows:** the audit's Markdown walk, its link resolver, the big-files scan and the receipt's folder list built paths with backslashes, so a tracked file was not recognized as tracked and protected paths did not match. All four now use forward slashes, like Git. Found by CI on 0.5.0 (3 of 84 tests failed on Windows only).
+
 ## 0.5.0 (draft)
 
 **Adapt first: assess a repo, say what to leave as is, and fit repo-fit's pieces around what is already there.** From the setup of a mature notes repo on 1 Oct 2026 (it has its own checks, hooks, decision lifecycle, append-only archive and people register).

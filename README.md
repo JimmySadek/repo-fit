@@ -4,7 +4,7 @@
 
 # repo-fit
 
-[![Tests](https://github.com/JimmySadek/repo-fit/actions/workflows/test.yml/badge.svg)](https://github.com/JimmySadek/repo-fit/actions/workflows/test.yml) [![Version](https://img.shields.io/github/v/tag/JimmySadek/repo-fit?label=version&color=blue)](CHANGELOG.md) [![License: MIT](https://img.shields.io/github/license/JimmySadek/repo-fit)](LICENSE)
+[![Tests](https://github.com/JimmySadek/repo-fit/actions/workflows/test.yml/badge.svg)](https://github.com/JimmySadek/repo-fit/actions/workflows/test.yml) [![Version](https://img.shields.io/github/v/tag/JimmySadek/repo-fit?label=version&color=blue)](CHANGELOG.md) [![npm](https://img.shields.io/npm/v/repo-fit?color=cb3837)](https://www.npmjs.com/package/repo-fit) [![License: MIT](https://img.shields.io/github/license/JimmySadek/repo-fit)](LICENSE)
 
 **Give your project a memory, so every work session starts where the last one stopped.**
 
@@ -71,7 +71,13 @@ That's it. Your assistant installs repo-fit, looks at your project, tells you wh
 
 **What your computer needs:** [Node.js](https://nodejs.org), version 18 or newer. It is a free program; if it is missing, your assistant will tell you.
 
-Prefer to run things yourself? See the [technical reference](docs/reference.md).
+**Prefer the terminal?** One line looks at any project and changes nothing:
+
+```bash
+npx repo-fit audit .
+```
+
+Everything else is in the [technical reference](docs/reference.md).
 
 ## A few words on safety
 

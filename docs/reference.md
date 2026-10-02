@@ -19,6 +19,15 @@ npx skills update -g -y                                          # later: update
 
 The skill runs the tool from its own folder (`$SKILL_DIR/bin/repo-fit.mjs`). If you keep the skill and the tool in different places, tell it where the tool is once: `node bin/repo-fit.mjs prefs set home /path/to/repo-fit`.
 
+**From npm**, without installing anything (needs Node.js):
+
+```bash
+npx repo-fit help           # every command
+npx repo-fit audit .        # read-only report on the current folder
+```
+
+Every command below works the same way: replace `node bin/repo-fit.mjs` with `npx repo-fit`.
+
 **As a clone**, to run commands yourself:
 
 ```bash

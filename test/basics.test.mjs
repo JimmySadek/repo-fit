@@ -36,9 +36,11 @@ test("help prints the version from the VERSION file", sandboxed((sb) => {
 test("no personal names or machine paths in the code, templates or guidance", () => {
   // Built from pieces so this file does not match its own patterns.
   const bad = new RegExp([`Jim${"my"}`, `gam${"al"}`, `/Us${"ers"}/`].join("|"), "i");
-  for (const dir of ["bin", "lib", "scripts", "kits", "core", "skill", "guidance"]) {
-    for (const f of files(join(ROOT, dir))) {
-      assert.doesNotMatch(readFileSync(f, "utf8"), bad, `${f} contains a personal name or a machine path`);
+  for (const f of [join(ROOT, "SKILL.md"), join(ROOT, "INSTALL.md"), ...["bin", "lib", "scripts", "kits", "core", "guidance"].flatMap((d) => files(join(ROOT, d)))]) {
+    {
+      // The repo's own public address (the install command) is allowed; a personal default is not.
+      const text = readFileSync(f, "utf8").replaceAll(`Jim${"my"}Sadek/repo-fit`, "OWNER/repo-fit");
+      assert.doesNotMatch(text, bad, `${f} contains a personal name or a machine path`);
     }
   }
 });

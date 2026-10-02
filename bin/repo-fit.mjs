@@ -84,7 +84,7 @@ function guidanceCheck() {
     console.log(`${r.file.padEnd(20)} ${(r.meta.retrieved ?? "?").padEnd(12)} ${(r.meta.review_after ?? "?").padEnd(13)} ${status}`);
   }
   if (g.overdue.length) {
-    console.log(`\nRefresh needed: ${g.overdue.join(", ")}. See "Refresh routine" in skill/repo-fit/SKILL.md.`);
+    console.log(`\nRefresh needed: ${g.overdue.join(", ")}. See "Refresh routine" in SKILL.md.`);
     process.exit(1);
   }
 }
@@ -109,8 +109,8 @@ function init(target, opt) {
   const g = guidanceState();
   if (g.overdue.length) {
     const msg = `Guidance is past its review date (${g.overdue.join(", ")}). The notes on tools and models may be out of date, so check them before relying on them.`;
-    if (opt.strict) fail(`${msg} --strict stops here. Refresh it first (see "Refresh routine" in skill/repo-fit/SKILL.md).`);
-    console.log(`⚠️ ${msg} Setup goes on. Maintainers: see "Refresh routine" in skill/repo-fit/SKILL.md, or use --strict to stop instead.\n`);
+    if (opt.strict) fail(`${msg} --strict stops here. Refresh it first (see "Refresh routine" in SKILL.md).`);
+    console.log(`⚠️ ${msg} Setup goes on. Maintainers: see "Refresh routine" in SKILL.md, or use --strict to stop instead.\n`);
   }
   const tool = opt.tool ?? "both";
   if (!["claude", "codex", "both"].includes(tool)) fail("--tool must be claude, codex or both");

@@ -55,21 +55,21 @@ changes nothing. Nothing is overwritten.
 
 Every change is shown to you first, keeps a backup, and can be undone with one command. It never uploads your files anywhere.
 
-## Start in 10 minutes
+## Start in 2 minutes
 
-The easiest way is through your AI assistant. You will not type any command yourself.
+Open your project in **Claude Code** or **Codex** and paste this:
 
-**1. Get repo-fit onto your computer.** Click the green **Code** button at the top of this page, then **Download ZIP**, and unzip it somewhere you will remember (for example a folder called `tools`). If you already use Git, `git clone` works too.
+```text
+Install the repo-fit skill with `npx skills add JimmySadek/repo-fit -g -a claude-code codex -y`, then use it to set up this project. Before you change anything, show me what you would change and explain it in plain words.
+```
 
-**2. Make sure Node.js is installed.** It is a free program that repo-fit's small scripts run on. If you are not sure, your assistant can check and tell you. Download: [nodejs.org](https://nodejs.org), version 18 or newer.
+That's it. Your assistant installs repo-fit, looks at your project, tells you what is already fine, suggests what is missing, and asks for your yes on each step. Say no to anything you don't want.
 
-**3. Open your project in Claude Code or Codex**, and paste this sentence, with the path to the unzipped folder:
+**Next session,** open the project again. The briefing appears by itself.
 
-> Read INSTALL.md in the repo-fit folder at `/path/to/repo-fit` and set up this project with it. Show me what you would change before you change anything, and explain it in plain words.
+**To update later,** paste: `Update repo-fit with npx skills update -g -y`
 
-The assistant will look at your project, tell you what is already fine, suggest what to add, and ask for your yes on each step. Say no to anything you do not want. That is the whole setup.
-
-**4. Next session**, open the project again. The briefing appears by itself.
+**What your computer needs:** [Node.js](https://nodejs.org), version 18 or newer. It is a free program; if it is missing, your assistant will tell you.
 
 Prefer to run things yourself? See the [technical reference](docs/reference.md).
 

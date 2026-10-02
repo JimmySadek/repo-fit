@@ -36,5 +36,5 @@ A small, balanced foundation for any repository, technical or notes, for Claude 
 | `kits/` | Starter kit and per-tool files |
 | `core/AGENTS.core.md` | The managed rules block |
 | `guidance/` | Dated notes from official sources, and the refresh routine |
-| `skill/repo-fit/SKILL.md` | The setup interview |
+| `SKILL.md` | The setup interview (at the root, so `npx skills add` installs the whole tool as one skill) |
 | `claudedocs/` | Research reports and the search data behind them |

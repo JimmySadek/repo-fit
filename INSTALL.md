@@ -12,7 +12,7 @@ A small, balanced foundation for any repository, technical or notes: a rulebook 
 
 ## Before you start
 
-1. **Find the playbook folder** (the one with `bin/repo-fit.mjs` and this file). If you cannot find it, ask the user where it is, or tell them to get it as described in the README's "Get it" section. Do not download anything without asking.
+1. **Find the playbook folder** (the one with `bin/repo-fit.mjs`, `SKILL.md` and this file; `npx skills add JimmySadek/repo-fit` puts it under the agent's skills folder). If you cannot find it, ask the user where it is, or tell them to get it as described in the README's "Get it" section. Do not download anything without asking.
 2. **Node 18 or later** is needed (`node --version`). If it is missing, say so. Do not install it.
 3. **The target repo** is the folder the user is working in, unless told otherwise. If it is not a Git repository, do not run `git init` unless the user says so.
 4. Run commands from the playbook folder as `node bin/repo-fit.mjs <command> <repo>`. `node bin/repo-fit.mjs help` lists them all.
@@ -21,7 +21,7 @@ A small, balanced foundation for any repository, technical or notes: a rulebook 
 
 1. **Look first (read-only).** `detect <repo>`. It reports the tools installed, whether `gh` and `glab` are logged in, the Git host, the repo kind, existing rule files and task tools, and what it would ask. Change nothing yet.
 2. **Existing repo? Audit it (read-only).** `audit <repo>`. Walk the user through it in this order: the verdict, **Leave as is** (what the repo already covers: repo-fit adapts to it), **Conflicts with the core block**, then **Worth improving**, one decision at a time. Work delta-first: only the areas the user names. For a step the user declines, record why: `skip <repo> <ID> --reason "..."` (dry run, then `--apply`).
-3. **Check the tools.** `tools <repo> --json`. Follow `skill/repo-fit/SKILL.md`, step 0d, for what to do with a needed or an optional update. Never install a missing tool. Never log in for the user.
+3. **Check the tools.** `tools <repo> --json`. Follow `SKILL.md`, step 0d, for what to do with a needed or an optional update. Never install a missing tool. Never log in for the user.
 4. **Ask, only about what was found.** Which tools (Claude Code, Codex, both), which models, how automatic saving should be, and where big files live (only if the audit found heavy files). Do **not** ask what kind of repo it is: `detect` says, and there is one kit. For an existing repo, then ask which plan steps to apply, one decision at a time. One decision per question, with a recommended option. Do not ask about a tool that is not there.
 5. **Show a dry run.**
    - New repo: `init <repo> --dry-run --tool ... --models ...`

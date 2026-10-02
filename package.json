@@ -1,0 +1,38 @@
+{
+  "name": "repo-fit",
+  "version": "0.5.0",
+  "description": "Give your project a memory: a session briefing, one list of everything open, safe automatic saves and one rulebook for Claude Code and Codex. Works on new and existing projects.",
+  "type": "module",
+  "bin": {
+    "repo-fit": "bin/repo-fit.mjs"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "scripts/",
+    "kits/",
+    "core/",
+    "guidance/",
+    "docs/",
+    "SKILL.md",
+    "INSTALL.md",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "VERSION"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": ["claude-code", "codex", "agent-skills", "ai-agents", "knowledge-base", "markdown", "productivity", "repository-setup"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JimmySadek/repo-fit.git"
+  },
+  "homepage": "https://github.com/JimmySadek/repo-fit#readme",
+  "bugs": "https://github.com/JimmySadek/repo-fit/issues",
+  "author": "Jimmy Sadek",
+  "license": "MIT"
+}

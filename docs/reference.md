@@ -8,7 +8,18 @@ Status, as it stood on 30 Sep 2026: automated tests green on macOS and Linux; on
 
 ## Get it
 
-You need [Node.js](https://nodejs.org) 18 or later and Git. There is nothing to install: no dependencies, no build step.
+You need [Node.js](https://nodejs.org) 18 or later. Nothing else: no dependencies, no build step.
+
+**As a skill (recommended).** `SKILL.md` sits at the root, so the skills installer takes the whole tool as one skill:
+
+```bash
+npx skills add JimmySadek/repo-fit -g -a claude-code codex -y   # install for both tools, for your user
+npx skills update -g -y                                          # later: update
+```
+
+The skill runs the tool from its own folder (`$SKILL_DIR/bin/repo-fit.mjs`). If you keep the skill and the tool in different places, tell it where the tool is once: `node bin/repo-fit.mjs prefs set home /path/to/repo-fit`.
+
+**As a clone**, to run commands yourself:
 
 ```bash
 git clone https://github.com/JimmySadek/repo-fit.git
@@ -18,15 +29,7 @@ node bin/repo-fit.mjs help
 
 Two read-only commands to start with: `detect <repo>` (what the machine and the repo have) and `audit <repo>` (a report and a plan for an existing repo).
 
-**With an AI agent:** open the repo you want to set up in Claude Code or Codex and say: *"Read INSTALL.md in the repo-fit folder at `<path to your clone>` and set up the playbook in this repository. Show me a dry run before you write anything."*
-
-**As a skill (optional, untested outside the maintainer's machine):** copy `skill/repo-fit` to your tool's skills folder (`~/.claude/skills/repo-fit` for Claude Code, `~/.codex/skills/repo-fit` for Codex), or add it to whatever syncs your skills between tools. Then tell the skill where your clone is, once:
-
-```bash
-node bin/repo-fit.mjs prefs set home /path/to/your/repo-fit
-```
-
-After a `git pull`, copy the skill again so the installed copy stays current.
+**Through any AI agent without the skill:** say *"Read INSTALL.md in the repo-fit folder at `<path>` and set up this project. Show me a dry run before you write anything."*
 
 **Tip:** `node bin/repo-fit.mjs prefs set owner "Your Name"` sets who new repos name as owner. Without it, repo-fit uses `--owner`, then the repo's `git user.name`, then the word "Owner".
 
@@ -74,7 +77,7 @@ node bin/repo-fit.mjs update <repo> --apply          # writes it, commits nothin
 
 **Setup by an agent:** give it [INSTALL.md](../INSTALL.md) (it names the steps, the approvals and the undo). Any writing command accepts `--pin <version>`.
 
-The setup is meant to be run through the [repo-fit skill](../skill/repo-fit/SKILL.md), which asks which tools and models the repo is for, reads the matching guidance, applies the kit, and verifies it.
+The setup is meant to be run through the [repo-fit skill](../SKILL.md), which asks which tools and models the repo is for, reads the matching guidance, applies the kit, and verifies it.
 
 ## The four scripts
 

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **One-paste install.** `SKILL.md` moved to the root, so `npx skills add JimmySadek/repo-fit` installs the whole tool as one skill for Claude Code and Codex (tested from a local copy: the tool installs and runs). Its front matter is now a YAML block: the old one-line description contained ": ", and the installer skipped the skill as invalid. The skill runs the tool from its own folder. The README's start is one sentence to paste into the assistant.
+- **`package.json`** so the name `repo-fit` can be published to npm and run as `npx repo-fit`. Not published yet. `npm pack` holds 47 files (94 kB), with no tests or notes.
+- 2 new tests: the SKILL.md front matter the installer accepts, and package.json matching VERSION and shipping every folder the tool reads.
 - **README rewritten for non-technical readers** (founders, product, design, commercial; non-native English). What it is, who it is for, what you get, how to start through an AI assistant, safety, status. All technical content moved to `docs/reference.md`, unchanged.
 - **Windows:** the audit's Markdown walk, its link resolver, the big-files scan and the receipt's folder list built paths with backslashes, so a tracked file was not recognized as tracked and protected paths did not match. All four now use forward slashes, like Git. Found by CI on 0.5.0 (3 of 84 tests failed on Windows only).
 

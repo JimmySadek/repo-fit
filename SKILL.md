@@ -1,18 +1,19 @@
 ---
 name: repo-fit
-description: Set up, update or refresh a repository with the repo-fit playbook: capture by default, absorbing, a task board, a session brief, Level 2 autosave and a living guidance layer for Claude Code and Codex. Use when starting a new repo, adding the playbook to an existing repo, or when asked to refresh the playbook's guidance.
+description: >-
+  Set up, update or refresh a repository with the repo-fit playbook: capture by default, absorbing, a task board, a session brief, Level 2 autosave and a living guidance layer for Claude Code and Codex. Use when starting a new repo, adding the playbook to an existing repo, or when asked to refresh the playbook's guidance.
 ---
 
 # repo-fit
 
-For an agent without this skill installed, `INSTALL.md` in the playbook folder carries the same steps in one file.
+For an agent without this skill installed, `INSTALL.md` beside this file carries the same steps in one file.
 
 The playbook sets up any repository so work can start at any time and nothing is dropped. It has two halves:
 
 - **The kit** (files and small scripts) that goes into a repo.
 - **The guidance layer** (`guidance/`), dated notes from official Anthropic and OpenAI sources that decide how the kit is set up for a given tool and model. It expires on purpose and is refreshed.
 
-Find the playbook folder first (the one containing `bin/repo-fit.mjs`). All commands below run from it. If it is not the current folder or a folder the user named, read `home` from `~/.config/repo-fit/preferences.json` (the user sets it once with `node bin/repo-fit.mjs prefs set home <path>`; `REPO_FIT_CONFIG` can move that file). If there is no `home`, ask where the clone is. Never download or install it yourself.
+**The playbook folder is the folder that contains this SKILL.md** (installed with `npx skills add JimmySadek/repo-fit`, or a clone). Run every command below from it, as `node "$SKILL_DIR/bin/repo-fit.mjs" <command> <repo>` where `$SKILL_DIR` is that folder. If this file was copied without its `bin/` folder, read `home` from `~/.config/repo-fit/preferences.json` (`REPO_FIT_CONFIG` can move that file); if there is none, ask where the clone is. Never download or install it yourself.
 
 ## Step 0. Guidance freshness (always first)
 

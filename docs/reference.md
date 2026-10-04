@@ -102,7 +102,7 @@ The setup is meant to be run through the [repo-fit skill](../SKILL.md), which as
 On an existing repo, `audit` assesses first and then sorts what it found:
 
 - **Leave as is:** what the repo already covers in its own way. Its own check scripts and hooks, a word cap or recorder list in its scripts, a decision lifecycle (`decisions/proposed`, `accepted`), how it saves raw input, a written big-files policy, and work tracked in the current view instead of a board (🔁, counted as in place).
-- **Conflicts with the core block:** where the full block would contradict the repo's rules (checks, commits, decisions, raw input, status, word cap). `apply --steps D-01` writes a **slim block** that defers to the repo's rule on each of those topics, so the repo keeps one definition of done.
+- **Conflicts with the core block:** where the full block would contradict the repo's rules (checks, commits, committing on main, board format, decisions, raw input, status, word cap). `apply --steps D-01` writes a **slim block** that defers to the repo's rule on each of those topics, so the repo keeps one definition of done.
 - **Protected paths:** folders the rules call append-only or read-only, `protectedPaths` in `playbook.json`, and delivered outputs. Findings inside are listed only, never offered for fixing, moving or archiving.
 - **Worth improving:** the plan. A-10 becomes a decision when the repo runs its own hooks or checks. A-01 copies the repo's own word cap and recorder list.
 
@@ -114,7 +114,7 @@ Adopted from the maintainer's own knowledge repos, where it is the part that kee
 
 - **The absorb rule** (in the core block): start at the topic's hub, search every spelling, merge into the note that exists, keep conflicts with dates, then connect (hub, current view, questions, decisions).
 - **The hub** is the folder README that lists every note beside it (`check` enforces the listing). A repo that already has a hubs folder gets it mapped under `paths.hubs`.
-- **The review queue**, in every session brief and in `check` as warnings: notes nothing links to, notes untouched for `staleNoteDays` (default 180) with no planned review, and notes whose `review_after: YYYY-MM-DD` date has passed. Archives, outputs, templates and folder READMEs are left out. `reviewIgnore` takes extra globs. Wiki-style `[[links]]` count.
+- **The review queue**, in every session brief and in `check` as warnings: notes nothing links to, notes untouched for `staleNoteDays` (default 180) with no planned review, and notes whose `review_after: YYYY-MM-DD` date has passed. Archives, outputs, templates (`templates/`, `template/`, `_template/`) and folder READMEs are left out. `reviewIgnore` takes extra globs. Wiki-style `[[links]]` count.
 - **Not built, by design:** an AI checker that reads the *meaning* of new input and asks whether it repeats or contradicts a note. The maintainer's repos do that with a paid vendor. Here the assistant makes that judgment itself while absorbing, so nothing in a session is lost; what is missing is an automated second opinion outside a session. It would fit as an optional add-on later.
 
 ## Level 2 autosave: the rules

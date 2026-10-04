@@ -66,6 +66,7 @@ Rules:
 - When the repo already runs its own hooks or checks, A-10 is a decision. Recommend skipping it when theirs cover the same ground; otherwise `--hooks none` (scripts only) or `--hooks brief` next to theirs. Never let two checks disagree about one rule: A-01 copies the repo's own word cap and recorder list.
 - Paths the repo marks append-only or read-only, and delivered outputs, are listed only. Never offer to fix, move or archive anything inside them. A repo can add more with `protectedPaths` in `playbook.json`.
 - For a `CLAUDE.md` that is a near copy of `AGENTS.md`, prefer `--claude-link merge` and show the user the diff. A plain import would load the same rules twice.
+- With only a `CLAUDE.md`, offer D-02 when Codex works here too: it moves the rules into `AGENTS.md` word for word and leaves `CLAUDE.md` as the import. With A-11 the core block goes after them; without A-11 the repo keeps its own rules and no block.
 - Moves, deletes, secrets, big files and adding a remote are never automated. Explain the options and let the user do or approve them.
 
 ## Step 0d. Tools and versions (read-only unless the user says yes)

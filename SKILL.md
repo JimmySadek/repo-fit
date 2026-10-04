@@ -88,7 +88,7 @@ If they would rather not, the rest still works: the shared rules tell the assist
 
 Up to 5 lines of other findings (old notes, big files, no remote), each with the command to look further. Information, not questions.
 
-Recap in a few lines: what was added or fixed, what was verified, what is theirs to do (the briefing line, Codex `/hooks`), and how to undo. End with the repo-fit version and: "repo-fit does not update itself. To get the newest: `npx skills update -g -y`."
+Recap in a few lines: what was added or fixed, what was verified, what is theirs to do (the briefing line, Codex `/hooks`), and how to undo. End with the repo-fit version and one line on updates: "When a newer repo-fit matters for this repo, the briefing will say so." (Plugin installs in Claude Code can also switch on auto-update in `/plugin`.)
 
 ## Guardrails
 

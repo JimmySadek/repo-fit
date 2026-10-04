@@ -64,9 +64,11 @@ Install the repo-fit skill with `npx skills add JimmySadek/repo-fit -g -a claude
 
 That's it. Your assistant installs repo-fit, looks at your project, shows you the briefing your sessions would start with, and asks you one question: set up the recommended pieces, pick your own, or just see the report. Your own files and rules stay as they are.
 
-**Next session,** open the project again. The briefing appears by itself.
+**One step is yours:** your assistant gives you one line to run that turns on the briefing. Claude Code does not let an assistant change how your sessions start, so it asks you. **Next session,** open the project again and the briefing appears by itself.
 
-**To update later,** paste: `Update repo-fit with npx skills update -g -y`
+**Updates:** repo-fit does not update itself. When a release matters for your project, the briefing tells you in one line, with why. Then paste: `Update repo-fit with npx skills update -g -y, then run /repo-fit here`.
+
+**Using Claude Code? Install it as a plugin instead,** and it can update itself. In Claude Code, run `/plugin marketplace add JimmySadek/repo-fit`, then `/plugin install repo-fit@repo-fit`. To get new versions automatically: `/plugin` → **Marketplaces** → **repo-fit** → **Enable auto-update** (it is off until you turn it on). The skill is then `/repo-fit:repo-fit`.
 
 **What your computer needs:** [Node.js](https://nodejs.org), version 18 or newer. It is a free program; if it is missing, your assistant will tell you.
 
@@ -82,7 +84,7 @@ Everything else is in the [technical reference](docs/reference.md).
 
 - **It changes nothing without showing you first.** Every step is a preview, then your yes.
 - **Everything it writes can be undone.** It keeps a backup and a receipt of each change.
-- **Your files never leave your computer.** It does not upload, publish, or send anything. The one exception is optional and asks first: creating an empty, private backup location for your project on GitHub or GitLab.
+- **Your files never leave your computer.** It does not upload, publish, or send anything. Two small exceptions: once a day the briefing asks npm whether a newer repo-fit exists (only the name "repo-fit" is sent; turn it off with `repo-fit prefs set updateCheck off`), and, only if you ask, it creates an empty, private backup location for your project on GitHub or GitLab.
 - **It never reads the contents of files that look like secrets** (passwords, keys). It only warns you if such a file is in a risky place.
 
 The [full list of what it reads and when it uses the network](docs/reference.md#security-and-privacy) is in the reference.

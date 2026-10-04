@@ -110,6 +110,12 @@ On an existing repo, `audit` assesses first and then sorts what it found:
 
 `repo-fit skip <repo> <ID> --reason "..."` records a step you leave out on purpose, so `audit`, `status` and `update` stop offering it. The detection is pattern matching on rule files and scripts, so every finding quotes the line it came from: check it before you rely on it.
 
+## Updates: how people learn about them
+
+- **The briefing** shows one line when a newer release is marked important, with why it matters, once a day at most (see Security and privacy). Release notes live in `package.json` under `repoFit.releases` (`version`, `important`, `why`, `news`, `steps`), so npm carries them; `status` and `update` read the same list.
+- **The Claude Code plugin** (`.claude-plugin/plugin.json` and `marketplace.json` in this repo): users add the marketplace with `/plugin marketplace add JimmySadek/repo-fit`, install `repo-fit@repo-fit`, and can switch on auto-update in `/plugin`. It is off by default, per Claude Code's design.
+- **A release** bumps `VERSION`, `package.json` and `.claude-plugin/plugin.json` together, and adds a `repoFit.releases` entry. A test fails if any of these is missing.
+
 ## Turning on the briefing, and upgrading an older setup
 
 **The briefing is turned on by the person.** It runs from hook files (`.claude/settings.json`, `.codex/hooks.json`) that start a command at every session. Claude Code's auto mode, the default since 2.1.283, blocks an assistant from writing them as self-modification. So the recommended set adds the scripts with `--hooks none`, and the person runs `repo-fit hooks <repo> --apply` (a dry run without `--apply`). It merges with hooks already there, records the mode in `playbook.json`, writes a receipt, and `undo` turns it off. `--hooks all` adds autosave; the default follows `autosave` in `playbook.json`.
@@ -140,7 +146,8 @@ Adopted from the maintainer's own knowledge repos, where it is the part that kee
 - **It never pushes, never installs a tool, never logs in for you.** `connect` can create an *empty private* remote, only after you approve the exact command.
 - **What it reads:** the repo you point it at (file names and sizes, rule files, Git remotes with any password or token stripped from the URL, secret-like file *names* but never their contents); which accounts `gh` and `glab` are logged in to (never tokens); and, for `tools`, the version number in the newest Claude Code session log under `~/.claude/projects`.
 - **One side effect to know about:** to see what is installed, `detect` runs `--version` on the tools it looks for (git, gh, glab, node, python3, jq, claude, codex, gemini and a few more) and `auth status` on `gh` and `glab`. repo-fit writes nothing itself, but some of those tools create their own config or temp files in your home folder when they run. The tests saw `glab` and `gemini` do this.
-- **Network:** `tools` asks npm for the latest Claude Code version when Claude Code was installed with npm (`--offline` skips it). `connect` talks to your Git host only through `gh` or `glab`; its dry run does one read-only name check. `claude update` runs only with `--update claude --apply`. Nothing else calls out.
+- **Network:** once a day, the session brief asks npm for the latest repo-fit release (`registry.npmjs.org/repo-fit/latest`: the package name only, no file, 2-second limit) and caches the answer in `~/.config/repo-fit/update-check.json`. It shows a line only when a newer release is marked important, and stays silent offline. Off with `repo-fit prefs set updateCheck off` or `REPO_FIT_UPDATE_CHECK=off`. `tools` asks npm for the latest Claude Code version when Claude Code was installed with npm (`--offline` skips it). `connect` talks to your Git host only through `gh` or `glab`; its dry run does one read-only name check. `claude update` runs only with `--update claude --apply`. Nothing else calls out.
+- **As a Claude Code plugin,** the repo's `bin/` folder is on the assistant's command path while the plugin is enabled (Claude Code puts a plugin's `bin/` there). claude.ai and Cowork do not install plugins that have a `bin/` folder; use the skill there.
 - **Your standing choices** (`repo-fit prefs`) live in `~/.config/repo-fit/preferences.json`, outside every repo.
 
 ## Tests

@@ -14,7 +14,7 @@ export function sandbox() {
   const dir = mkdtempSync(join(tmpdir(), "repo-fit-test-"));
   const home = join(dir, "home");
   mkdirSync(home);
-  const env = { ...process.env, HOME: home, USERPROFILE: home, REPO_FIT_CONFIG: join(home, "cfg"), GIT_CONFIG_NOSYSTEM: "1", GIT_TERMINAL_PROMPT: "0" };
+  const env = { ...process.env, HOME: home, USERPROFILE: home, REPO_FIT_CONFIG: join(home, "cfg"), GIT_CONFIG_NOSYSTEM: "1", GIT_TERMINAL_PROMPT: "0", REPO_FIT_UPDATE_CHECK: "off" };
   delete env.REPO_FIT_TODAY;
   return { dir, home, env, cleanup: () => rmSync(dir, { recursive: true, force: true, maxRetries: 5 }) };
 }

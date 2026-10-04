@@ -1,10 +1,11 @@
-// Session brief. Read-only: it never writes, commits or contacts anything.
+// Session brief. Read-only in the repo: it never writes, commits or pushes there. Once a day it may ask npm for the
+// latest repo-fit version (package name only) and cache the answer in ~/.config/repo-fit/; see updateNotice in lib.mjs.
 //   node scripts/playbook/brief.mjs --text                  for a person, or Codex without hooks
 //   node scripts/playbook/brief.mjs --hook                  Claude Code SessionStart hook (JSON)
 //   node scripts/playbook/brief.mjs --hook --format codex   Codex SessionStart hook (JSON)
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { root, git, config, readBoard, analyseBoard, paths, coverage, preview } from "./lib.mjs";
+import { root, git, config, readBoard, analyseBoard, paths, coverage, preview, updateNotice } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const hook = args.includes("--hook");
@@ -25,6 +26,10 @@ out.push(
   `📍 ${basename(root)} · ${branch || "no branch"} · ${dirty ? `${dirty} uncommitted` : "clean"}` +
     (lastDate ? ` · last commit ${lastDate}${host ? ` by ${host}` : ""}` : " · no commits yet"),
 );
+
+// A newer repo-fit that matters for this repo (see updateNotice: once a day, package name only, silent on failure).
+const notice = preview ? null : await updateNotice(cfg.playbook);
+if (notice) out.push(notice);
 
 // Which branch to work on is the repo's own rule. The brief only says where autosave puts its commits.
 if (cfg.autosave && cfg.protectedBranches.includes(branch)) out.push(`🌿 On ${branch}: autosave saves to a wip/ branch, not here.`);

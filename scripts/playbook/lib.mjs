@@ -1,7 +1,7 @@
 // Shared helpers for the playbook scripts. No dependencies.
 // Managed by repo-fit: change it there and run `repo-fit update`, not here.
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -282,4 +282,53 @@ export function coverage(cfg = config()) {
   stale.sort((a, b) => a.date.localeCompare(b.date) || a.path.localeCompare(b.path));
   due.sort((a, b) => a.date.localeCompare(b.date) || a.path.localeCompare(b.path));
   return { scanned: files.length, capped: files.length >= MD_CAP, orphans, stale, due, staleNoteDays: cfg.staleNoteDays };
+}
+
+// Is version a newer than version b? Both like "1.2.3"; anything unreadable is not newer.
+const parts = (v) => (String(v ?? "").match(/^(\d+)\.(\d+)\.(\d+)/) ?? []).slice(1).map(Number);
+export function newer(a, b) {
+  const x = parts(a);
+  const y = parts(b);
+  if (x.length < 3 || y.length < 3) return false;
+  for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i];
+  return false;
+}
+
+// Tells the briefing when a newer repo-fit matters. At most once a day it asks npm for the latest release: one request
+// that carries only the package name, never a file, with a 2-second limit. The answer is cached in ~/.config/repo-fit/.
+// A line appears only when a release newer than this repo's is marked important. Any failure, offline included, is silent.
+// Off with REPO_FIT_UPDATE_CHECK=off, or "updateCheck": "off" in ~/.config/repo-fit/preferences.json.
+export async function updateNotice(have) {
+  const dir = process.env.REPO_FIT_CONFIG ?? join(process.env.HOME ?? process.env.USERPROFILE ?? "", ".config/repo-fit");
+  let prefs = {};
+  try {
+    prefs = JSON.parse(readFileSync(join(dir, "preferences.json"), "utf8"));
+  } catch {
+    /* no preferences: the check is on */
+  }
+  if (process.env.REPO_FIT_UPDATE_CHECK === "off" || prefs.updateCheck === "off" || !parts(have).length || have === "0.0.0") return null;
+  const cache = join(dir, "update-check.json");
+  let latest = null;
+  try {
+    const c = JSON.parse(readFileSync(cache, "utf8"));
+    if (c.checked === today()) latest = c.latest;
+  } catch {
+    /* no cache yet */
+  }
+  if (!latest) {
+    try {
+      // REPO_FIT_UPDATE_JSON stands in for npm's answer in the tests, which never use the network.
+      const j = process.env.REPO_FIT_UPDATE_JSON ? JSON.parse(process.env.REPO_FIT_UPDATE_JSON) : await (await fetch("https://registry.npmjs.org/repo-fit/latest", { signal: AbortSignal.timeout(2000) })).json();
+      latest = { version: j.version, releases: (j.repoFit?.releases ?? []).map(({ version, important, why }) => ({ version, important, why })) };
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(cache, `${JSON.stringify({ checked: today(), latest })}\n`);
+    } catch {
+      return null;
+    }
+  }
+  if (!newer(latest.version, have)) return null;
+  const important = latest.releases.filter((r) => r.important && newer(r.version, have) && !newer(r.version, latest.version));
+  if (!important.length) return null;
+  const top = important.sort((a, b) => (newer(a.version, b.version) ? -1 : 1))[0];
+  return `🆕 repo-fit ${latest.version} is out (this repo has ${have}): ${top.why} To get it, update repo-fit (\`npx skills update -g -y\`, or /plugin in Claude Code), then ask your assistant to run /repo-fit here.`;
 }

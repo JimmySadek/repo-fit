@@ -1,0 +1,15 @@
+{
+  "name": "repo-fit",
+  "owner": {
+    "name": "Jimmy Sadek",
+    "url": "https://github.com/JimmySadek"
+  },
+  "description": "repo-fit as a Claude Code plugin. Turn on auto-update in /plugin to get new versions by yourself.",
+  "plugins": [
+    {
+      "name": "repo-fit",
+      "source": "./",
+      "description": "Every AI session starts with a short briefing of where you left off, and Claude Code and Codex share one rulebook. Looks at your repo first, shows what you would gain, then asks once."
+    }
+  ]
+}

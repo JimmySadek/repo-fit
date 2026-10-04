@@ -46,11 +46,10 @@ Here is a real briefing from a small test project (two lines left out to keep it
 ## How it works
 
 ```
-1. LOOK          2. CHOOSE                3. WORK
-It reads your    It suggests what is      Every session: briefing,
-project and      missing. You say yes     one open list, automatic
-reports. It      or no to each step.      saves, reminders.
-changes nothing. Nothing is overwritten.
+1. LOOK          2. SEE                   3. CHOOSE ONCE           4. WORK
+It reads your    It shows the briefing    Recommended set, or      Every session starts
+project. It      your sessions would      pick pieces, or just     with the briefing.
+changes nothing. start with.              the report.
 ```
 
 Every change is shown to you first, keeps a backup, and can be undone with one command. It never uploads your files anywhere.
@@ -63,7 +62,7 @@ Open your project in **Claude Code** or **Codex** and paste this:
 Install the repo-fit skill with `npx skills add JimmySadek/repo-fit -g -a claude-code codex -y`, then use it to set up this project. Before you change anything, show me what you would change and explain it in plain words.
 ```
 
-That's it. Your assistant installs repo-fit, looks at your project, tells you what is already fine, suggests what is missing, and asks for your yes on each step. Say no to anything you don't want.
+That's it. Your assistant installs repo-fit, looks at your project, shows you the briefing your sessions would start with, and asks you one question: set up the recommended pieces, pick your own, or just see the report. Your own files and rules stay as they are.
 
 **Next session,** open the project again. The briefing appears by itself.
 

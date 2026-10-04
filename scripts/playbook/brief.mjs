@@ -4,7 +4,7 @@
 //   node scripts/playbook/brief.mjs --hook --format codex   Codex SessionStart hook (JSON)
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { root, git, config, readBoard, analyseBoard, paths, coverage } from "./lib.mjs";
+import { root, git, config, readBoard, analyseBoard, paths, coverage, preview } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const hook = args.includes("--hook");
@@ -40,7 +40,14 @@ if (unfinished.length) out.push(`🚧 Setup not finished: ${unfinished.join(", "
 
 // 🔄 the board
 const board = readBoard();
-if (board.missing) {
+// A repo can adopt only some parts (`required` in playbook.json). Without a board, Git says where the last session stopped.
+const noBoard = board.missing && Array.isArray(cfg.required) && !cfg.required.includes(P.board);
+if (noBoard) {
+  const recent = (git(["log", "-3", "--format=%cs %s"]) ?? "").split("\n").filter(Boolean);
+  if (recent.length) out.push(`🕘 Recent: ${recent.map((l) => short(l, 70)).join(" · ")}`);
+} else if (board.missing && preview) {
+  out.push("➡️ The board starts empty. Say what you want to work on and it goes on the board.");
+} else if (board.missing) {
   out.push(`❌ The board (${P.board}) is missing. Run repo-fit init, or create it.`);
 } else if (board.external) {
   out.push(`🔄 Work is tracked in ${P.board} (not a playbook table). Read it for what is open.`);

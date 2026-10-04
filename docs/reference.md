@@ -36,7 +36,7 @@ cd repo-fit
 node bin/repo-fit.mjs help
 ```
 
-Two read-only commands to start with: `detect <repo>` (what the machine and the repo have) and `audit <repo>` (a report and a plan for an existing repo).
+Three read-only commands to start with: `detect <repo>` (what the machine and the repo have), `audit <repo>` (a report and a plan for an existing repo, opening with the **recommended set** for its kind) and `preview <repo>` (the session briefing that set would give).
 
 **Through any AI agent without the skill:** say *"Read INSTALL.md in the repo-fit folder at `<path>` and set up this project. Show me a dry run before you write anything."*
 
@@ -59,9 +59,10 @@ Two read-only commands to start with: `detect <repo>` (what the machine and the 
 ## Commands
 
 ```sh
-node bin/repo-fit.mjs detect <repo>                  # read-only: machine, repo, existing tools, what it would ask
+node bin/repo-fit.mjs detect <repo>                  # read-only: machine, repo, existing tools, what it would offer
 node bin/repo-fit.mjs detect <repo> --json           # the same, for scripts
 node bin/repo-fit.mjs audit <repo>                   # read-only report and plan for an existing repo (prints Markdown)
+node bin/repo-fit.mjs preview <repo>                 # read-only: the session briefing the recommended set would give
 node bin/repo-fit.mjs audit <repo> --area docs/brand # only that area for notes, links and old documents
 node bin/repo-fit.mjs audit <repo> --out report.md   # also --json; you choose where the file goes
 node bin/repo-fit.mjs apply <repo> --steps A-01,A-10 --tool claude --hooks brief --autosave off   # dry run: shows every file and diff
@@ -156,7 +157,8 @@ A balanced foundation for **any** repo, technical or notes. **Not a second brain
 | Piece | What it does |
 |---|---|
 | `detect` | Read-only look at the machine (CLIs, `gh` and `glab` logins), the Git host, repo kind, rule files, task tools, commands, big files |
-| `audit` | Read-only report on an existing repo: 19 foundation checks, a map of files it already has, and a plan (add only, then edit, move, delete or outward decisions) |
+| `audit` | Read-only report on an existing repo. It opens with the **recommended set** for its kind (code: briefing, one rulebook, its commands; notes: also a current view and a board), with the exact `apply` command. Then 19 foundation checks, a map of files it already has, and the full plan |
+| `preview` | Read-only: runs the session brief against the repo as the recommended set would leave it, so the user sees the result before saying yes |
 | `apply` and `undo` | Applies chosen plan steps. Adds files, links `CLAUDE.md` to `AGENTS.md` by case, drafts a Dev, test and lint section, merges hooks. Never overwrites |
 | `paths` in `playbook.json` | Points each role (current view, board, log, ...) at a file the repo already has, so nothing has to move. The core block names these paths and leaves out a role the repo does not have. A role can point at any file, for example `paths.people` at a JSON register. The audit also finds a people or entity register (`people.json`, `entity-register/registry.json` and similar), a note template and a raw-input folder |
 | `connect` | For a repo with no remote: creates an **empty private** remote after approval. Never pushes |

@@ -3,6 +3,7 @@
 //   repo-fit detect <repo> [--json]                           read-only: machine, repo, existing tools, what it would ask
 //   repo-fit audit <repo> [--area <folder>] [--json] [--out <file>]
 //                                                             read-only report and plan for an existing repo
+//   repo-fit preview <repo>                                   read-only: the session brief the recommended set would give
 //   repo-fit apply <repo> [--steps A-01,...] [--tool ..] [--hooks all|brief|none] [--autosave on|off] [--apply]
 //                                                             dry run by default; --apply writes, backs up, and writes a receipt
 //   repo-fit undo <repo> [--receipt <file>] [--apply]         put back what the last apply changed (dry run by default)
@@ -277,7 +278,8 @@ const HELP = `repo-fit ${version}: a small foundation for any repo, new or exist
 Look (read-only):
   detect <repo> [--json]                     machine, repo, existing tools, what it would ask
   audit <repo> [--area <folder>] [--json] [--out <file>]
-                                             report and plan for an existing repo
+                                             report and plan for an existing repo, with the recommended set
+  preview <repo>                             the session brief the recommended set would give
   tools <repo> [--json] [--offline]          tool versions vs the limits in guidance/gates.json
   status <repo>                              is the repo behind this playbook?
   guidance check                             which guidance is due for a refresh
@@ -359,6 +361,27 @@ switch (process.argv[2]) {
       writeFileSync(opt.out, `${text}\n`);
       console.log(`Audit written to ${opt.out}`);
     } else console.log(text);
+    break;
+  }
+  case "preview": {
+    if (!pos[0]) fail("Usage: repo-fit preview <repo>");
+    const { audit, placeNew } = await import("../lib/audit.mjs");
+    const a = audit(pos[0]);
+    if (!a.detect.repo.exists) fail(`Not a folder: ${a.root}`);
+    // The settings the recommended set would write, so the brief reads the repo the way it will after the apply.
+    // A repo that already has playbook.json is shown with its own settings.
+    const rec = a.plan.recommended;
+    const role = { "A-02": "board", "A-03": "current" };
+    const paths = Object.fromEntries(Object.entries(a.mapping).filter(([, p]) => p));
+    for (const id of rec.steps) if (role[id]) paths[role[id]] = placeNew(a.mapping, role[id]);
+    const quiet = rec.flags.includes("--autosave off");
+    const cfg = {
+      paths, required: Object.entries(paths).filter(([k]) => ["current", "board", "log", "questions", "people", "decisions", "lessons"].includes(k)).map(([, p]) => p),
+      autosave: !quiet, protectedBranches: a.own.topics.mainBranch && quiet ? [] : ["main", "master"], currentWordCap: a.details.current?.cap ?? a.details.current?.playbookCap ?? 900,
+    };
+    const r = spawnSync(process.execPath, [join(here, "scripts/playbook/brief.mjs"), "--text"], { encoding: "utf8", env: { ...process.env, REPO_FIT_PREVIEW_ROOT: a.root, REPO_FIT_PREVIEW_CONFIG: JSON.stringify(cfg) } });
+    if (r.status !== 0) fail(r.stderr || "The brief did not run.");
+    console.log(`${existsSync(join(a.root, "scripts/playbook/brief.mjs")) ? "The briefing this repo's sessions start with today" : "The briefing this repo's sessions would start with after the recommended set"}. Nothing was written.\n\n${r.stdout.trimEnd()}`);
     break;
   }
   case "detect": {

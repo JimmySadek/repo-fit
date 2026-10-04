@@ -6,7 +6,10 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // scripts/playbook/lib.mjs -> repo root, whichever tool or folder started the session.
-export const root = resolve(fileURLToPath(new URL("../../", import.meta.url)));
+// `repo-fit preview` runs the brief from the playbook folder against a repo that does not have the scripts yet:
+// REPO_FIT_PREVIEW_ROOT names that repo, REPO_FIT_PREVIEW_CONFIG the settings the recommended set would write.
+export const preview = Boolean(process.env.REPO_FIT_PREVIEW_ROOT);
+export const root = preview ? resolve(process.env.REPO_FIT_PREVIEW_ROOT) : resolve(fileURLToPath(new URL("../../", import.meta.url)));
 export const today = () => new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD, local time
 export const daysBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
 export const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -56,12 +59,13 @@ const DEFAULTS = {
 
 export function config() {
   const path = join(root, "playbook.json");
-  if (!existsSync(path)) return DEFAULTS;
+  let own = {};
   try {
-    return { ...DEFAULTS, ...JSON.parse(readFileSync(path, "utf8")) };
+    own = existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : preview ? JSON.parse(process.env.REPO_FIT_PREVIEW_CONFIG || "{}") : {};
   } catch {
-    return DEFAULTS;
+    /* not valid JSON: defaults */
   }
+  return { ...DEFAULTS, ...own };
 }
 
 // Words in a Markdown file's body. YAML frontmatter at the top is metadata, so it does not count toward a word cap.

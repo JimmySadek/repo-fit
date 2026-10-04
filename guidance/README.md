@@ -32,6 +32,7 @@ sources (official docs)  →  guidance/*.md  →  setup interview reads it  → 
 3. Mark disagreement between sources. Do not pick a side silently.
 4. Fast-moving or low-confidence files get a short `review_after` (7 days). Stable, high-confidence files get 30 days.
 5. A refresh may propose kit changes. It never edits a repository without approval.
+6. A weekly scheduled refresh may run only steps 1 and 2 of the routine below and write a report. It never applies changes to a repo. Creating the schedule needs the user's approval.
 
 ## Refresh routine
 

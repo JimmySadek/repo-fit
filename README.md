@@ -89,7 +89,7 @@ The [full list of what it reads and when it uses the network](docs/reference.md#
 
 ## Where this stands
 
-**Public beta, version 0.5.0.** Built and used by one person so far, on a Mac, with Claude Code. Automated tests pass on Mac, Linux and Windows. Codex support is written to the official documentation but has not been tried live yet. If you try it, [tell us what happened](https://github.com/JimmySadek/repo-fit/issues): that is the most useful thing you can do right now.
+**Public beta, version 0.6.0.** Built and used by one person so far, on a Mac, with Claude Code. Automated tests pass on Mac, Linux and Windows. Codex support is written to the official documentation but has not been tried live yet. If you try it, [tell us what happened](https://github.com/JimmySadek/repo-fit/issues): that is the most useful thing you can do right now.
 
 ## For developers
 

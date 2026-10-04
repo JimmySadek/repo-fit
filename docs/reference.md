@@ -160,7 +160,7 @@ A GitHub Actions workflow (`.github/workflows/test.yml`) runs them on macOS, Lin
 
 A balanced foundation for **any** repo, technical or notes. **Not a second brain:** no semantic search, no wiki, no memory database. It should look at what a repo and a machine already have, adapt, and ask before using anything.
 
-## Status (beta, 0.5.0)
+## Status (beta, 0.6.0)
 
 **Built and tested** (each writing command is a dry run first, backs up before editing, writes a receipt, and can be undone):
 

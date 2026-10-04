@@ -142,7 +142,17 @@ Adopted from the maintainer's own knowledge repos, where it is the part that kee
 node --test
 ```
 
-84 automated tests, no dependencies. They run in a throwaway sandbox (a fake home folder, so nothing depends on your machine) and cover: every command on new and existing repos, dry runs writing nothing, undo, the safety rules (never overwrite, a token in a remote URL never printed), the session brief, autosave and the Stop and PreCompact hooks, and the stale-guidance warning. Each past bug has a test that fails without its fix.
+120 automated tests, no dependencies. They run in a throwaway sandbox (a fake home folder, so nothing depends on your machine) and cover: every command on new and existing repos, dry runs writing nothing, undo, the safety rules (never overwrite, a token in a remote URL never printed), the session brief, autosave and the Stop and PreCompact hooks, and the stale-guidance warning. Each past bug has a test that fails without its fix.
+
+**The setup contract** (`test/onboarding.test.mjs`): on a code, a notes, a mixed and a mature repo, the recommended set has no move, delete or outward step, applies in one go, leaves `check` passing and the brief without errors, and is not offered again afterwards.
+
+**Live runs** cannot be tested without a model, so they are checked from the transcript. After running `/repo-fit` in Claude Code:
+
+```bash
+node dev/transcript-check.mjs ~/.claude/projects/<folder>/<session-id>.jsonl
+```
+
+It counts the questions after the last `/repo-fit`, flags any over 3 and any about things repo-fit does not change (CI, deploys, big files, models), and flags any write (`--apply`, or `init` without `--dry-run`) with no answer from the user after the last dry run. Read-only; `dev/` is not shipped to npm.
 
 A GitHub Actions workflow (`.github/workflows/test.yml`) runs them on macOS, Linux and Windows with Node 18, 20 and 22. First run, 30 Sep 2026: **macOS and Linux green** on all three Node versions. **Windows failed 2 of 43** for one reason, Windows line endings in the guidance dates. That is fixed, but the Windows job is still allowed to fail until a run confirms it.
 

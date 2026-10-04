@@ -1,7 +1,7 @@
 // The setup flow: one recommended set per kind of repo, a preview of the briefing, one dry run.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { cli, git, repo, sandboxed, script, tree } from "./helpers.mjs";
+import { cli, git, repo, sandboxed, script, tree, write } from "./helpers.mjs";
 
 const audit = (sb, d) => JSON.parse(cli(sb, ["audit", d, "--json"]).stdout);
 const pkg = JSON.stringify({ name: "app", scripts: { test: "node --test" } });
@@ -116,4 +116,23 @@ test("the brief sets no branch rule: on main with autosave off it says nothing a
   assert.equal(cli(sb, ["apply", d, "--steps", rec.steps.join(","), ...rec.flags.split(" "), "--apply"]).status, 0);
   const b = script(sb, d, "brief.mjs", ["--text"]).stdout;
   assert.doesNotMatch(b, /never to commit|Work on a branch|wip\//, b);
+}));
+
+test("a code repo is not scored on notes files, and unsaved work on main is never a gap", sandboxed((sb) => {
+  const d = codeRepo(sb);
+  write(d, "src/d.js", "export const d = 4;\n");
+  const a = audit(sb, d);
+  for (const id of ["F5", "F6", "F7", "F8", "F9", "F10", "F11"]) assert.equal(a.checks.find((c) => c.id === id).status, "na", id);
+  const f19 = a.checks.find((c) => c.id === "F19");
+  assert.equal(f19.status, "part", "uncommitted work on main is noted");
+  assert.equal(f19.weight, 0);
+  const out = cli(sb, ["audit", codeRepo(sb)]).stdout;
+  assert.doesNotMatch(out.match(/## Verdict[\s\S]*?## What/)[0], /Current-state page|Unsaved work/);
+}));
+
+test("unsaved work on main is fine where the repo's own rules commit on main", sandboxed((sb) => {
+  const d = codeRepo(sb, { "AGENTS.md": "# Rules\n\nBranch `main`. Commit finished steps with clear messages.\n" });
+  write(d, "src/d.js", "export const d = 4;\n");
+  const f19 = audit(sb, d).checks.find((c) => c.id === "F19");
+  assert.equal(f19.status, "ok");
 }));

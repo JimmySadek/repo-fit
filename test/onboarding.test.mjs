@@ -1,0 +1,82 @@
+// The setup contract, on four kinds of repo: the recommended set is safe to approve in one yes, it applies cleanly,
+// and the repo is healthy afterwards. Plus the checker for live runs (dev/transcript-check.mjs).
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { checkTranscript } from "../dev/transcript-check.mjs";
+import { cli, repo, sandboxed, script } from "./helpers.mjs";
+
+const pkg = JSON.stringify({ name: "app", scripts: { test: "node --test", lint: "eslint ." } });
+const KINDS = {
+  code: { "package.json": pkg, "src/a.js": "1\n", "src/b.js": "2\n", "src/c.js": "3\n", "src/d.js": "4\n" },
+  notes: { "notes/one.md": "# One\n", "notes/two.md": "# Two\n", "people.md": "# People\n" },
+  mixed: { "package.json": pkg, "src/a.js": "1\n", "docs/one.md": "# One\n", "docs/two.md": "# Two\n", "docs/three.md": "# Three\n" },
+  mature: {
+    "AGENTS.md": "# Rules\n\nCommit only when asked.\nBefore you commit, run `python3 scripts/check_notes.py`.\n",
+    "CLAUDE.md": "@AGENTS.md\n",
+    "00-home/current.md": "# Current\n",
+    "00-home/open-questions.md": "# Questions\n",
+    "decisions/accepted/one.md": "# One\n",
+    "scripts/check_notes.py": "# check\n",
+  },
+};
+
+for (const [kind, files] of Object.entries(KINDS)) {
+  test(`contract (${kind}): one yes is enough, and the repo is healthy after it`, sandboxed((sb) => {
+    const d = repo(sb, kind, { commit: true, files });
+    const a = JSON.parse(cli(sb, ["audit", d, "--json"]).stdout);
+    const rec = a.plan.recommended;
+    assert.ok(rec.steps.length, "something is recommended");
+    const risky = [...a.plan.safe, ...a.plan.decide].filter((s) => rec.steps.includes(s.id) && ["move", "delete", "outward"].includes(s.risk));
+    assert.deepEqual(risky, [], "no move, delete or outward step in the one-click set");
+    const args = ["apply", d, "--steps", rec.steps.join(","), ...rec.flags.split(" ")];
+    const dry = cli(sb, args);
+    assert.equal(dry.status, 0, dry.out);
+    assert.match(dry.out, /Dry run/);
+    const done = cli(sb, [...args, "--apply"]);
+    assert.equal(done.status, 0, done.out);
+    const check = script(sb, d, "check.mjs");
+    assert.equal(check.status, 0, check.out);
+    const brief = script(sb, d, "brief.mjs", ["--text"]);
+    assert.equal(brief.status, 0, brief.out);
+    assert.doesNotMatch(brief.stdout, /❌/, brief.stdout);
+    assert.equal(JSON.parse(cli(sb, ["audit", d, "--json"]).stdout).plan.recommended.steps.length, 0, "nothing is recommended twice");
+  }));
+}
+
+// Transcripts in Claude Code's format, reduced to what the checker reads.
+const line = (o) => JSON.stringify(o);
+const user = (text) => line({ type: "user", message: { content: text } });
+const ask = (id, ...qs) => line({ type: "assistant", message: { content: [{ type: "tool_use", id, name: "AskUserQuestion", input: { questions: qs.map((q) => ({ question: q })) } }] } });
+const answer = (id) => line({ type: "user", message: { content: [{ type: "tool_result", tool_use_id: id, content: "answered" }] } });
+const bash = (command) => line({ type: "assistant", message: { content: [{ type: "tool_use", id: "b", name: "Bash", input: { command } }] } });
+const start = user("<command-message>repo-fit</command-message> <command-name>/repo-fit</command-name>");
+const DRY = "node bin/repo-fit.mjs apply /r --steps A-01,A-10 --tool both --hooks brief --autosave off";
+
+test("transcript check: dry run, one question, then apply meets the contract", () => {
+  const r = checkTranscript([start, bash(DRY), ask("q1", "Set up these files?"), answer("q1"), bash(`${DRY} --apply`)].join("\n"));
+  assert.ok(r.ok, r.problems.join("; "));
+  assert.equal(r.questions.length, 1);
+});
+
+test("transcript check: a write with no answer after the dry run fails", () => {
+  const r = checkTranscript([start, bash(DRY), bash(`${DRY} --apply`)].join("\n"));
+  assert.ok(!r.ok);
+  assert.match(r.problems.join(), /wrote without an answer/);
+});
+
+test("transcript check: a new dry run after the answer needs a new answer", () => {
+  const r = checkTranscript([start, bash(DRY), ask("q1", "Set up?"), answer("q1"), bash(DRY.replace("A-01,A-10", "A-01")), bash(`${DRY.replace("A-01,A-10", "A-01")} --apply`)].join("\n"));
+  assert.match(r.problems.join(), /wrote without an answer/);
+});
+
+test("transcript check: more than 3 questions, or an off-topic one, fails", () => {
+  const many = checkTranscript([start, ask("q1", "A?", "B?", "C?", "D?")].join("\n"));
+  assert.match(many.problems.join(), /4 questions/);
+  const ci = checkTranscript([start, ask("q1", "A GitHub Actions workflow still runs every Monday. Should it keep running?")].join("\n"));
+  assert.match(ci.problems.join(), /off-topic/);
+});
+
+test("transcript check: only the last /repo-fit run counts", () => {
+  const r = checkTranscript([start, ask("q0", "A?", "B?", "C?", "D?"), user("(Re-invocation of /repo-fit — new arguments)"), ask("q1", "Set up?")].join("\n"));
+  assert.equal(r.questions.length, 1);
+});

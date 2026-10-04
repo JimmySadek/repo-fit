@@ -15,10 +15,10 @@ For an agent without this skill installed, `INSTALL.md` beside this file carries
 The user sees value on the first screen, answers **one** question, and approves **one** dry run. Ask **3 questions at most** in the whole setup. Most repos need only the first. **One, never zero:** anything that writes needs the user's yes to its dry run.
 
 ```
-1. LOOK     detect + audit + preview, silently
-2. SHOW     the briefing they would get, what each piece adds, "your rules stay"
-3. ASK      recommended set / let me pick / just the report
-4. APPLY    one dry run, one yes, --apply, verify
+1. LOOK     audit + preview + the recommended dry run, silently
+2. SHOW     the briefing they would get, what each piece adds, the files it writes, "your rules stay"
+3. ASK      set up these files / let me pick / just the report. The yes approves that dry run
+4. APPLY    the same command with --apply, then verify
 5. NOTICED  up to 5 lines of other findings. Not questions
 ```
 
@@ -27,6 +27,7 @@ The user sees value on the first screen, answers **one** question, and approves 
 ```sh
 node "$SKILL_DIR/bin/repo-fit.mjs" audit <repo>      # existing repo; starts with the recommended set
 node "$SKILL_DIR/bin/repo-fit.mjs" preview <repo>    # the session briefing the recommended set would give
+node "$SKILL_DIR/bin/repo-fit.mjs" apply <repo> --steps <ids> <flags>   # the recommended set's dry run, from the audit
 ```
 
 An empty or new folder: run `detect <repo>` instead, and use `init` in step 4. A repo that already has `playbook.json`: run `status <repo>` and `update <repo>` (a dry run), show what would change as a short list, and ask the one question: update now (recommended) or not now. Run `update <repo> --apply` only after the yes.
@@ -39,6 +40,7 @@ In about 10 lines, plain words, no step IDs:
 
 - **The briefing** from `preview`, as a code block: "Every session would start with this."
 - **What each piece adds**, from the audit's "Recommended set", with one concrete example from this repo. Example: "The rulebook would list `npm test`, so the assistant runs your real test command."
+- **The files it writes**, from the dry run, one line each ("new: a section in AGENTS.md with your test command"). Not the full diff, unless an existing file is edited.
 - **What stays the same.** If the audit lists the repo's own rules, checks or hooks under "Leave as is", say so in one line: "Your rules stay as they are. repo-fit uses them." These are not conflicts to discuss.
 
 If the recommended set is empty, say plainly that the repo already has what matters and stop. That is a good result.
@@ -47,8 +49,8 @@ If the recommended set is empty, say plainly that the repo already has what matt
 
 One question, these three options:
 
-1. **Set up the recommended pieces (Recommended).** Name them in the description.
-2. **Let me pick.** Then one multi-select question with the other add-only steps and edits from the audit, each in plain words.
+1. **Set up these files (Recommended).** The yes approves the dry run shown above.
+2. **Let me pick.** Then one multi-select question with the other add-only steps and edits from the audit, each in plain words. Run their dry run, show the files, and ask for the yes to it: that is question 3.
 3. **Just the report.** Summarize the audit in a short table and stop.
 
 Ask a second question only for a choice the code cannot make:
@@ -66,14 +68,13 @@ Those go in step 5 as one line each, if at all.
 
 ## 4. Apply
 
+Run the exact command the user approved, with `--apply`:
+
 ```sh
-node "$SKILL_DIR/bin/repo-fit.mjs" apply <repo> --steps <ids> <flags>            # dry run: every file and diff
-node "$SKILL_DIR/bin/repo-fit.mjs" apply <repo> --steps <ids> <flags> --apply    # after the user's yes to that dry run
+node "$SKILL_DIR/bin/repo-fit.mjs" apply <repo> --steps <ids> <flags> --apply
 ```
 
-Use the steps and flags from the audit's "Recommended set" (or the user's pick). A new repo uses `init <repo> --dry-run --tool <tools>`, then `init` without `--dry-run`.
-
-Show the dry run as a short list of files with one line each ("new: AGENTS.md section with your test command"), not the full diff, unless the user asks or an existing file is edited. Then apply. Every apply writes a backup and a receipt, and `undo <repo>` reverses it. Say that once.
+If anything about it changed after the yes (other steps, other flags), show the new dry run and ask again. A new repo uses `init <repo> --dry-run --tool <tools>` in step 1 and `init` without `--dry-run` here. Every apply writes a backup and a receipt, and `undo <repo>` reverses it. Say that once.
 
 Then verify in the repo, and say what you checked:
 

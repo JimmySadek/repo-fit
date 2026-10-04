@@ -15,7 +15,7 @@ From `2026-10-04-usefulness-audit.md`, section 7, "First: the flow". Tick as don
 
 - [x] Recommended flags ignored `autosave: false` already in `playbook.json` (found on a real repo, read-only)
 - [x] `preview` said "start with today" in a repo without the brief script
-- [ ] Later: quieter review queue: the brief's review queue is noisy in repos with many small unlinked files; consider leaving it out for code repos
+- [x] Quieter review queue (batch 3): the brief's review queue is noisy in repos with many small unlinked files; consider leaving it out for code repos
 
 ## Batch 2: shrink the rules block (audit items 7, 8, 10)
 
@@ -24,5 +24,8 @@ From `2026-10-04-usefulness-audit.md`, section 7, "First: the flow". Tick as don
 - [x] Brief: no imposed main-branch line
 - [x] False findings: example lines, kit/starter folders, media rule for one image
 - [x] Tests rewritten and added; docs and CHANGELOG
-- [ ] Open: F19 "work happens off main" still scores branch practice (item 6, the score)
-- [ ] Open: onboarding eval (item 9), quieter review queue, VERSION bump and release
+- [x] Score counts only what is recommended for the kind; F19 neutral (item 6)
+- [x] Onboarding contract tests + live transcript checker (item 9); found and fixed 2 bugs in the one-yes path
+- [x] Quieter review queue
+- [x] Found on the way: the one question now approves the dry run shown (dry run moved before the ask)
+- [ ] Open: VERSION bump and release (needs the owner's yes)

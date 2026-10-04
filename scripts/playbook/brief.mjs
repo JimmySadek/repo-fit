@@ -26,9 +26,8 @@ out.push(
     (lastDate ? ` · last commit ${lastDate}${host ? ` by ${host}` : ""}` : " · no commits yet"),
 );
 
-if (cfg.protectedBranches.includes(branch)) {
-  out.push(`⚠️ On ${branch}: the playbook rule is never to commit here. ${cfg.autosave ? "Autosave will use a wip/ branch." : "Work on a branch."}`);
-}
+// Which branch to work on is the repo's own rule. The brief only says where autosave puts its commits.
+if (cfg.autosave && cfg.protectedBranches.includes(branch)) out.push(`🌿 On ${branch}: autosave saves to a wip/ branch, not here.`);
 if (branch.startsWith("wip/")) {
   const base = cfg.protectedBranches.find((b) => git(["rev-parse", "--verify", "--quiet", `refs/heads/${b}`]) !== null);
   const ahead = base ? Number((git(["rev-list", "--count", `${base}..HEAD`]) ?? "0").trim()) : 0;

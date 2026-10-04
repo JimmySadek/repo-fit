@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **The shared rules block is 293 words instead of 774, and imposes nothing.** It goes after the repo's own rules and says "where they overlap, the rules above win". Five rules stay, the ones that change what an assistant does: write it down, start from the files, search before saying "unknown", keep what matters, never invent agreement. Gone: rules about branches, when to commit, which checks to run, the board's columns, and fact/hypothesis labels. With nothing left to contradict, the "Conflicts with the core block" section, the slim-block switches (`deferVars`, `conflicts`) and the board-format detection are removed. The repo's own commit rules still turn autosave off in the recommended flags and appear under "Leave as is".
+- **The brief sets no branch rule.** "On main: the playbook rule is never to commit here" is gone. With autosave on, it says autosave saves to a `wip/` branch instead.
+- **Three false findings fixed** (found by auditing this repo): a commit rule quoted as an example ("Example: a repo that says ...") was read as the repo's own; notes in `kits/`, `starter/` and similar folders counted as unlinked; one banner image triggered the media `.gitignore` step, which now needs a video, zip or psd file.
+- 5 new tests and 12 rewritten to the new intent (108 in all). The new ones fail without these changes. **The core block and the vendored `brief.mjs` and `lib.mjs` changed:** `update` will offer the new block to adopted repos after the next `VERSION` bump.
+
 - **Setup asks once instead of a dozen times.** From an audit of three real setups (`claudedocs/2026-10-04-usefulness-audit.md`): 23 questions, about 5 that improved the repo. The rest were setup trivia, housekeeping outside repo-fit's job (one was about a scheduled CI workflow), or conflicts repo-fit's own rules started. Now:
   - **`audit` opens with a recommended set** for the kind of repo, with the exact `apply` command. Code repos: the briefing, one rulebook and their commands, no notes files. Notes repos: also a current view and a board. Autosave and full hooks only where the repo has no commit rules or hooks of its own. A `CLAUDE.md` that mostly repeats `AGENTS.md` gets `--claude-link merge`; one that differs a lot stays a separate question.
   - **`repo-fit preview <repo>`** prints the session briefing the recommended set would give. Read-only.

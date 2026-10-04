@@ -1,5 +1,5 @@
 // A small repo whose only rulebook is CLAUDE.md, which commits finished steps on main and keeps its task list as a checklist.
-// repo-fit must see both rules as conflicts with the core block, offer to move CLAUDE.md's rules into AGENTS.md,
+// repo-fit must read both as the repo's own rules and add nothing that competes, offer to move CLAUDE.md's rules into AGENTS.md,
 // and keep template folders out of the unlinked-notes list. Generic names only.
 import assert from "node:assert/strict";
 import { test } from "node:test";
@@ -40,37 +40,32 @@ function writer(sb, extra = {}, name = "writer") {
   });
 }
 
-test("R1: a rule to commit on main is a conflict; a rule never to commit on main is not", sandboxed((sb) => {
-  const c = audit(sb, writer(sb)).details.conflicts;
-  const main = c.find((x) => x.topic === "main branch");
-  assert.ok(main, JSON.stringify(c));
-  assert.match(main.repo, /branch `main`\. Commit finished steps/);
+test("R1: a rule to commit on main is read as the repo's own; a rule never to commit on main is not", sandboxed((sb) => {
+  const main = audit(sb, writer(sb)).own.topics.mainBranch;
+  assert.ok(main);
+  assert.match(main.quote, /branch `main`\. Commit finished steps/);
   assert.equal(main.where, "CLAUDE.md:12");
 
   const plain = repo(sb, "plain", { commit: true, files: { "AGENTS.md": "# Rules\n\n- Never commit on main.\n- Do not commit to `master`.\n- The owner merges into `main`; commit on your branch.\n" } });
-  assert.ok(!audit(sb, plain).details.conflicts.some((x) => x.topic === "main branch"));
+  assert.equal(audit(sb, plain).own.topics.mainBranch, undefined);
 }));
 
-test("R2: the block defers on the branch rule, and playbook.json stops guarding main", sandboxed((sb) => {
+test("R2: the block adds no branch rule, and playbook.json stops guarding main", sandboxed((sb) => {
   const d = writer(sb);
   const r = apply(sb, d, "A-01,A-11,D-02", ["--apply"]);
   assert.equal(r.status, 0, r.out);
   const b = block(read(d, "AGENTS.md"));
-  assert.doesNotMatch(b, /Never commit on `main`/);
-  assert.match(b, /Which branch to commit on follows this repo's own rules above/);
-  assert.match(b, /Never push unasked/);
+  assert.doesNotMatch(b, /\bmain\b|commit/i);
+  assert.match(b, /Ask before sending anything outside the repository/);
   assert.deepEqual(json(d, "playbook.json").protectedBranches, []);
 }));
 
-test("R3: a checklist board is a conflict, and the Board section keeps the repo's format", sandboxed((sb) => {
+test("R3: a checklist board keeps its format: the block names it and adds no board schema", sandboxed((sb) => {
   const d = writer(sb);
-  const board = audit(sb, d).details.conflicts.find((x) => x.topic === "board format");
-  assert.ok(board);
-  assert.match(board.repo, /TASKS\.md.*not a table/);
   assert.equal(apply(sb, d, "A-11,D-02", ["--apply"]).status, 0);
   const b = block(read(d, "AGENTS.md"));
-  assert.match(b, /`TASKS\.md` keeps this repo's own format/);
-  assert.doesNotMatch(b, /stable ID|verified date/);
+  assert.match(b, /add, move or close items in `TASKS\.md`/);
+  assert.doesNotMatch(b, /stable ID|verified date|evidence/);
 }));
 
 test("R4: with only CLAUDE.md, D-02 moves its rules into AGENTS.md and CLAUDE.md imports it", sandboxed((sb) => {

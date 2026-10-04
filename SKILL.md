@@ -53,7 +53,7 @@ One question, these three options:
 
 Ask a second question only for a choice the code cannot make:
 
-- An **edit to an existing file** that is not in the recommended set: show its diff. Examples: moving `CLAUDE.md` rules into `AGENTS.md` (D-02), or adding the rules block to an `AGENTS.md` whose rules differ (D-01).
+- An **edit to an existing file** that is not in the recommended set: show its diff. Example: linking a `CLAUDE.md` that differs a lot from `AGENTS.md` (D-02). The shared rules block (D-01) is not such a case: it goes after the repo's rules, which win, so it needs no discussion.
 - A **word cap** when the audit says the current view is over the default and none is written down.
 
 **Never ask about:**

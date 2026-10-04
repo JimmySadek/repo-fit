@@ -113,9 +113,7 @@ test("audit maps an existing hubs folder and apply records it in playbook.json",
   assert.equal(json(d, "playbook.json").paths.hubs, "00-home/hubs");
 }));
 
-test("the core rules say to start at the hub and to work the review queue", sandboxed((sb) => {
+test("the core rules say to merge into the note that exists, and the brief carries the review queue", sandboxed((sb) => {
   const d = ready(sb);
-  const t = read(d, "AGENTS.md");
-  assert.match(t, /Start at the topic's hub/);
-  assert.match(t, /review queue/);
+  assert.match(read(d, "AGENTS.md"), /Merge into the note that exists/);
 }));

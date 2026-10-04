@@ -184,7 +184,7 @@ export function analyseBoard(rows, cfg) {
 // The review queue: notes nothing links to, notes untouched for a long time, and notes whose `review_after` date has passed.
 // Same rules as `repo-fit audit` (F14 and F15). Archives, raw inputs, outputs, templates, folder READMEs and the
 // root files are expected to be unlinked, so they are never reported. Read-only.
-const EXPECTED_UNLINKED = /(^|\/)(source-archive|archive|archives|_archive|\.handoffs|raw|vendor|third_party|outputs|_?templates?)\//;
+const EXPECTED_UNLINKED = /(^|\/)(source-archive|archive|archives|_archive|\.handoffs|raw|vendor|third_party|outputs|_?templates?|kits?|starters?|scaffolds?|boilerplates?|skeletons?)\//;
 const ROOT_NAMES = new Set(["README.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md", "CHANGELOG.md", "LICENSE.md", "CONTRIBUTING.md", "SECURITY.md"]);
 const MD_CAP = 4000;
 

@@ -64,38 +64,33 @@ function mature(sb, { policy = true, big = false, playbook = null } = {}) {
   return d;
 }
 
-test("A2: the audit lists where the core block would contradict the repo's rules", sandboxed((sb) => {
+test("A2: the repo's own rules are listed as kept, and there is no Conflicts section to negotiate", sandboxed((sb) => {
   const a = audit(sb, mature(sb));
-  const topics = a.details.conflicts.map((c) => c.topic).sort();
-  assert.deepEqual(topics, ["checks", "commits", "decisions", "inputs"]);
-  const d01 = a.plan.decide.find((s) => s.id === "D-01");
-  assert.match(d01.step, /⚠️ conflicts with existing rules \(4\)/);
-  const md = cli(sb, ["audit", mature(sb)]).out;
-  assert.match(md, /## Conflicts with the core block/);
-  assert.match(md, /\| inputs \| .* \| AGENTS\.md:9 \|/);
+  assert.match(a.plan.decide.find((s) => s.id === "D-01").step, /after your own/);
+  const kept = a.leave.map((l) => l.what);
+  for (const w of ["Its own checks", "Its commit rules", "Its decision lifecycle", "Its way of saving raw input"]) assert.ok(kept.includes(w), `${w} in ${kept}`);
+  assert.doesNotMatch(cli(sb, ["audit", mature(sb)]).out, /Conflicts/);
 }));
 
-test("A2: D-01 writes the slim block, which defers to the repo on every topic it covers", sandboxed((sb) => {
+test("A2: D-01 adds a short block after the repo's rules: it says those win, names the repo's paths, and adds no commit, branch or check rule", sandboxed((sb) => {
   const d = mature(sb);
-  const r = apply(sb, d, "D-01", ["--apply"]);
-  assert.equal(r.status, 0, r.out);
-  assert.match(r.out, /the slim block defers to this repo's own rules on checks, commits, decisions, inputs/);
+  assert.equal(apply(sb, d, "D-01", ["--apply"]).status, 0);
   const b = block(read(d, "AGENTS.md"));
-  assert.match(b, /Run this repo's own checks \(`python3 scripts\/check_notes\.py`, `python3 scripts\/validate_notes\.py --strict` and the others its rules name\)/);
-  assert.match(b, /goes to `source-archive\/inputs\/`, saved the way this repo's own rules above say/);
-  assert.match(b, /binding only as this repo's own decision rules above define it \(`decisions\/`\)/);
-  assert.match(b, /When to commit follows this repo's own rules above/);
-  assert.doesNotMatch(b, /scripts\/playbook\/|Autosave|wip\/|YYYY-MM-DD-topic|docs\//, "nothing the repo does not have, nothing that competes");
+  assert.match(b, /Where they overlap, the rules above win\./);
+  assert.match(b, /`source-archive\/inputs\/`/);
+  assert.match(b, /`decisions\/`/);
+  assert.doesNotMatch(b, /commit|\bmain\b|master|wip\/|autosave|check\.mjs|docs\//i, "nothing that competes with the repo's own rules");
+  assert.ok(b.split(/\s+/).length <= 320, `short: ${b.split(/\s+/).length} words`);
 }));
 
-test("A2: a repo without such rules still gets the full block", sandboxed((sb) => {
+test("A2: a repo without such rules gets the same short block", sandboxed((sb) => {
   const d = repo(sb, "plain", { files: { "AGENTS.md": "# Rules\n\nBe kind.\n\n- Never commit on main.\n- Never commit secrets or .env files.\n" } });
   assert.equal(cli(sb, ["init", d, "--tool", "claude"]).status, 0);
   assert.equal(block(read(d, "AGENTS.md")), "", "init never edits an AGENTS.md that exists");
   assert.equal(apply(sb, d, "D-01", ["--apply"]).status, 0);
-  const full = block(read(d, "AGENTS.md"));
-  assert.match(full, /Run `node scripts\/playbook\/check\.mjs`\. Commit\./);
-  assert.match(full, /Autosave \(see `playbook\.json`\)/);
+  const b = block(read(d, "AGENTS.md"));
+  assert.match(b, /## Shared rules \(repo-fit\)/);
+  assert.doesNotMatch(b, /commit|autosave|wip\//i);
 }));
 
 test("B1: protected paths are listed only, never offered for fixing", sandboxed((sb) => {
@@ -135,7 +130,6 @@ test("C1: the audit reads an existing playbook.json, and two caps that disagree 
   const f5 = a.checks.find((c) => c.id === "F5");
   assert.equal(f5.status, "part");
   assert.match(f5.suggest, /Two caps disagree: set currentWordCap to 1200/);
-  assert.ok(a.details.conflicts.some((c) => c.topic === "word cap"));
 }));
 
 test("C3: a written big-files policy counts, and ignored files are told apart from tracked ones", sandboxed((sb) => {

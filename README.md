@@ -31,7 +31,7 @@ You do not need to be a developer. You need an AI assistant and about 10 minutes
 | **One list of everything open** | Tasks, questions and ideas live in one place, each with an owner and a next step. Nothing is "somewhere in a chat". |
 | **Your work saved automatically, safely** | Small automatic saves while you work. Never on your main version, never sent anywhere. You stay in control. |
 | **A memory that does not rot** | Your assistant gets reminded of notes nobody links to and notes that went quiet, so they get merged, linked or archived. |
-| **The same rules for every assistant** | One short rulebook that Claude Code and Codex both read: capture by default, search before saying "unknown", ask before deciding. |
+| **The same rules for every assistant** | One short rulebook that Claude Code and Codex both read. repo-fit adds five short rules after yours (write it down, search before saying "unknown", never invent agreement), and yours win where they overlap. |
 | **It fits what you already have** | Your own files stay where they are. repo-fit points at them instead of making copies. |
 
 Here is a real briefing from a small test project (two lines left out to keep it short):

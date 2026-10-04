@@ -63,6 +63,7 @@ node bin/repo-fit.mjs detect <repo>                  # read-only: machine, repo,
 node bin/repo-fit.mjs detect <repo> --json           # the same, for scripts
 node bin/repo-fit.mjs audit <repo>                   # read-only report and plan for an existing repo (prints Markdown)
 node bin/repo-fit.mjs preview <repo>                 # read-only: the session briefing the recommended set would give
+node bin/repo-fit.mjs hooks <repo> --apply           # turn on the start-of-session briefing; the person runs this, not the assistant
 node bin/repo-fit.mjs audit <repo> --area docs/brand # only that area for notes, links and old documents
 node bin/repo-fit.mjs audit <repo> --out report.md   # also --json; you choose where the file goes
 node bin/repo-fit.mjs apply <repo> --steps A-01,A-10 --tool claude --hooks brief --autosave off   # dry run: shows every file and diff
@@ -108,6 +109,12 @@ On an existing repo, `audit` assesses first and then sorts what it found:
 - **Worth improving:** the plan. A-10 becomes a decision when the repo runs its own hooks or checks. A-01 copies the repo's own word cap and recorder list.
 
 `repo-fit skip <repo> <ID> --reason "..."` records a step you leave out on purpose, so `audit`, `status` and `update` stop offering it. The detection is pattern matching on rule files and scripts, so every finding quotes the line it came from: check it before you rely on it.
+
+## Turning on the briefing, and upgrading an older setup
+
+**The briefing is turned on by the person.** It runs from hook files (`.claude/settings.json`, `.codex/hooks.json`) that start a command at every session. Claude Code's auto mode, the default since 2.1.283, blocks an assistant from writing them as self-modification. So the recommended set adds the scripts with `--hooks none`, and the person runs `repo-fit hooks <repo> --apply` (a dry run without `--apply`). It merges with hooks already there, records the mode in `playbook.json`, writes a receipt, and `undo` turns it off. `--hooks all` adds autosave; the default follows `autosave` in `playbook.json`.
+
+**An older setup** (a repo with `playbook.json` from an earlier version): `status` and `update` list what is new since its version in plain words, and any step it skipped that has changed since, quoting the old reason ("worth a second look"). The skill shows these, asks once, then runs `update --apply` and the recommended set. The plain-word notes live in `RELEASES` in `lib/versions.mjs`: add an entry with every release that changes what a repo gets.
 
 ## Connecting the dots: the review queue
 

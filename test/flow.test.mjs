@@ -1,7 +1,7 @@
 // The setup flow: one recommended set per kind of repo, a preview of the briefing, one dry run.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { cli, git, repo, sandboxed, script, tree, write } from "./helpers.mjs";
+import { cli, git, has, read, repo, sandboxed, script, tree, write } from "./helpers.mjs";
 
 const audit = (sb, d) => JSON.parse(cli(sb, ["audit", d, "--json"]).stdout);
 const pkg = JSON.stringify({ name: "app", scripts: { test: "node --test" } });
@@ -14,7 +14,8 @@ test("a code repo is recommended the briefing, one rulebook and its commands, no
   assert.equal(rec.kind, "technical");
   for (const id of ["A-01", "A-10", "D-10"]) assert.ok(rec.steps.includes(id), `${id} in ${rec.steps}`);
   for (const id of ["A-02", "A-03", "A-11", "D-01"]) assert.ok(!rec.steps.includes(id), `${id} not in ${rec.steps}`);
-  assert.match(rec.flags, /--hooks brief --autosave off/);
+  assert.match(rec.flags, /--hooks none --autosave off/);
+  assert.match(rec.hooksCommand, /hooks .* --hooks brief --apply$/);
   assert.ok(rec.gains.some((g) => /briefing/.test(g)));
 }));
 
@@ -22,7 +23,8 @@ test("a notes repo without rules gets the rulebook, a current view and a board, 
   const rec = audit(sb, notesRepo(sb)).plan.recommended;
   assert.equal(rec.kind, "notes");
   for (const id of ["A-01", "A-10", "A-11", "A-03", "A-02"]) assert.ok(rec.steps.includes(id), `${id} in ${rec.steps}`);
-  assert.match(rec.flags, /--hooks all --autosave on/);
+  assert.match(rec.flags, /--hooks none --autosave on/);
+  assert.match(rec.hooksCommand, /--hooks all --apply$/);
 }));
 
 test("a repo with its own commit rule gets autosave off, and still the short block, which adds no commit rule", sandboxed((sb) => {
@@ -135,4 +137,45 @@ test("unsaved work on main is fine where the repo's own rules commit on main", s
   write(d, "src/d.js", "export const d = 4;\n");
   const f19 = audit(sb, d).checks.find((c) => c.id === "F19");
   assert.equal(f19.status, "ok");
+}));
+
+test("the recommended set writes no hook files; the person turns the briefing on with `hooks`", sandboxed((sb) => {
+  const d = codeRepo(sb, { ".claude/settings.json": JSON.stringify({ hooks: { Stop: [{ hooks: [{ type: "command", command: "their-own.sh" }] }] } }) });
+  const rec = audit(sb, d).plan.recommended;
+  assert.equal(cli(sb, ["apply", d, "--steps", rec.steps.join(","), ...rec.flags.split(" "), "--apply"]).status, 0);
+  assert.doesNotMatch(read(d, ".claude/settings.json"), /scripts\/playbook/, "the assistant's apply adds no hook");
+  assert.ok(!has(d, ".codex/hooks.json"));
+  const dry = cli(sb, ["hooks", d]);
+  assert.equal(dry.status, 0, dry.out);
+  assert.match(dry.out, /Dry run/);
+  assert.doesNotMatch(read(d, ".claude/settings.json"), /scripts\/playbook/, "the dry run writes nothing");
+  const on = cli(sb, ["hooks", d, "--apply"]);
+  assert.equal(on.status, 0, on.out);
+  assert.match(on.out, /The briefing is on/);
+  const s = read(d, ".claude/settings.json");
+  assert.match(s, /scripts\/playbook\/brief\.mjs/);
+  assert.match(s, /their-own\.sh/, "the repo's own hook stays");
+  assert.doesNotMatch(s, /autosave\.mjs/, "briefing only when autosave is off");
+  assert.equal(JSON.parse(read(d, "playbook.json")).hooks, "brief");
+  assert.match(cli(sb, ["hooks", d, "--apply"]).out, /already on/);
+  assert.equal(cli(sb, ["undo", d, "--apply"]).status, 0);
+  assert.doesNotMatch(read(d, ".claude/settings.json"), /scripts\/playbook/, "undo turns it off");
+}));
+
+test("`hooks` refuses a repo without the briefing script", sandboxed((sb) => {
+  const r = cli(sb, ["hooks", codeRepo(sb), "--apply"]);
+  assert.equal(r.status, 2);
+  assert.match(r.out, /briefing script is not there yet/);
+}));
+
+test("an older setup is told what is new, and a skipped step that changed gets a second look", sandboxed((sb) => {
+  const pj = { playbook: "0.5.0", tools: ["claude-code"], skipped: { "D-01": "the block wants a table board" } };
+  const d = notesRepo(sb, { "playbook.json": JSON.stringify(pj), "AGENTS.md": "# Rules\n" });
+  const out = cli(sb, ["status", d]).out;
+  assert.match(out, /🆕 New since 0\.5\.0:/);
+  assert.match(out, /774 to 293 words/);
+  assert.match(out, /👀 Worth a second look: .*D-01.*"the block wants a table board".*no longer needs a table board/);
+  assert.match(out, /skip <repo> D-01 --remove --apply, then apply <repo> --steps D-01/);
+  const current = notesRepo(sb, { "playbook.json": JSON.stringify({ ...pj, playbook: "0.6.0" }), "AGENTS.md": "# Rules\n" });
+  assert.doesNotMatch(cli(sb, ["status", current]).out, /New since|second look/);
 }));

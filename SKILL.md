@@ -1,7 +1,7 @@
 ---
 name: repo-fit
 description: >-
-  Set up or update a repository so every AI session starts with a short briefing and one shared rulebook for Claude Code and Codex. It looks at the repo first, shows the user what they would gain, then asks once. Use when starting a new repo, adding repo-fit to an existing repo, or updating a repo that already has it.
+  Set up, update or repair a repository so every AI session starts with a short briefing and one shared rulebook for Claude Code and Codex. It looks at the repo first, shows the user what they would gain with examples from their own repo, then asks once. Use when starting a new repo, adding repo-fit to an existing repo, or bringing a repo set up with an older repo-fit up to date.
 ---
 
 # repo-fit
@@ -10,27 +10,33 @@ For an agent without this skill installed, `INSTALL.md` beside this file carries
 
 **The playbook folder is the folder that contains this SKILL.md.** Run commands as `node "$SKILL_DIR/bin/repo-fit.mjs" <command> <repo>`, where `$SKILL_DIR` is that folder. If `bin/` is not beside this file, read `home` from `~/.config/repo-fit/preferences.json`; if there is none, ask where the clone is. Never download or install it yourself.
 
-## What a good setup looks like
+## Who you are talking to
 
-The user sees value on the first screen, answers **one** question, and approves **one** dry run. Ask **3 questions at most** in the whole setup. Most repos need only the first. **One, never zero:** anything that writes needs the user's yes to its dry run.
+Assume the person does not know what hooks, dry runs, rule files or Git branches are, and should not need to. Say what changes for **them**, with lines from **their own repo**: their real branch, their last commit, their test command, their file names. Never a made-up example. Use a technical word only with a plain gloss beside it.
+
+## What a good run looks like
+
+The person sees value on the first screen, answers **one** question, and the yes approves exactly what they saw. **3 questions at most**, and **never zero**: anything that writes needs their yes first.
 
 ```
-1. LOOK     audit + preview + the recommended dry run, silently
-2. SHOW     the briefing they would get, what each piece adds, the files it writes, "your rules stay"
-3. ASK      set up these files / let me pick / just the report. The yes approves that dry run
-4. APPLY    the same command with --apply, then verify
-5. NOTICED  up to 5 lines of other findings. Not questions
+1. LOOK      audit, preview, update and the recommended dry run, silently
+2. SHOW      their briefing, what each piece adds, what changes since their old version
+3. ASK       set these up / let me pick / just the report
+4. APPLY     the approved commands with --apply, then verify
+5. BRIEFING  one line the person runs to turn on the start-of-session briefing
+6. RECAP     up to 5 "also noticed" lines, then a short recap
 ```
 
 ## 1. Look (read-only, say nothing yet)
 
 ```sh
-node "$SKILL_DIR/bin/repo-fit.mjs" audit <repo>      # existing repo; starts with the recommended set
-node "$SKILL_DIR/bin/repo-fit.mjs" preview <repo>    # the session briefing the recommended set would give
-node "$SKILL_DIR/bin/repo-fit.mjs" apply <repo> --steps <ids> <flags>   # the recommended set's dry run, from the audit
+node "$SKILL_DIR/bin/repo-fit.mjs" audit <repo>       # starts with the recommended set and its dry-run command
+node "$SKILL_DIR/bin/repo-fit.mjs" preview <repo>     # the briefing their sessions would start with
+node "$SKILL_DIR/bin/repo-fit.mjs" apply <repo> --steps <ids> <flags>   # the recommended dry run, from the audit
 ```
 
-An empty or new folder: run `detect <repo>` instead, and use `init` in step 4. A repo that already has `playbook.json`: run `status <repo>` and `update <repo>` (a dry run), show what would change as a short list, and ask the one question: update now (recommended) or not now. Run `update <repo> --apply` only after the yes.
+- **Repo set up with an older repo-fit** (it has `playbook.json`): also run `status <repo>` and `update <repo>` (a dry run). `status` lists what is new since their version and any step they skipped that has changed since ("worth a second look").
+- **Empty or new folder:** run `detect <repo>` and `init <repo> --dry-run --tool <tools> --no-hooks` instead.
 
 Do not paste the reports. They are your working notes.
 
@@ -38,67 +44,62 @@ Do not paste the reports. They are your working notes.
 
 In about 10 lines, plain words, no step IDs:
 
-- **The briefing** from `preview`, as a code block: "Every session would start with this."
-- **What each piece adds**, from the audit's "Recommended set", with one concrete example from this repo. Example: "The rulebook would list `npm test`, so the assistant runs your real test command."
-- **The files it writes**, from the dry run, one line each ("new: a section in AGENTS.md with your test command"). Not the full diff, unless an existing file is edited.
-- **What stays the same.** If the audit lists the repo's own rules, checks or hooks under "Leave as is", say so in one line: "Your rules stay as they are. repo-fit uses them." These are not conflicts to discuss.
+- **Their briefing**, from `preview`, as a code block, with one sentence on why it matters here. Example from a real repo: "Right now a new session knows nothing. With this, it starts by seeing you are on `main` with 1 unsaved file and that your last work was 'AWS spend fix' on 29 Sep."
+- **What each piece adds**, from the audit's "Recommended set", each tied to something in this repo ("the rulebook would list `npm test`, so the assistant runs your real test command").
+- **For an older setup:** what the update fixes, from `status`'s "New since" lines, in a sentence each. A skipped step marked "worth a second look": quote their old reason and say what changed.
+- **What stays the same:** "Your own rules and files stay as they are; where they overlap, yours win." If the audit lists the repo's own rules or checks under "Leave as is", that is the reason.
+- **What it writes**, one line per file, from the dry runs.
 
-If the recommended set is empty, say plainly that the repo already has what matters and stop. That is a good result.
+If nothing is recommended and nothing is behind, say the repo already has what matters, and stop. That is a good result.
 
 ## 3. Ask once
 
-One question, these three options:
+1. **Set these up (Recommended).** The yes approves the dry runs shown: the recommended `apply` and, for an older setup, the `update`.
+2. **Let me pick.** One multi-select question with the other steps from the audit, in plain words. Run their dry run, show the files, and ask for the yes to it (question 3).
+3. **Just the report.** A short table of the audit, then stop.
 
-1. **Set up these files (Recommended).** The yes approves the dry run shown above.
-2. **Let me pick.** Then one multi-select question with the other add-only steps and edits from the audit, each in plain words. Run their dry run, show the files, and ask for the yes to it: that is question 3.
-3. **Just the report.** Summarize the audit in a short table and stop.
+Ask a second question only for what the code cannot decide: an edit to an existing file outside the recommended set (show its diff), a second-look step (re-adding something they once said no to), or a word cap the audit asks for.
 
-Ask a second question only for a choice the code cannot make:
-
-- An **edit to an existing file** that is not in the recommended set: show its diff. Example: linking a `CLAUDE.md` that differs a lot from `AGENTS.md` (D-02). The shared rules block (D-01) is not such a case: it goes after the repo's rules, which win, so it needs no discussion.
-- A **word cap** when the audit says the current view is over the default and none is written down.
-
-**Never ask about:**
-
-- which tools are used (`detect` finds them) or which models (the answer changes no file)
-- what kind of repo it is
-- anything repo-fit does not add or change: CI and scheduled workflows, deploys, code quality, other automation, old or unlinked notes, big files, branches or remotes
-
-Those go in step 5 as one line each, if at all.
+**Never ask about** which tools or models (found, or changes nothing), what kind of repo it is, or anything repo-fit does not change: CI and scheduled workflows, deploys, code quality, old notes, big files, branches, remotes. Those go in the recap, one line each.
 
 ## 4. Apply
 
-Run the exact command the user approved, with `--apply`:
+Run exactly what was approved, with `--apply`: `update <repo> --apply` first for an older setup, then `apply <repo> --steps <ids> <flags> --apply`. A new repo: `init` with the same flags, without `--dry-run`. If anything changed after the yes, show the new dry run and ask again. Every write keeps a backup and a receipt; `undo <repo> --apply` puts things back. Say that once.
 
-```sh
-node "$SKILL_DIR/bin/repo-fit.mjs" apply <repo> --steps <ids> <flags> --apply
+Verify, and say what you checked: `node scripts/playbook/brief.mjs --text` prints the briefing, and `node scripts/playbook/check.mjs` passes, plus the repo's own checks.
+
+## 5. The briefing: one line the person runs
+
+If the audit shows a "turn on the start-of-session briefing" command, the person runs it, not you. Claude Code's safety check (auto mode) blocks an assistant from changing how sessions start, and that is right: it is their call. Explain it like this, with their real preview:
+
+> **One last step, and it is yours to run.** Right now each new session starts blank. This line makes every new session in this folder start with the briefing above, so the assistant knows where you left off without you explaining. Claude Code does not let an assistant switch this on by itself, because it changes how every future session starts. To turn it off later: `undo`.
+
+Then give the command in its own `bash` block, with the full path, so it has a Run button:
+
+```bash
+node "<full path to the playbook folder>/bin/repo-fit.mjs" hooks "<full path to the repo>" --apply
 ```
 
-If anything about it changed after the yes (other steps, other flags), show the new dry run and ask again. A new repo uses `init <repo> --dry-run --tool <tools>` in step 1 and `init` without `--dry-run` here. Every apply writes a backup and a receipt, and `undo <repo>` reverses it. Say that once.
+After they run it: check that `.claude/settings.json` names `scripts/playbook/brief.mjs`, and tell them a new session will show the briefing. **Codex:** it runs this only after they allow it once with `/hooks` in Codex. Until a Codex session shows the briefing, call it untested.
 
-Then verify in the repo, and say what you checked:
+If they would rather not, the rest still works: the shared rules tell the assistant to run the briefing itself when none appeared.
 
-- `node scripts/playbook/brief.mjs --text` prints the briefing.
-- `node scripts/playbook/check.mjs` passes, and so do the repo's own checks if it has them.
-- **Claude Code:** `/context` lists `CLAUDE.md`.
-- **Codex:** hooks do nothing until the user trusts them with `/hooks`. Tell them. Until one fires, call the Codex hooks untested.
+## 6. Also noticed, then the recap
 
-## 5. Also noticed, then the recap
+Up to 5 lines of other findings (old notes, big files, no remote), each with the command to look further. Information, not questions.
 
-At most 5 lines of other audit findings (old notes, big files, no remote, a stale guidance warning). Each line says what was found and the command to look further. They are information, not questions.
-
-Recap in a few lines: what was added, what was verified, what needs the user (Codex trust), and how to undo.
+Recap in a few lines: what was added or fixed, what was verified, what is theirs to do (the briefing line, Codex `/hooks`), and how to undo. End with the repo-fit version and: "repo-fit does not update itself. To get the newest: `npx skills update -g -y`."
 
 ## Guardrails
 
 The CLI already guarantees dry runs, backups, receipts, undo, no overwrites, and no commits to `main`. These rules are what it cannot enforce:
 
-- Add `--apply` to `apply`, `update` or `skip`, or run `init` without `--dry-run`, only after the user said yes to that exact dry run. Invoking the skill is not that yes.
-- Never move, delete, push, install a tool, log in, or create a remote as part of setup. `connect` and `tools --update` run only when the user asks for them.
+- Add `--apply` to `apply`, `update`, `skip` or `hooks`, or run `init` without `--dry-run`, only after the person said yes to that exact dry run. Invoking the skill is not that yes.
+- **If a safety check blocks a step, do not work around it** and do not offer a path that will hit the same block later. Say in one plain sentence what was blocked and why, and give the person the exact command to run themselves in a `bash` block.
+- Never move, delete, push, install a tool, log in, or create a remote as part of setup. `connect` and `tools --update` run only when the person asks.
 - Never read or print the contents of a secret-like file. If the audit lists one, say so and recommend rotating it.
-- The repo's own rules win. If it says "commit only when asked", the recommended flags already turn autosave off.
-- Do not save audit output inside the audited repo unless the user asks.
+- Do not save audit output inside the audited repo unless the person asks.
 
 ## For maintainers
 
-Refreshing the guidance layer and the version rules: `guidance/README.md`. Command reference: `docs/reference.md`.
+Refreshing the guidance layer: `guidance/README.md`. Command reference and tests: `docs/reference.md`. After changing this file, check a live run: `node dev/transcript-check.mjs <session.jsonl>`.

@@ -19,9 +19,9 @@ A small foundation for any repository, code or notes. The parts that matter most
 
 ## Steps
 
-The user should see value on the first screen, answer one question, and approve one dry run. Ask **3 questions at most** in the whole setup.
+The user should see value on the first screen, answer one question, and approve one dry run. Ask **3 questions at most** in the whole setup, and **never zero**: anything that writes needs the user's yes to its dry run. Asking for the setup is not that yes.
 
-1. **Look, silently.** `audit <repo>` (it starts with the recommended set for this kind of repo) and `preview <repo>` (the briefing the user would get). New or empty folder: `detect <repo>`. A repo that already has `playbook.json`: `status <repo>`, then `update <repo>` as a dry run.
+1. **Look, silently.** `audit <repo>` (it starts with the recommended set for this kind of repo) and `preview <repo>` (the briefing the user would get). New or empty folder: `detect <repo>`. A repo that already has `playbook.json`: `status <repo>`, then `update <repo>` as a dry run; show the changes and ask "update now or not now" before `--apply`.
 2. **Show, in about 10 lines.** The preview briefing as a code block. What each recommended piece adds, with one example from this repo. If the audit lists the repo's own rules or checks under "Leave as is": "Your rules stay as they are. repo-fit uses them." If nothing is recommended, say the repo already has what matters, and stop.
 3. **Ask once:** set up the recommended pieces (recommended), let me pick (then one multi-select question), or just the report. Ask again only to show the diff of an edit to an existing file that is not in the recommended set, or to set a word cap. Never ask which tools or models (detected, and the models answer changes no file), what kind of repo it is, or about anything repo-fit does not change (CI, deploys, code quality, old notes, big files, remotes).
 4. **Dry run, then apply.** Existing repo: `apply <repo> --steps <ids> <flags>` with the steps and flags from the recommended set. New repo: `init <repo> --dry-run --tool <tools>`. Show the files as a short list, one line each. After the yes: the same command with `--apply` (for `init`, without `--dry-run`). Every apply writes a backup and a receipt.

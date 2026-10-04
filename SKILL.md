@@ -12,7 +12,7 @@ For an agent without this skill installed, `INSTALL.md` beside this file carries
 
 ## What a good setup looks like
 
-The user sees value on the first screen, answers **one** question, and approves **one** dry run. Ask **3 questions at most** in the whole setup. Most repos need only the first.
+The user sees value on the first screen, answers **one** question, and approves **one** dry run. Ask **3 questions at most** in the whole setup. Most repos need only the first. **One, never zero:** anything that writes needs the user's yes to its dry run.
 
 ```
 1. LOOK     detect + audit + preview, silently
@@ -29,7 +29,7 @@ node "$SKILL_DIR/bin/repo-fit.mjs" audit <repo>      # existing repo; starts wit
 node "$SKILL_DIR/bin/repo-fit.mjs" preview <repo>    # the session briefing the recommended set would give
 ```
 
-An empty or new folder: run `detect <repo>` instead, and use `init` in step 4. A repo that already has `playbook.json`: run `status <repo>` and `update <repo>` (a dry run) and show what would change.
+An empty or new folder: run `detect <repo>` instead, and use `init` in step 4. A repo that already has `playbook.json`: run `status <repo>` and `update <repo>` (a dry run), show what would change as a short list, and ask the one question: update now (recommended) or not now. Run `update <repo> --apply` only after the yes.
 
 Do not paste the reports. They are your working notes.
 
@@ -92,7 +92,7 @@ Recap in a few lines: what was added, what was verified, what needs the user (Co
 
 The CLI already guarantees dry runs, backups, receipts, undo, no overwrites, and no commits to `main`. These rules are what it cannot enforce:
 
-- Add `--apply` only after the user said yes to that exact dry run.
+- Add `--apply` to `apply`, `update` or `skip`, or run `init` without `--dry-run`, only after the user said yes to that exact dry run. Invoking the skill is not that yes.
 - Never move, delete, push, install a tool, log in, or create a remote as part of setup. `connect` and `tools --update` run only when the user asks for them.
 - Never read or print the contents of a secret-like file. If the audit lists one, say so and recommend rotating it.
 - The repo's own rules win. If it says "commit only when asked", the recommended flags already turn autosave off.

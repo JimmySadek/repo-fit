@@ -80,3 +80,13 @@ test("transcript check: only the last /repo-fit run counts", () => {
   const r = checkTranscript([start, ask("q0", "A?", "B?", "C?", "D?"), user("(Re-invocation of /repo-fit — new arguments)"), ask("q1", "Set up?")].join("\n"));
   assert.equal(r.questions.length, 1);
 });
+
+test("transcript check: a quoted path, a hand edit and a housekeeping option are all caught", () => {
+  const quoted = 'node "/x/bin/repo-fit.mjs" apply /r --steps A-01 --hooks none';
+  const r = checkTranscript([start, bash(quoted), bash(`${quoted} --apply`)].join("\n"));
+  assert.match(r.problems.join(), /wrote without an answer/);
+  const edit = line({ type: "assistant", message: { content: [{ type: "tool_use", id: "e", name: "Edit", input: { file_path: "/r/CLAUDE.md" } }] } });
+  assert.match(checkTranscript([start, edit].join("\n")).problems.join(), /Edit \/r\/CLAUDE\.md/);
+  const opt = line({ type: "assistant", message: { content: [{ type: "tool_use", id: "q", name: "AskUserQuestion", input: { questions: [{ question: "Which small edits?", options: [{ label: "Link the June note" }] }] } }] } });
+  assert.match(checkTranscript([start, opt].join("\n")).problems.join(), /off-topic/);
+});

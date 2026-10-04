@@ -86,7 +86,7 @@ If they would rather not, the rest still works: the shared rules tell the assist
 
 ## 6. Also noticed, then the recap
 
-Up to 5 lines of other findings (old notes, big files, no remote), each with the command to look further. Information, not questions.
+Up to 5 lines of other findings (old notes, unlinked notes, big files, no remote), each with the command to look further. Information, not questions: do not offer to fix them in this run.
 
 Recap in a few lines: what was added or fixed, what was verified, what is theirs to do (the briefing line, Codex `/hooks`), and how to undo. End with the repo-fit version and one line on updates: "When a newer repo-fit matters for this repo, the briefing will say so." (Plugin installs in Claude Code can also switch on auto-update in `/plugin`.)
 
@@ -95,6 +95,7 @@ Recap in a few lines: what was added or fixed, what was verified, what is theirs
 The CLI already guarantees dry runs, backups, receipts, undo, no overwrites, and no commits to `main`. These rules are what it cannot enforce:
 
 - Add `--apply` to `apply`, `update`, `skip` or `hooks`, or run `init` without `--dry-run`, only after the person said yes to that exact dry run. Invoking the skill is not that yes.
+- **Write only what the approved dry run shows.** No hand edits, not even to tidy a file repo-fit just wrote. If something it wrote looks wrong, say so in the recap; that is a repo-fit bug to report.
 - **If a safety check blocks a step, do not work around it** and do not offer a path that will hit the same block later. Say in one plain sentence what was blocked and why, and give the person the exact command to run themselves in a `bash` block.
 - Never move, delete, push, install a tool, log in, or create a remote as part of setup. `connect` and `tools --update` run only when the person asks.
 - Never read or print the contents of a secret-like file. If the audit lists one, say so and recommend rotating it.

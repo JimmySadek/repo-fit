@@ -7,8 +7,8 @@
 import { readFileSync } from "node:fs";
 
 const MAX_QUESTIONS = 3;
-const OFF_TOPIC = /\b(CI|workflows?|GitHub Actions|deploy\w*|archive|big files?|large files?|models?|which (?:AI )?tools)\b/i;
-const REPO_FIT = /repo-fit(?:\.mjs)?\s+(apply|update|skip|init|undo|connect|tools)\b/;
+const OFF_TOPIC = /\b(CI|workflows?|GitHub Actions|deploy\w*|archive|big files?|large files?|models?|which (?:AI )?tools|link (?:the|this|these|an?) \w+ note|unlinked|old notes?|stale|\.gitignore)\b/i;
+const REPO_FIT = /repo-fit(?:\.mjs)?["']?\s+(apply|update|skip|init|undo|connect|tools|hooks)\b/;
 
 export function checkTranscript(text) {
   const events = text.split("\n").filter(Boolean).flatMap((line) => {
@@ -24,9 +24,10 @@ export function checkTranscript(text) {
     if (/command-name>\/repo-fit|Re-invocation of \/repo-fit/.test(JSON.stringify(e.message?.content ?? ""))) start = i;
   });
   const questions = [];
+  const asked = [];
   const writes = [];
   const askIds = new Set();
-  let answered = true; // nothing to answer before the first dry run
+  let answered = false; // invoking the skill is not a yes: every write needs an answer first
   for (const e of events.slice(start + 1)) {
     const content = e.message?.content;
     if (e.type === "user") {
@@ -38,9 +39,16 @@ export function checkTranscript(text) {
     if (e.type !== "assistant" || !Array.isArray(content)) continue;
     for (const b of content) {
       if (b.type !== "tool_use") continue;
+      // A file the assistant edits or writes by itself is a write too.
+      if (["Edit", "Write", "MultiEdit", "NotebookEdit"].includes(b.name)) {
+        writes.push({ command: `${b.name} ${b.input?.file_path ?? ""}`, approved: answered });
+        continue;
+      }
       if (b.name === "AskUserQuestion") {
         askIds.add(b.id);
         for (const q of b.input?.questions ?? []) questions.push(q.question ?? "");
+        // The options say what is really being asked ("Link the June note"), so they count for the topic too.
+        for (const q of b.input?.questions ?? []) asked.push([q.question, ...(q.options ?? []).map((o) => `${o.label} ${o.description ?? ""}`)].join(" "));
       }
       const cmd = b.name === "Bash" ? b.input?.command ?? "" : "";
       const m = cmd.match(REPO_FIT);
@@ -54,7 +62,7 @@ export function checkTranscript(text) {
       }
     }
   }
-  const offTopic = questions.filter((q) => OFF_TOPIC.test(q));
+  const offTopic = asked.filter((q) => OFF_TOPIC.test(q));
   const unapproved = writes.filter((w) => !w.approved);
   const problems = [
     ...(questions.length > MAX_QUESTIONS ? [`${questions.length} questions, more than ${MAX_QUESTIONS}`] : []),

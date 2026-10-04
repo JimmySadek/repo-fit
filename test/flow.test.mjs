@@ -179,3 +179,25 @@ test("an older setup is told what is new, and a skipped step that changed gets a
   const current = notesRepo(sb, { "playbook.json": JSON.stringify({ ...pj, playbook: "0.6.0" }), "AGENTS.md": "# Rules\n" });
   assert.doesNotMatch(cli(sb, ["status", current]).out, /New since|second look/);
 }));
+
+test("what repo-fit writes claims nothing that is off: CLAUDE.md, and .playbook/ stays out of git status", sandboxed((sb) => {
+  const d = codeRepo(sb);
+  const rec = audit(sb, d).plan.recommended;
+  assert.equal(cli(sb, ["apply", d, "--steps", rec.steps.join(","), ...rec.flags.split(" "), "--apply"]).status, 0);
+  assert.doesNotMatch(read(d, "CLAUDE.md"), /autosave|hooks? .*print/i, "CLAUDE.md does not say the briefing or autosave is on");
+  assert.doesNotMatch(git(sb, d, ["status", "--porcelain"]).stdout, /\.playbook/, "receipts and backups stay local");
+}));
+
+test("an older .playbook/.gitignore is widened so receipts stop showing as untracked", sandboxed((sb) => {
+  const d = codeRepo(sb, { ".playbook/.gitignore": "backups/\nundone/\n" });
+  const rec = audit(sb, d).plan.recommended;
+  assert.equal(cli(sb, ["apply", d, "--steps", rec.steps.join(","), ...rec.flags.split(" "), "--apply"]).status, 0);
+  assert.equal(read(d, ".playbook/.gitignore"), "*\n");
+}));
+
+test("a mixed repo is not offered a blank current-view page in the one-click set", sandboxed((sb) => {
+  const d = repo(sb, "mixed", { commit: true, files: { "package.json": pkg, "src/a.js": "1\n", "docs/one.md": "# One\n", "docs/two.md": "# Two\n", "docs/three.md": "# Three\n" } });
+  const rec = audit(sb, d).plan.recommended;
+  assert.equal(rec.kind, "mixed");
+  assert.ok(!rec.steps.includes("A-03"), rec.steps.join());
+}));

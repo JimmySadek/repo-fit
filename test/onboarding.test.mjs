@@ -113,6 +113,12 @@ test("transcript check: commands chained in one line are read one by one", () =>
   assert.equal(r.writes.length, 2);
 });
 
+test("transcript check: a folder written as a shell variable in the dry run and as a path in the write is the same", () => {
+  const dry = 'S=/x; R=/tmp/f; node "$S/bin/repo-fit.mjs" organize "$R"';
+  const r = checkTranscript([start, bash(dry), say(SCREEN), ask("q1", "Organize it all?"), answer("q1"), bash("node /x/bin/repo-fit.mjs organize /tmp/f --apply --plan abc")].join("\n"));
+  assert.ok(r.ok, r.problems.join("; "));
+});
+
 test("transcript check: a quoted path, a hand edit and a housekeeping option are all caught", () => {
   const quoted = 'node "/x/bin/repo-fit.mjs" apply /r --steps A-01 --hooks none';
   const r = checkTranscript([start, bash(quoted), bash(`${quoted} --apply`)].join("\n"));

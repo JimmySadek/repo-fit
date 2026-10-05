@@ -68,7 +68,11 @@ export function checkTranscript(text) {
         for (const q of b.input?.questions ?? []) asked.push([q.question, ...(q.options ?? []).map((o) => `${o.label} ${o.description ?? ""}`)].join(" "));
       }
       // One Bash call can chain several commands ("a; b && c | tail"): each repo-fit command counts on its own.
-      for (const cmd of (b.name === "Bash" ? b.input?.command ?? "" : "").split(/\s*(?:;|&&|\|\|?|\n)\s*/)) {
+      const vars = {};
+      for (const raw of (b.name === "Bash" ? b.input?.command ?? "" : "").split(/\s*(?:;|&&|\|\|?|\n)\s*/)) {
+      const set = raw.match(/^(?:export\s+)?([A-Za-z_]\w*)=(?:"([^"]*)"|'([^']*)'|(\S*))$/);
+      if (set) vars[set[1]] = set[2] ?? set[3] ?? set[4];
+      const cmd = raw.replace(/\$\{?([A-Za-z_]\w*)\}?/g, (all, v) => (v in vars ? vars[v] : all));
       const m = cmd.match(REPO_FIT);
       if (!m) continue;
       const writes_ = m[1] === "init" ? !/--dry-run/.test(cmd) : /--apply\b/.test(cmd);

@@ -104,3 +104,13 @@ test("the setup (apply --apply) also saves a snapshot first", sandboxed((sb) => 
   assert.equal(log(sb, d)[0], "repo-fit: snapshot before changes");
   assert.deepEqual(inCommit(sb, d, "HEAD"), ["notes/b.md"]);
 }));
+
+test("one snapshot per run: repo-fit's own changes since the snapshot are not saved as another snapshot", sandboxed((sb) => {
+  const { dir } = makeFixture("spaghetti-nogit", sb.dir);
+  const rec = JSON.parse(cli(sb, ["audit", dir, "--json"], { env: ME }).stdout).plan.recommended;
+  assert.equal(organize(sb, dir).status, 0);
+  const r = cli(sb, ["apply", dir, "--steps", rec.steps.join(","), ...rec.flags.split(" "), "--apply"], { env: ME });
+  assert.equal(r.status, 0, r.out);
+  assert.deepEqual(log(sb, dir), ["repo-fit: snapshot before changes"], "only the snapshot of the person's folder");
+  assert.match(r.out, /already saved/);
+}));

@@ -290,7 +290,7 @@ async function status(target) {
   items.push(managed.length ? [false, `Behind: this folder has repo-fit ${pj.playbook}, and ${version} is ready`] : [true, `repo-fit ${version}: Up to date`]);
   const off = items.filter(([ok]) => !ok).length;
   console.log([off ? `⚠️ Your folder needs a look: ${off} ${off === 1 ? "thing" : "things"}` : "✅ Your folder is fit", ...items.map(([ok, s]) => `   ${ok ? "✅" : "⚠️"} ${s}`)].join("\n"));
-  console.log(off ? "\nWhat repo-fit can do about it: loose files and the inbox are in the organize plan (`organize`), an update shows what it changes (`update`). Broken links are yours to fix; the list says where." : "\nNothing to change.");
+  console.log(off ? "\nWhat can fix it: files at the top go in the organize plan (`organize`); for items waiting in inbox/, one question per kind; an update shows what it changes (`update`). Broken links are yours to fix; the list says where." : "\nNothing to change.");
   if (old?.length) console.log(`\n🆕 ${old.length} old ${old.length === 1 ? "note" : "notes"} (not changed for 180+ days): worth a look in the next review.`);
   for (const l of notAdoptedLines(notAdopted)) console.log(l);
   for (const l of newsLines(pj, notAdopted)) console.log(l);

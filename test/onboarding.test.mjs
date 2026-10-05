@@ -81,6 +81,31 @@ test("transcript check: only the last /repo-fit run counts", () => {
   assert.equal(r.questions.length, 1);
 });
 
+const say = (text) => line({ type: "assistant", message: { content: [{ type: "text", text }] } });
+const ORG = 'node "/x/bin/repo-fit.mjs" organize /r';
+const SCREEN = "```\nYour folder today          After one yes (undo any time)\n32 things loose at the top  notes/: your 12 notes\n```\n**Why this is better for you**";
+
+test("transcript check: the before/after screen, one yes, then setup and organize both run", () => {
+  const r = checkTranscript([start, bash(DRY), bash(ORG), say(SCREEN), ask("q1", "Organize it all?"), answer("q1"), bash(`${DRY} --apply`), bash(`${ORG} --apply`)].join("\n"));
+  assert.ok(r.ok, r.problems.join("; "));
+  assert.equal(r.writes.length, 2);
+});
+
+test("transcript check: asking before the before/after screen was shown fails", () => {
+  const r = checkTranscript([start, bash(DRY), bash(ORG), say("I looked at your folder."), ask("q1", "Organize it all?"), answer("q1"), bash(`${ORG} --apply`)].join("\n"));
+  assert.match(r.problems.join(), /before showing the before and after/);
+});
+
+test("transcript check: organize --apply needs a yes given after its plan was shown", () => {
+  const r = checkTranscript([start, bash(DRY), say(SCREEN), ask("q1", "Set up?"), answer("q1"), bash(ORG), bash(`${ORG} --apply`)].join("\n"));
+  assert.match(r.problems.join(), /wrote without an answer.*organize/);
+});
+
+test("transcript check: archive and old notes are part of organizing now, not off-topic", () => {
+  const r = checkTranscript([start, bash(ORG), say(SCREEN), ask("q1", "Organize it all? Old folders go to the archive; old notes stay findable.")].join("\n"));
+  assert.ok(r.ok, r.problems.join("; "));
+});
+
 test("transcript check: a quoted path, a hand edit and a housekeeping option are all caught", () => {
   const quoted = 'node "/x/bin/repo-fit.mjs" apply /r --steps A-01 --hooks none';
   const r = checkTranscript([start, bash(quoted), bash(`${quoted} --apply`)].join("\n"));

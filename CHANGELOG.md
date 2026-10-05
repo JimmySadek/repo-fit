@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Outcome scores, before any new feature.** The redesign (`claudedocs/2026-10-05-redesign-design.md`) is measured by whether a folder is really better organized, not only by "nothing broke". `dev/measure.mjs` builds five synthetic test folders (an everything-folder with and without Git, a program with documents spread around, a flat second brain, an already tidy folder), sets each up with a repo-fit version and scores it with `dev/score.mjs`, which has its own file walk and link reader. 0.6.0's starting score: no map, 0% of notes findable from one, loose files unchanged, no new input filed, safety perfect (`claudedocs/2026-10-05-baseline-0.6.0.md`).
 - **Releases publish themselves.** Merging a new version into `main` runs the tests and publishes it to npm through trusted publishing (no login, no stored token), then tags it. Ordinary merges publish nothing.
 
 ## 0.6.0 (5 Oct 2026)

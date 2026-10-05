@@ -42,3 +42,4 @@ A small, balanced foundation for any repository, technical or notes, for Claude 
 | `guidance/` | Dated notes from official sources, and the refresh routine |
 | `SKILL.md` | The setup interview (at the root, so `npx skills add` installs the whole tool as one skill) |
 | `claudedocs/` | Research reports and the search data behind them |
+| `dev/` | Maintainer tools, not shipped: `transcript-check` (live runs), `fixtures`, `score` and `measure` (outcome scores on synthetic test folders; `node dev/measure.mjs --ref 3fed971` is the 0.6.0 starting score) |

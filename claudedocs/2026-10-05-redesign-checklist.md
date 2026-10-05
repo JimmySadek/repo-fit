@@ -49,16 +49,25 @@ Code facts gathered for the design (5 Oct):
 - `dev/transcript-check.mjs`: `OFF_TOPIC` lists archive, stale, unlinked, old notes. These become on-topic for organizing; the checker must change with the flow.
 
 ## Step 4. Design
-- [ ] One design document: outcomes → capabilities → code changes → out of scope
-- [ ] Maintainer says yes
+- [x] One design document: outcomes → capabilities → code changes → out of scope (`2026-10-05-redesign-design.md`)
+- [x] Maintainer says yes (5 Oct), including the 6 choices listed with the design: standing-rule filing at session start, uncertain items to `inbox/`, same-role folders only suggested, exact copies archived in the plan, no transcript reading, open tasks stay in their notes
 
 ## Step 5. Measurement before features
-- [ ] Fixture repos (synthetic only), including a spaghetti everything-folder
-- [ ] Outcome scorer for the section 5 outcomes
-- [ ] 0.6.0 baseline scores recorded
+- [x] Fixture repos (synthetic only), including a spaghetti everything-folder: `dev/fixtures.mjs` (5 folders)
+- [x] Outcome scorer for the section 5 outcomes: `dev/score.mjs`, runner `dev/measure.mjs`, tests `test/measure.test.mjs`
+- [x] 0.6.0 baseline scores recorded: `2026-10-05-baseline-0.6.0.md` (pinned to commit `3fed971`; no `v0.6.0` tag exists)
 
 ## Step 6. Slices (each: failing test first, `node --test` green, scores improve, live run checked)
-- [ ] (filled in after the design is approved)
+- [ ] 1. Map + generated `MAP.md` and index pages + pointer (add-only). Moves: Orient, Find
+- [ ] 2. Safe move engine: move receipts, plan fingerprint, journal, link rewrite, code-reference check, verify, undo. Moves: Safety
+- [ ] 3. Organize plan and the before/after/why screen; one-click apply. Moves: Loose, Find, One home
+- [ ] 4. `SKILL.md` flow and transcript checker; first live run on a test folder. Moves: Ceremony
+- [ ] 5. Capture: inbox, standing rules, duplicates, "Not now"; briefing lines. Moves: New input
+- [ ] 6. Fit check: facts, rebuild, judgement pass prompt; dates without Git. Moves: Nothing rots
+- [ ] 7. Open work collector and map section. Moves: Open work
+- [ ] 8. Improve: receipts-based rules, candidates, preferences block (opt-in)
+- [ ] 9. Release prep: README "From chaos to progress", CHANGELOG, guidance (Codex URL), `docs/reference.md` scope line, pilots on copies of two real folders with the maintainer's approval
+- For each slice, add the measure adapter step in `dev/measure.mjs` so the scores reflect the new flow
 
 ## Ceremony limits (from the 4 Oct audit)
 - At most 3 questions to start

@@ -6,7 +6,7 @@ import { test } from "node:test";
 import { makeFixture } from "../dev/fixtures.mjs";
 import { find, locator, loose, oneHome, orient, safety, sameTree, snapshot } from "../dev/score.mjs";
 import { organizePlan } from "../lib/organize.mjs";
-import { applyMoves, planMoves } from "../lib/move.mjs";
+import { applyMoves, planMoves } from "../scripts/playbook/move.mjs";
 import { cli, git, has, read, repo, sandboxed, script, write } from "./helpers.mjs";
 
 const DAY = { REPO_FIT_TODAY: "2026-10-05", GIT_AUTHOR_NAME: "Test Person", GIT_AUTHOR_EMAIL: "test@example.com", GIT_COMMITTER_NAME: "Test Person", GIT_COMMITTER_EMAIL: "test@example.com" };

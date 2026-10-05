@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { makeFixture } from "../dev/fixtures.mjs";
 import { locator, safety, sameTree, snapshot } from "../dev/score.mjs";
-import { applyMoves, planMoves, recover, scanLinks } from "../lib/move.mjs";
+import { applyMoves, planMoves, recover, scanLinks } from "../scripts/playbook/move.mjs";
 import { cli, has, read, sandboxed, tree, write } from "./helpers.mjs";
 
 const folder = (sb, name, files) => {

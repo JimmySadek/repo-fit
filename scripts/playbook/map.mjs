@@ -17,10 +17,17 @@ const EXT = {
   media: [".mp4", ".mov", ".webm", ".avi", ".mkv", ".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg"],
   code: [".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".py", ".rs", ".go", ".java", ".kt", ".rb", ".php", ".swift", ".c", ".cc", ".cpp", ".h", ".cs", ".sh", ".sql", ".vue", ".svelte", ".astro", ".html", ".css", ".scss"],
 };
-const kindOf = (name) => {
+export const kindOf = (name) => {
   const ext = name.includes(".") ? name.slice(name.lastIndexOf(".")).toLowerCase() : "";
   return Object.keys(EXT).find((k) => EXT[k].includes(ext)) ?? "data";
 };
+// The words a file name starts with, without dates, times, numbers and words like "copy" or "final". Files whose
+// first words match are a family ("japan-trip-plan.md", "japan-trip-budget.md" → "japan-trip").
+const STOP = new Set(["at", "the", "of", "and", "a", "an", "copy", "final", "old", "draft", "new"]);
+export function nameWords(name) {
+  const stem = name.replace(/\.[^.]+$/, "").replace(/\(\d+\)/g, " ").replace(/\d{4}[-_.]?\d{2}([-_.]?\d{2})?/g, " ").replace(/\d{1,2}[.:]\d{2}([.:]\d{2})?/g, " ").replace(/\bv\d+\b/gi, " ");
+  return stem.split(/[\s\-_.()]+/).map((w) => w.toLowerCase()).filter((w) => w && !/^\d+$/.test(w) && !STOP.has(w));
+}
 const MANIFEST = /^(package\.json|pyproject\.toml|requirements\.txt|Cargo\.toml|go\.mod|pom\.xml|build\.gradle|Gemfile|composer\.json|Package\.swift|Makefile|Dockerfile)$/;
 // Files that belong at the top of a folder: front doors, rule files, manifests, lock files and config. Not "loose".
 const FRONT = /^(README|AGENTS|CLAUDE|GEMINI|CHANGELOG|LICEN[CS]E|CONTRIBUTING|SECURITY|CODE_OF_CONDUCT|MAP|LEARNINGS)(\.(md|txt))?$/i;
@@ -118,6 +125,7 @@ export function scan(root, { virtual = new Map(), protect = [] } = {}) {
   const out = [];
   for (const a of areas.values()) {
     const c = {};
+    if (a.name === "inbox") a.files = a.files.filter((p) => p !== "inbox/rules.json");
     for (const p of a.files) c[kindOf(p)] = (c[kindOf(p)] ?? 0) + 1;
     const notes = a.files.filter((p) => kindOf(p) === "note" && !/(^|\/)INDEX\.md$/.test(p));
     c.note = notes.length; // index pages are not notes

@@ -1,4 +1,6 @@
-// Session brief. Read-only in the repo: it never writes, commits or pushes there. Once a day it may ask npm for the
+// Session brief. It never commits or pushes. The one change it makes: at session start (--hook, or --file), new
+// items in inbox/ that match a standing rule the person approved (inbox/rules.json) are filed, with a receipt and
+// undo (file.mjs). Everything else is read-only. Once a day it may ask npm for the
 // latest repo-fit version (package name only) and cache the answer in ~/.config/repo-fit/; see updateNotice in lib.mjs.
 //   node scripts/playbook/brief.mjs --text                  for a person, or Codex without hooks
 //   node scripts/playbook/brief.mjs --hook                  Claude Code SessionStart hook (JSON)
@@ -6,6 +8,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { root, git, config, readBoard, analyseBoard, paths, coverage, preview, updateNotice } from "./lib.mjs";
+import { capture } from "./file.mjs";
 
 const args = process.argv.slice(2);
 const hook = args.includes("--hook");
@@ -15,6 +18,9 @@ const P = paths();
 const out = [];
 const short = (s, n = 90) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 const list = (rows, f) => rows.slice(0, 3).map(f).join(" · ") + (rows.length > 3 ? ` · +${rows.length - 3} more` : "");
+
+// 📥 the inbox first, so the lines below see the folder after filing. Filing happens only when a session starts.
+const inbox = capture(root, { apply: (hook || args.includes("--file")) && !preview, protect: cfg.protectedPaths ?? [] });
 
 // 📍 where we are
 const branch = (git(["branch", "--show-current"]) ?? "").trim();
@@ -26,6 +32,8 @@ out.push(
   `📍 ${basename(root)} · ${branch || "no branch"} · ${dirty ? `${dirty} uncommitted` : "clean"}` +
     (lastDate ? ` · last commit ${lastDate}${host ? ` by ${host}` : ""}` : " · no commits yet"),
 );
+
+out.push(...inbox.lines);
 
 // A newer repo-fit that matters for this repo (see updateNotice: once a day, package name only, silent on failure).
 const notice = preview ? null : await updateNotice(cfg.playbook);

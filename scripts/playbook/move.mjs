@@ -1,3 +1,4 @@
+// Managed by repo-fit: change it there and run `repo-fit update`, not here.
 // The safe move engine. It plans a batch of moves, refuses what must stay, rewrites links in both directions in each
 // link's own style, ties the yes to the exact plan (a fingerprint), journals before the first move, verifies after,
 // rolls back on any failure, recovers after a crash, and writes a receipt that `undo` replays. It never deletes a file.
@@ -266,8 +267,9 @@ export function planMoves(root, wanted, { protect = [] } = {}) {
   // name. Links in rule files are rewritten like any link, so only plain-text mentions count there.
   const mentions = [];
   const blocked = new Map();
-  // repo-fit's own scripts name files like INDEX.md in general, never one of the person's files, so they are not read here.
-  const others = list.filter((p) => !moves.some((m) => m.from === p) && !p.startsWith("scripts/playbook/"));
+  // repo-fit's own scripts and inbox rules name files and folders in general, never load one of the person's files,
+  // so they are not read here.
+  const others = list.filter((p) => !moves.some((m) => m.from === p) && !p.startsWith("scripts/playbook/") && p !== "inbox/rules.json");
   for (const p of others) {
     const t = text(p);
     if (t === null) continue;

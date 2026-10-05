@@ -6,6 +6,7 @@
 //   repo-fit preview <repo>                                   read-only: the session brief the recommended set would give
 //   repo-fit map <repo> [--json]                              read-only: the folder's map (MAP.md) as repo-fit would write it
 //   repo-fit organize <repo> [--list] [--apply] [--json]      the plan to organize the folder (before → after → why); --apply does it
+//   repo-fit file <repo> [<item> --to <folder> [--always] | <item> --not-now] [--apply]   file inbox items
 //   repo-fit apply <repo> [--steps A-01,...] [--tool ..] [--hooks all|brief|none] [--autosave on|off] [--apply]
 //                                                             dry run by default; --apply writes, backs up, and writes a receipt
 //   repo-fit undo <repo> [--receipt <file>] [--apply]         put back what the last apply changed (dry run by default)
@@ -98,7 +99,7 @@ function guidanceCheck() {
 const fill = (text, v) =>
   text.replaceAll("{{version}}", version).replaceAll("{{name}}", v.name ?? "").replaceAll("{{owner}}", v.owner ?? "").replaceAll("{{current}}", "docs/00-home/current.md").replaceAll("{{date}}", today());
 const BLOCK_RE = /<!-- playbook:core v\S+ begin[^>]*-->[\s\S]*?<!-- playbook:core end -->/;
-const VENDORED = ["lib.mjs", "brief.mjs", "check.mjs", "autosave.mjs", "map.mjs"];
+const VENDORED = ["lib.mjs", "brief.mjs", "check.mjs", "autosave.mjs", "map.mjs", "move.mjs", "file.mjs"];
 const vendoredSource = (f) => readFileSync(join(here, "scripts/playbook", f), "utf8");
 function* files(dir, base = dir) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -353,6 +354,8 @@ Change (dry run first):
   update <repo> [--apply]                    bring the adopted parts up to this playbook version
   hooks <repo> [--hooks brief|all] [--apply] turn on the start-of-session briefing (the person runs this)
   organize <repo> --apply                    organize the folder as the plan shows: moves, link updates, map; one undo
+  file <repo> [<inbox item> --to <folder> [--always] | <inbox item> --not-now] [--apply]
+                                             file inbox items: by the standing rules, or one item by your answer
   skip <repo> <ID> --reason "..." [--remove] [--apply]
                                              record a step you leave out on purpose (audit, status, update respect it)
   undo <repo> [--receipt <file>] [--force] [--apply]
@@ -474,6 +477,56 @@ switch (process.argv[2]) {
       // The snapshot line goes right under the title, before the plan: the one yes covers it.
       console.log(p.batches.length ? text.replace(/\n\n/, `\n\n${await safeLine(root)}\n\n`) : text);
     }
+    break;
+  }
+  case "file": {
+    // The inbox: file by the standing rules, or one item by the person's answer (Yes / Yes, and always / Not now).
+    if (!pos[0]) fail("Usage: repo-fit file <repo> [--apply] | file <repo> <inbox item> --to <folder> [--always] [--apply] | file <repo> <inbox item> --not-now [--apply]");
+    const root = resolve(pos[0]);
+    const { capture, inboxState, readRules } = await import("../scripts/playbook/file.mjs");
+    const { applyMoves, planMoves } = await import("../scripts/playbook/move.mjs");
+    const { pages } = await import("../scripts/playbook/map.mjs");
+    const { RULES_ABOUT } = await import("../lib/organize.mjs");
+    const item = pos[1]?.replace(/^\.\//, "");
+    if (!item) {
+      const r = capture(root, { apply: Boolean(opt.apply) });
+      console.log(r.lines.length ? r.lines.join("\n") : "📥 The inbox is empty, or nothing in it matches a rule.");
+      break;
+    }
+    const it = inboxState(root).items.find((i) => i.path === item);
+    if (!it) fail(`${item} is not in inbox/.`);
+    const rules = readRules(root) ?? { about: RULES_ABOUT, rules: [], notNow: {} };
+    const save = (next) => `${JSON.stringify({ about: rules.about ?? RULES_ABOUT, rules: next.rules, notNow: next.notNow }, null, 2)}\n`;
+    if (opt["not-now"]) {
+      // Quiet until more of this kind arrive than are waiting now.
+      const waiting = inboxState(root).items.filter((i) => !i.rule && !i.dupOf && i.kind === it.kind).length;
+      if (!opt.apply) console.log(`Would keep ${waiting} waiting ${it.kind} item(s) quiet until another one arrives. Nothing was changed.`);
+      else {
+        writeFileSync(join(root, "inbox/rules.json"), save({ rules: rules.rules, notNow: { ...rules.notNow, [it.kind]: waiting } }));
+        console.log(`✅ Not now: the briefing stays quiet about these until another ${it.kind} arrives in inbox/.`);
+      }
+      break;
+    }
+    if (typeof opt.to !== "string") fail("Say where it goes: --to <folder>, or --not-now.");
+    const folder = opt.to.replace(/\/+$/, "");
+    const plan = planMoves(root, [{ from: item, to: `${folder}/${basename(item)}`, why: "your answer" }]);
+    if (!plan.moves.length) fail(`It stays: ${plan.refused[0]?.why ?? "nothing to move"}`);
+    const rule = opt.always ? { kind: it.kind, to: folder } : null;
+    if (!opt.apply) {
+      console.log(`Dry run: would move \`${item}\` → \`${plan.moves[0].to}\`${rule ? `, and from now on file new ${it.kind} items in inbox/ to ${folder}/` : ""}. Nothing was changed. Run again with --apply.`);
+      break;
+    }
+    const r = applyMoves(root, plan, {
+      step: "file",
+      writes: (x) => {
+        const out = pages(x);
+        if (rule && !rules.rules.some((y) => y.kind === rule.kind && !y.starts)) out.set("inbox/rules.json", save({ rules: [...rules.rules, rule], notNow: rules.notNow }));
+        return out;
+      },
+    });
+    console.log(r.text);
+    if (!r.ok) process.exit(1);
+    if (rule) console.log(`📥 New rule: new ${it.kind} items in inbox/ go to ${folder}/ when a session starts.`);
     break;
   }
   case "map": {

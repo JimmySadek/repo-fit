@@ -58,8 +58,16 @@ Code facts gathered for the design (5 Oct):
 - [x] 0.6.0 baseline scores recorded: `2026-10-05-baseline-0.6.0.md` (pinned to commit `3fed971`; no `v0.6.0` tag exists)
 
 ## Step 6. Slices (each: failing test first, `node --test` green, scores improve, live run checked)
-- [x] 1. Map + generated `MAP.md` and index pages + pointer (add-only). Moves: Orient, Find. Done 5 Oct: 153 tests pass; Orient ✅ and Find 100% on all five folders; safety unchanged ✅. The first build hid orphan notes (links from the map counted), dropping "Nothing rots" below 0.6.0; fixed with a test, back to 3/1/3/4. Live run of `repo-fit map` on a copy of the everything-folder: plain words, nothing written. The measure adapter needed no change (A-13 and D-11 are in the recommended set)
-- [ ] 2. Safe move engine: move receipts, plan fingerprint, journal, link rewrite, code-reference check, verify, undo. Moves: Safety
+- [x] 1. Map + generated `MAP.md` and index pages + pointer (add-only). Moves: Orient, Find. Done 5 Oct: 153 tests pass; Orient ✅ and Find 100% on all five folders; safety unchanged ✅. The first build hid orphan notes (links from the map counted), dropping "Nothing rots" below 0.6.0; fixed with a test, back to 3/1/3/4. Live run: only `repo-fit map` run by hand on a copy of the everything-folder (plain words, nothing written). ⏳ **Not yet** a skill session checked with `node dev/transcript-check.mjs <session.jsonl>`, which the original brief asks for every slice: do it with slice 4's first live skill run, when the flow offers the map. The measure adapter needed no change (A-13 and D-11 are in the recommended set)
+- [x] 2. Safe move engine: move receipts, plan fingerprint, journal, link rewrite, code-reference check, verify, undo. Moves: Safety. Done 5 Oct: `lib/move.mjs`, `undo` extended; 13 new tests, 166 pass. On the test folders the engine moved 36, 20 and 10 files, refused every file the code or rules need, kept links working, and undo restored the exact tree. Scores unchanged (no command uses it yet), safety ✅. ⏳ No live run: there is nothing a person can run until slice 3
+  - [x] Link scanner: inline, images, reference definitions, angle brackets, `%20`, HTML src/href, wikilinks (headings, aliases, embeds), frontmatter; skips code blocks and inline code
+  - [x] Plan: refuse code, files named by code/config/rule files, protected paths, dot folders, taken or duplicate destinations; list plain-text mentions
+  - [x] Rewrite both directions, keeping each link's style (fragment, title, `./`, `.md` or not, `<>` or `%20`, alias, `!`)
+  - [x] Fingerprint: refuse when a file in the plan changed after the preview
+  - [x] Journal before the first move; verify after (files, content, working links); roll back on failure; recover after a crash
+  - [x] Receipt `move` entries; `undo` moves back, refuses where a file changed, restores emptied folders
+  - [x] Whole-folder test on the test folders with the independent scorer: nothing lost, code untouched, links not fewer, undo restores the exact tree
+  - Engine only, no user command: the organize screen (slice 3) is its front door, so the scores move in slice 3
 - [ ] 3. Organize plan and the before/after/why screen; one-click apply. Moves: Loose, Find, One home
 - [ ] 4. `SKILL.md` flow and transcript checker; first live run on a test folder. Moves: Ceremony
 - [ ] 5. Capture: inbox, standing rules, duplicates, "Not now"; briefing lines. Moves: New input

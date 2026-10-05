@@ -114,7 +114,7 @@ On an existing repo, `audit` assesses first and then sorts what it found:
 
 - **The briefing** shows one line when a newer release is marked important, with why it matters, once a day at most (see Security and privacy). Release notes live in `package.json` under `repoFit.releases` (`version`, `important`, `why`, `news`, `steps`), so npm carries them; `status` and `update` read the same list.
 - **The Claude Code plugin** (`.claude-plugin/plugin.json` and `marketplace.json` in this repo): users add the marketplace with `/plugin marketplace add JimmySadek/repo-fit`, install `repo-fit@repo-fit`, and can switch on auto-update in `/plugin`. It is off by default, per Claude Code's design.
-- **A release** bumps `VERSION`, `package.json` and `.claude-plugin/plugin.json` together, and adds a `repoFit.releases` entry. A test fails if any of these is missing.
+- **A release** bumps `VERSION`, `package.json` and `.claude-plugin/plugin.json` together, and adds a `repoFit.releases` entry. A test fails if any of these is missing. Merging it into `main` publishes it: `.github/workflows/publish.yml` runs the tests, publishes with npm trusted publishing (no stored token; set up once in the package settings on npmjs.com, workflow `publish.yml`), and tags `v<version>`. A version already on npm is skipped.
 
 ## Turning on the briefing, and upgrading an older setup
 

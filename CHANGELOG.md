@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.6.0 (draft, 4 Oct 2026)
+## Unreleased
+
+- **Releases publish themselves.** Merging a new version into `main` runs the tests and publishes it to npm through trusted publishing (no login, no stored token), then tags it. Ordinary merges publish nothing.
+
+## 0.6.0 (5 Oct 2026)
 
 **Useful, not ceremony.** From an impartial audit of three real setups (`claudedocs/2026-10-04-usefulness-audit.md`): setup now shows the briefing first and asks once, the shared rules block is 293 words and imposes nothing, and a test and a transcript checker hold the flow to that. Adopted repos see "behind" and get the new block and scripts through `update`.
 

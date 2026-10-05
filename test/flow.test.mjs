@@ -155,7 +155,8 @@ test("the recommended set writes no hook files; the person turns the briefing on
   const s = read(d, ".claude/settings.json");
   assert.match(s, /scripts\/playbook\/brief\.mjs/);
   assert.match(s, /their-own\.sh/, "the repo's own hook stays");
-  assert.doesNotMatch(s, /autosave\.mjs/, "briefing only when autosave is off");
+  assert.match(s, /autosave\.mjs\\" --event stop/, "the end-of-reply reminder comes with the briefing");
+  assert.doesNotMatch(s, /precompact/, "no autosave before compaction when autosave is off");
   assert.equal(JSON.parse(read(d, "playbook.json")).hooks, "brief");
   assert.match(cli(sb, ["hooks", d, "--apply"]).out, /already on/);
   assert.equal(cli(sb, ["undo", d, "--apply"]).status, 0);
@@ -200,4 +201,45 @@ test("a mixed repo is not offered a blank current-view page in the one-click set
   const rec = audit(sb, d).plan.recommended;
   assert.equal(rec.kind, "mixed");
   assert.ok(!rec.steps.includes("A-03"), rec.steps.join());
+}));
+
+// The end-of-reply reminder with autosave off: a code repo with the briefing and reminder turned on.
+function reminderRepo(sb) {
+  const d = codeRepo(sb);
+  const rec = audit(sb, d).plan.recommended;
+  assert.equal(cli(sb, ["apply", d, "--steps", rec.steps.join(","), ...rec.flags.split(" "), "--apply"]).status, 0);
+  assert.equal(cli(sb, ["hooks", d, "--apply"]).status, 0);
+  git(sb, d, ["add", "-A"]);
+  git(sb, d, ["commit", "-q", "-m", "repo-fit"]);
+  return d;
+}
+const stop = (sb, d, session) => script(sb, d, "autosave.mjs", ["--event", "stop", "--host", "Claude Code"], { input: JSON.stringify({ session_id: session }) });
+
+test("with autosave off, the reminder asks once whether anything is worth keeping, and never asks to commit", sandboxed((sb) => {
+  const d = reminderRepo(sb);
+  const head = git(sb, d, ["rev-parse", "HEAD"]).stdout;
+  write(d, "src/a.js", "export const a = 2;\n");
+  const r = stop(sb, d, "s1");
+  assert.equal(r.status, 0, r.out);
+  const out = JSON.parse(r.stdout);
+  assert.equal(out.decision, "block");
+  assert.match(out.reason, /Before you finish: files changed \(src\/a\.js\) but no note, current view or log did/);
+  assert.match(out.reason, /If there is nothing worth keeping, say so in one line and stop\. Do not commit unless/);
+  assert.doesNotMatch(out.reason, /Capture by default|then commit\./);
+  assert.equal(git(sb, d, ["rev-parse", "HEAD"]).stdout, head, "nothing is committed");
+  assert.equal(stop(sb, d, "s1").stdout.trim(), "", "once per session");
+}));
+
+test("the reminder stays quiet when something was written down, or nothing changed", sandboxed((sb) => {
+  const d = reminderRepo(sb);
+  assert.equal(stop(sb, d, "s1").stdout.trim(), "", "nothing changed");
+  write(d, "src/a.js", "export const a = 2;\n");
+  write(d, "docs/notes.md", "# Notes\n\nWhy a is 2.\n");
+  assert.equal(stop(sb, d, "s2").stdout.trim(), "", "a note was updated");
+}));
+
+test("status tells a repo with the old briefing-only setup about the reminder", sandboxed((sb) => {
+  const d = reminderRepo(sb);
+  write(d, ".claude/settings.json", JSON.stringify({ hooks: { SessionStart: [{ hooks: [{ type: "command", command: "node scripts/playbook/brief.mjs --hook" }] }] } }));
+  assert.match(cli(sb, ["status", d]).out, /end-of-reply reminder .* is not on\. The person turns it on with: repo-fit hooks/);
 }));

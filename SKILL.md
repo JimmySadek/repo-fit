@@ -72,7 +72,7 @@ Verify, and say what you checked: `node scripts/playbook/brief.mjs --text` print
 
 If the audit shows a "turn on the start-of-session briefing" command, the person runs it, not you. Claude Code's safety check (auto mode) blocks an assistant from changing how sessions start, and that is right: it is their call. Explain it like this, with their real preview:
 
-> **One last step, and it is yours to run.** Right now each new session starts blank. This line makes every new session in this folder start with the briefing above, so the assistant knows where you left off without you explaining. Claude Code does not let an assistant switch this on by itself, because it changes how every future session starts. To turn it off later: `undo`.
+> **One last step, and it is yours to run.** Right now each new session starts blank. This line turns on two things in this folder: every new session starts with the briefing above, so the assistant knows where you left off; and when a reply changed files but nothing was written down, the assistant is reminded once to keep what matters (it never saves anything on its own). Claude Code does not let an assistant switch this on by itself, because it changes how every session runs. To turn it off later: `undo`.
 
 Then give the command in its own `bash` block, with the full path, so it has a Run button:
 

@@ -209,6 +209,8 @@ function hookNotes(target, pj) {
   if (existsSync(join(target, "scripts/playbook")) && pj.hooks !== "none") {
     const off = [tools.includes("claude-code") && !has(".claude/settings.json") ? "Claude Code" : null, tools.includes("codex") && !has(".codex/hooks.json") ? "Codex" : null].filter(Boolean);
     if (off.length) notes.push(`The start-of-session briefing is not turned on for ${off.join(" and ")}. The person turns it on with: repo-fit hooks ${target} --apply`);
+    const noReminder = tools.includes("claude-code") && has(".claude/settings.json") && !readFileSync(join(target, ".claude/settings.json"), "utf8").includes("autosave.mjs");
+    if (noReminder) notes.push(`The end-of-reply reminder ("did we write down what matters?") is not on. The person turns it on with: repo-fit hooks ${target} --apply`);
   }
   // guidance/claude-code.md C1: with a CLAUDE.md present, Claude Code reads only that file, so it must import AGENTS.md.
   const claudeMd = join(target, "CLAUDE.md");

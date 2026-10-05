@@ -1,4 +1,6 @@
-// Capture check and Level 2 autosave. Never pushes. Never commits on a protected branch.
+// End-of-reply check, and Level 2 autosave. Never pushes. Never commits on a protected branch.
+// With autosave off (the usual case), it only reminds: once per session, when files changed but nothing was written
+// down, it asks the assistant whether anything is worth keeping. It never asks it to commit: the repo's rules decide that.
 //   node scripts/playbook/autosave.mjs --report [--host Codex]                  report only, commits nothing
 //   node scripts/playbook/autosave.mjs --event stop --host "Claude Code"        Stop hook (Claude Code or Codex)
 //   node scripts/playbook/autosave.mjs --event precompact --host "Claude Code"  PreCompact hook
@@ -75,7 +77,11 @@ if (!report && cfg.autosave && allow.length) saved = autosave(allow);
 const after = changedFiles() ?? [];
 const left = new Map();
 const show = (files) => files.slice(0, 6).join(", ") + (files.length > 6 ? `, and ${files.length - 6} more` : "");
-if (after.length) left.set("outside", `uncommitted changes ${cfg.autosave && !report ? "outside the autosave list" : ""} (${show(after)})`.replace("  ", " "));
+// With autosave on, uncommitted files outside its list are left over. With it off, saving is the repo's own business.
+if (cfg.autosave && after.length) left.set("outside", `uncommitted changes ${report ? "" : "outside the autosave list"} (${show(after)})`.replace("  ", " "));
+// Files changed, but no note, current view, log or other Markdown file did: maybe nothing was written down.
+const recorded = (p) => matchesAny(p, [...cfg.autosaveAllow, "*.md", "**/*.md"]);
+if (!cfg.autosave && before.length && !before.some(recorded)) left.set("unrecorded", `files changed (${show(before)}) but no note, current view or log did`);
 if (saved?.error) left.set("failed", `autosave failed: ${saved.error}`);
 const logRel = paths().log;
 const log = join(root, logRel);
@@ -123,7 +129,9 @@ try {
 }
 emit({
   decision: "block",
-  reason:
-    `${savedNote ? `${savedNote} ` : ""}Capture pass not finished: ${[...left.values()].join("; ")}. ` +
-    'Follow "Capture by default" in AGENTS.md, including its checks, then commit. If something should stay uncommitted, tell the user what and why.',
+  reason: cfg.autosave
+    ? `${savedNote ? `${savedNote} ` : ""}Capture pass not finished: ${[...left.values()].join("; ")}. ` +
+      'Follow "Keep what matters" in AGENTS.md, run the checks, then commit. If something should stay uncommitted, tell the user what and why.'
+    : `Before you finish: ${[...left.values()].join("; ")}. If this session produced a decision, a correction or a new fact, ` +
+      'write it down now ("Keep what matters" in AGENTS.md). If there is nothing worth keeping, say so in one line and stop. Do not commit unless the user or the repo\'s rules say to.',
 });

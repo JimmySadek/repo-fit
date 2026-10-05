@@ -64,7 +64,7 @@ Install the repo-fit skill with `npx skills add JimmySadek/repo-fit -g -a claude
 
 That's it. Your assistant installs repo-fit, looks at your project, shows you the briefing your sessions would start with, and asks you one question: set up the recommended pieces, pick your own, or just see the report. Your own files and rules stay as they are.
 
-**One step is yours:** your assistant gives you one line to run that turns on the briefing. Claude Code does not let an assistant change how your sessions start, so it asks you. **Next session,** open the project again and the briefing appears by itself.
+**One step is yours:** your assistant gives you one line to run that turns on the briefing, and a short reminder at the end of each reply when something changed but was not written down. Claude Code does not let an assistant change how your sessions start, so it asks you. **Next session,** open the project again and the briefing appears by itself.
 
 **Updates:** repo-fit does not update itself. When a release matters for your project, the briefing tells you in one line, with why. Then paste: `Update repo-fit with npx skills update -g -y, then run /repo-fit here`.
 

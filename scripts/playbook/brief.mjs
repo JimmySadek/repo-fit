@@ -10,6 +10,7 @@ import { basename, join } from "node:path";
 import { root, git, config, readBoard, analyseBoard, paths, coverage, preview, updateNotice } from "./lib.mjs";
 import { capture } from "./file.mjs";
 import { fitFacts, fitLines, rebuildMap } from "./fit.mjs";
+import { scan } from "./map.mjs";
 
 const args = process.argv.slice(2);
 const hook = args.includes("--hook");
@@ -39,6 +40,12 @@ out.push(...inbox.lines);
 if ((hook || args.includes("--file")) && !preview && rebuildMap(cfg).length) out.push("✅ Map updated: notes were added, renamed or removed.");
 // What is off, one short line each. Quiet when all is well.
 out.push(...fitLines(fitFacts(cfg)));
+// ✅ open work, collected where it already is (MAP.md lists it).
+{
+  const open = scan(root, { protect: cfg.protectedPaths ?? [] }).open;
+  const notes = new Set(open.map((o) => o.path)).size;
+  if (open.length) out.push(`✅ Open work: ${open.length} ${open.length === 1 ? "item" : "items"} in ${notes} ${notes === 1 ? "note" : "notes"} (see MAP.md)`);
+}
 
 // A newer repo-fit that matters for this repo (see updateNotice: once a day, package name only, silent on failure).
 const notice = preview ? null : await updateNotice(cfg.playbook);

@@ -4,6 +4,7 @@
 // It never moves, renames or deletes anything.
 //   node scripts/playbook/map.mjs            what would change (nothing is written)
 //   node scripts/playbook/map.mjs --write    write MAP.md and the index pages
+//   node scripts/playbook/map.mjs --open     every open item (unchecked boxes, TODO: lines) with its note
 import { existsSync, readdirSync, readFileSync, realpathSync, renameSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -93,6 +94,25 @@ function listFiles(root, virtual) {
   return [...out].sort(byPath);
 }
 
+// Open work where it already is: unchecked boxes ("- [ ]"; only "x" counts as done) and "TODO:" lines, in notes
+// outside the archive and repo-fit's own pages. Code blocks are examples, not tasks. Nothing moves out of the notes.
+// Rule files hold rules, not tasks (their TODO lines are the setup's placeholders, named by the briefing instead).
+const OPEN_SKIP = /^(archive|archives|_archive|scripts\/playbook)\/|(^|\/)(MAP|INDEX|AGENTS|CLAUDE|GEMINI)\.md$|(^|\/)\./;
+export function openItems(files, read) {
+  const out = [];
+  for (const p of files.filter((x) => kindOf(x) === "note" && !OPEN_SKIP.test(x))) {
+    const text = read(p);
+    let fenced = false;
+    for (const line of text.split(/\r?\n/)) {
+      if (/^\s{0,3}(`{3,}|~{3,})/.test(line)) fenced = !fenced;
+      if (fenced) continue;
+      const m = line.match(/^\s*[-*+]\s+\[ \]\s+(.+)$/) ?? line.match(/^\s*TODO:\s*(.+)$/);
+      if (m) out.push({ text: plain(m[1]), path: p, title: title(text, p) });
+    }
+  }
+  return out;
+}
+
 // What the folder holds, area by area. An area is a top-level folder, in its own name.
 export function scan(root, { virtual = new Map(), protect = [] } = {}) {
   const read = (p) => {
@@ -157,7 +177,7 @@ export function scan(root, { virtual = new Map(), protect = [] } = {}) {
   const order = (a) => (a.special ? 3 : a.code ? 2 : a.notes.length ? 0 : 1);
   out.sort((x, y) => order(x) - order(y) || byPath(x.name, y.name));
   const rootManifest = files.find((p) => !p.includes("/") && MANIFEST.test(p)) ?? null;
-  return { areas: out, rootManifest, readme: files.includes("README.md"), loose: loose.map((p) => ({ path: p, kind: kindOf(p), title: kindOf(p) === "note" ? title(read(p), p) : p, summary: kindOf(p) === "note" ? summary(read(p)) : "" })) };
+  return { areas: out, open: openItems(files, read), rootManifest, readme: files.includes("README.md"), loose: loose.map((p) => ({ path: p, kind: kindOf(p), title: kindOf(p) === "note" ? title(read(p), p) : p, summary: kindOf(p) === "note" ? summary(read(p)) : "" })) };
 }
 
 function mapBlock(s) {
@@ -183,9 +203,16 @@ function mapBlock(s) {
     lines.push("", `**Loose at the top of the folder:** ${counts(c)}.`);
     for (const n of notes) lines.push(`- ${link(n.title, n.path)}${n.summary ? `: ${n.summary}` : ""}`);
   }
+  if (s.open.length) {
+    const notes = new Set(s.open.map((o) => o.path)).size;
+    lines.push("", `**Open work** (${s.open.length} ${s.open.length === 1 ? "item" : "items"} in ${notes} ${notes === 1 ? "note" : "notes"}). Tick them in their notes; this list follows.`);
+    for (const o of s.open.slice(0, OPEN_SHOWN)) lines.push(`- ${o.text} (${link(o.title, o.path)})`);
+    if (s.open.length > OPEN_SHOWN) lines.push(`- and ${s.open.length - OPEN_SHOWN} more: \`node scripts/playbook/map.mjs --open\` lists them all.`);
+  }
   lines.push(end("map"));
   return lines.join("\n");
 }
+const OPEN_SHOWN = 10;
 
 function indexBlock(a) {
   const lines = [begin("index")];
@@ -230,6 +257,11 @@ if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToP
     protect = JSON.parse(readFileSync(join(root, "playbook.json"), "utf8")).protectedPaths ?? [];
   } catch {
     /* no playbook.json: nothing extra protected */
+  }
+  if (process.argv.includes("--open")) {
+    const s = scan(root, { protect });
+    console.log(s.open.length ? s.open.map((o) => `- ${o.text} (${o.path})`).join("\n") : "No open items.");
+    process.exit(0);
   }
   const out = pages(root, { protect });
   if (!out.size) console.log("✅ The map and index pages are up to date.");

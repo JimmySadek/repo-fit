@@ -34,9 +34,9 @@ A small, balanced foundation for any repository, technical or notes, for Claude 
 
 | Path | What |
 |---|---|
-| `bin/repo-fit.mjs` | The command: `init`, `status`, `update`, `detect`, `audit`, `apply`, `skip`, `undo`, `connect`, `tools`, `prefs`, `guidance check` |
-| `lib/` | `detect`, `audit`, `adapt` (what a repo already has: own checks, hooks, caps, protected paths, rule conflicts), `apply`, `core` (renders the core block with the repo's paths), `connect`, `tools`, `versions`, `prefs`. Not copied into repos |
-| `scripts/playbook/` | `brief`, `check`, `autosave`, `lib`. Copied into every repo, version-stamped |
+| `bin/repo-fit.mjs` | The command: `init`, `status`, `update`, `detect`, `audit`, `map`, `organize`, `apply`, `skip`, `undo`, `connect`, `tools`, `prefs`, `guidance check` |
+| `lib/` | `detect`, `audit`, `adapt` (what a repo already has: own checks, hooks, caps, protected paths, rule conflicts), `apply`, `move` (the safe move engine), `organize` (the plan and screen), `core` (renders the core block with the repo's paths), `connect`, `tools`, `versions`, `prefs`. Not copied into repos |
+| `scripts/playbook/` | `brief`, `check`, `autosave`, `map`, `lib`. Copied into every repo, version-stamped |
 | `kits/` | Starter kit and per-tool files |
 | `core/AGENTS.core.md` | The managed rules block |
 | `guidance/` | Dated notes from official sources, and the refresh routine |

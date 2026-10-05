@@ -57,6 +57,11 @@ const adapter = {
       const r = cli("hooks", dir, "--hooks", rec.hooksMode, "--apply");
       log.push(`hooks --hooks ${rec.hooksMode} → exit ${r.status}`);
     }
+    // Slice 3: the person says yes to the organize plan (versions before it have no organize command).
+    if (existsSync(join(rf, "lib/organize.mjs"))) {
+      const r = cli("organize", dir, "--apply");
+      log.push(`organize --apply → exit ${r.status}`);
+    }
     return log;
   },
   // What the person sees about problems: the repo's check and its briefing.

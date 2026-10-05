@@ -1,6 +1,7 @@
 // Shared helpers for the playbook scripts. No dependencies.
 // Managed by repo-fit: change it there and run `repo-fit update`, not here.
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -273,6 +274,35 @@ export function coverage(cfg = config()) {
     else if (line && !changed.has(line)) changed.set(line, when);
   }
   const dirty = new Set(changedFiles() ?? []);
+  // A note repo-fit moved (and whose only change since is its links) keeps the date of where it came from: a move is
+  // not a change to the note. The receipts of moves not undone say where each file came from.
+  const movedFrom = new Map();
+  const receipts = join(root, ".playbook/receipts");
+  for (const r of existsSync(receipts) ? readdirSync(receipts).filter((n) => n.endsWith(".json") && !existsSync(join(receipts, `${n}.undone`))).sort() : []) {
+    let rc;
+    try {
+      rc = JSON.parse(readFileSync(join(receipts, r), "utf8"));
+    } catch {
+      continue;
+    }
+    const sums = new Set((rc.entries ?? []).filter((e) => e.type === "edit").map((e) => `${e.path}\0${e.after}`));
+    for (const e of (rc.entries ?? []).filter((x) => x.type === "move")) {
+      let now;
+      try {
+        now = readFileSync(join(root, e.to));
+      } catch {
+        continue;
+      }
+      const same = createHash("sha256").update(now).digest("hex") === e.hash || sums.has(`${e.to}\0${createHash("sha256").update(now.toString("utf8")).digest("hex")}`);
+      if (same) movedFrom.set(e.to, movedFrom.get(e.from) ?? e.from);
+    }
+  }
+  for (const [to, from] of movedFrom) {
+    if (changed.has(from) && !changed.has(to)) {
+      changed.set(to, changed.get(from));
+      dirty.delete(to);
+    }
+  }
   const t = today();
   const cutoff = new Date(Date.now() - cfg.staleNoteDays * 864e5).toLocaleDateString("sv-SE");
   const stale = [];

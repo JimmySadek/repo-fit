@@ -77,6 +77,11 @@ test("names with spaces and brackets are linked so the links work", sandboxed((s
   assert.match(read(d, "MAP.md"), /\]\(<Meeting notes\.md>\)/);
 }));
 
+test("an empty inbox/ still gets its line in the map, so people know where new things go", sandboxed((sb) => {
+  const d = repo(sb, "in", { files: { "notes/a.md": "# A\n\nAlpha note.\n", "inbox/.gitkeep": "" } });
+  assert.match(pages(d).get("MAP.md"), /\[inbox\/\]\(inbox\/\): new things waiting to be filed \(empty\)/);
+}));
+
 test("map.mjs prints what would change and writes only with --write", sandboxed((sb) => {
   const d = repo(sb, "c", { files: mixed });
   write(d, "scripts/playbook/map.mjs", read(ROOT, "scripts/playbook/map.mjs"));

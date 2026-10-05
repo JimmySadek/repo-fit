@@ -68,7 +68,8 @@ Code facts gathered for the design (5 Oct):
   - [x] Receipt `move` entries; `undo` moves back, refuses where a file changed, restores emptied folders
   - [x] Whole-folder test on the test folders with the independent scorer: nothing lost, code untouched, links not fewer, undo restores the exact tree
   - Engine only, no user command: the organize screen (slice 3) is its front door, so the scores move in slice 3
-- [ ] 3. Organize plan and the before/after/why screen; one-click apply. Moves: Loose, Find, One home
+- [x] 3. Organize plan and the before/after/why screen; one-click apply. Moves: Loose, Find, One home. Done 5 Oct: `lib/organize.mjs`, `repo-fit organize` (screen, `--list`, `--apply`), one receipt for moves + links + map. 179 tests pass. Scores: loose at the top 30/30/7/18 → 0/0/0/0; exact copies 1/1 everywhere; Orient and Find full; safety ✅; nothing else lower. Found and fixed with tests: folder links did not follow an archived folder (the move check rolled back, as designed); moved notes lost their old date; empty `inbox/` missing from the map; rule files naming a folder locked files in; repo-fit's own scripts blocked `INDEX.md`; notes went into the setup's `docs/`. ⏳ Live run: the screen read on a copy of the everything-folder (wording fixed: plural, matching counts, one archive line); no skill session yet (slice 4)
+  - ⏳ Not built (left for later slices, as designed): renaming folders before the yes (the skill, slice 4), batch-by-batch apply, "Not now, just the map" (slice 4 flow), near copies (judgement pass)
 - [ ] 4. `SKILL.md` flow and transcript checker; first live run on a test folder. Moves: Ceremony
 - [ ] 5. Capture: inbox, standing rules, duplicates, "Not now"; briefing lines. Moves: New input
 - [ ] 6. Fit check: facts, rebuild, judgement pass prompt; dates without Git. Moves: Nothing rots

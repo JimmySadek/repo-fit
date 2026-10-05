@@ -4,7 +4,7 @@
 // It never moves, renames or deletes anything.
 //   node scripts/playbook/map.mjs            what would change (nothing is written)
 //   node scripts/playbook/map.mjs --write    write MAP.md and the index pages
-import { existsSync, readdirSync, readFileSync, realpathSync, renameSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync, renameSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -65,7 +65,7 @@ export function title(text, file) {
 
 // All files under root as relative paths, plus files about to be created (`virtual`: path → content).
 function listFiles(root, virtual) {
-  const out = new Set(virtual.keys());
+  const out = new Set([...virtual.keys()].filter((p) => !p.split("/").some((s) => s.startsWith("."))));
   let n = 0;
   const walk = (rel) => {
     let entries = [];
@@ -108,6 +108,11 @@ export function scan(root, { virtual = new Map(), protect = [] } = {}) {
     const name = p.slice(0, i);
     if (!areas.has(name)) areas.set(name, { name, files: [] });
     areas.get(name).files.push(p);
+  }
+  // The inbox and the archive are areas even while empty (only a hidden placeholder inside): the map says where they are.
+  for (const name of ["inbox", "archive"]) {
+    const there = (existsSync(join(root, name)) && statSync(join(root, name)).isDirectory()) || [...virtual.keys()].some((p) => p.startsWith(`${name}/`));
+    if (!areas.has(name) && there) areas.set(name, { name, files: [] });
   }
   const isProtected = (name) => protect.some((x) => x.replace(/\/+$/, "") === name);
   const out = [];
@@ -159,6 +164,9 @@ function mapBlock(s) {
       : a.code ? `a program (${a.manifest ?? counts(a.counts, ["code"])}). It stays where it is`
       : counts(a.counts) || "empty";
     lines.push(`- ${link(`${a.name}/`, target)}: ${what}.${a.about && !a.special && !a.ownScripts ? ` ${a.about}` : ""}`);
+    // What waits in the inbox is listed here (it has no index page), so it can be found until it is filed.
+    if (a.special === "inbox") for (const n of a.notes.slice(0, 10)) lines.push(`  - ${link(n.title, n.path)}`);
+    if (a.special === "inbox" && a.notes.length > 10) lines.push(`  - and ${a.notes.length - 10} more in ${link("inbox/", "inbox/")}`);
   }
   const notes = s.loose.filter((l) => l.kind === "note");
   if (s.loose.length) {

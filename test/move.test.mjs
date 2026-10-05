@@ -95,6 +95,14 @@ test("a name with spaces keeps its link style: %20 stays %20", sandboxed((sb) =>
   assert.match(read(d, "space note.md"), /\[pct\]\(other%20place\/z\.md\)/);
 }));
 
+test("a link to a folder follows the folder when all its files move to the same new place", sandboxed((sb) => {
+  const d = folder(sb, "fl", { "MAP.md": "- [old/](old/)\n- [keep/](<keep/>)\n", "old/a.md": "# A\n", "old/sub/b.md": "# B\n", "keep/c.md": "# C\n", "keep/d.md": "# D\n" });
+  const r = applyMoves(d, planMoves(d, [{ from: "old/a.md", to: "archive/2026-old/a.md" }, { from: "old/sub/b.md", to: "archive/2026-old/sub/b.md" }, { from: "keep/c.md", to: "notes/c.md" }]));
+  assert.equal(r.ok, true, r.text);
+  assert.equal(read(d, "MAP.md"), "- [old/](archive/2026-old/)\n- [keep/](<keep/>)\n");
+  assert.ok(!has(d, "old"));
+}));
+
 test("a move that renames a file updates bare [[name]] links; a move that keeps the name leaves them alone", sandboxed((sb) => {
   const d = folder(sb, "w", { "review.md": "See ![[chart.png|200]] and [[plan#Goals|the plan]].\n", "att/chart.png": "png", "plan.md": "# Plan\n" });
   assert.equal(applyMoves(d, planMoves(d, [{ from: "att/chart.png", to: "images/review-chart.png" }, { from: "plan.md", to: "notes/plan.md" }])).ok, true);

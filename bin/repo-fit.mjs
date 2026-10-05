@@ -5,6 +5,7 @@
 //                                                             read-only report and plan for an existing repo
 //   repo-fit preview <repo>                                   read-only: the session brief the recommended set would give
 //   repo-fit map <repo> [--json]                              read-only: the folder's map (MAP.md) as repo-fit would write it
+//   repo-fit organize <repo> [--list] [--apply] [--json]      the plan to organize the folder (before → after → why); --apply does it
 //   repo-fit apply <repo> [--steps A-01,...] [--tool ..] [--hooks all|brief|none] [--autosave on|off] [--apply]
 //                                                             dry run by default; --apply writes, backs up, and writes a receipt
 //   repo-fit undo <repo> [--receipt <file>] [--apply]         put back what the last apply changed (dry run by default)
@@ -330,6 +331,7 @@ Look (read-only):
                                              report and plan for an existing repo, with the recommended set
   preview <repo>                             the session brief the recommended set would give
   map <repo> [--json]                        the map of the folder (MAP.md) as repo-fit would write it
+  organize <repo> [--list]                   the plan to organize the folder: before, after and why; --list shows every move
   tools <repo> [--json] [--offline]          tool versions vs the limits in guidance/gates.json
   status <repo>                              is the repo behind this playbook?
   guidance check                             which guidance is due for a refresh
@@ -339,10 +341,11 @@ Change (dry run first):
   apply <repo> [--steps A-01,...] [--tool ..] [--hooks all|brief|none] [--autosave on|off] [--claude-link merge] [--word-cap N] [--show] [--apply]
   update <repo> [--apply]                    bring the adopted parts up to this playbook version
   hooks <repo> [--hooks brief|all] [--apply] turn on the start-of-session briefing (the person runs this)
+  organize <repo> --apply                    organize the folder as the plan shows: moves, link updates, map; one undo
   skip <repo> <ID> --reason "..." [--remove] [--apply]
                                              record a step you leave out on purpose (audit, status, update respect it)
   undo <repo> [--receipt <file>] [--force] [--apply]
-                                             put back what the last apply, init or update changed
+                                             put back what the last apply, init, update or organize changed
   connect <repo> [--host github|gitlab] [--owner O] [--name N] [--apply]
                                              no remote yet: create an EMPTY PRIVATE remote. Never pushes
   tools <repo> --update claude [--apply]     run Claude Code's own updater
@@ -433,6 +436,21 @@ switch (process.argv[2]) {
     const r = spawnSync(process.execPath, [join(here, "scripts/playbook/brief.mjs"), "--text"], { encoding: "utf8", env: { ...process.env, REPO_FIT_PREVIEW_ROOT: a.root, REPO_FIT_PREVIEW_CONFIG: JSON.stringify(cfg) } });
     if (r.status !== 0) fail(r.stderr || "The brief did not run.");
     console.log(`${existsSync(join(a.root, "scripts/playbook/brief.mjs")) ? "The briefing this repo's sessions start with today" : "The briefing this repo's sessions would start with after the recommended set"}. Nothing was written.\n\n${r.stdout.trimEnd()}`);
+    break;
+  }
+  case "organize": {
+    if (!pos[0]) fail("Usage: repo-fit organize <repo> [--list] [--apply] [--json]");
+    const { organizePlan, organizeApply, screen, list } = await import("../lib/organize.mjs");
+    const root = resolve(pos[0]);
+    if (!existsSync(root)) fail(`Not a folder: ${root}`);
+    const p = organizePlan(root);
+    if (opt.json) console.log(JSON.stringify({ batches: p.batches, stays: p.stays, suggestions: p.suggestions, mentions: p.mentions, links: p.links }, null, 2));
+    else if (opt.apply) {
+      const r = organizeApply(root, p);
+      console.log(r.text);
+      if (!r.ok) process.exit(1);
+      if (p.batches.length) console.log(`\nThe map (MAP.md) and the index pages were rebuilt. Undo everything with one command: repo-fit undo ${pos[0]} --apply`);
+    } else console.log(opt.list ? list(p) : screen(p, pos[0]));
     break;
   }
   case "map": {

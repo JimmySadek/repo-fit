@@ -2,16 +2,19 @@
 // Files new things in inbox/ by the standing rules the person approved (inbox/rules.json). A lookup, never a guess:
 // an item that matches no rule waits, and the briefing asks once (Yes / Yes, and always / Not now). An exact copy of
 // something already in the folder is named, not filed. Moves go through the safe move engine: receipt, undo, links.
-//   node scripts/playbook/file.mjs            what would be filed (nothing moves)
-//   node scripts/playbook/file.mjs --apply    file it now (the briefing does this at session start)
+//   node scripts/playbook/file.mjs                                   what would be filed (nothing moves)
+//   node scripts/playbook/file.mjs --apply                           file it now (the briefing does this at session start)
+//   node scripts/playbook/file.mjs <item> --to <folder> [--always]   the person said Yes (and always): dry run, then --apply
+//   node scripts/playbook/file.mjs <item> --not-now                  the person said Not now: dry run, then --apply
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { applyMoves, files, planMoves } from "./move.mjs";
 import { kindOf, nameWords, pages } from "./map.mjs";
 
 const RULES = "inbox/rules.json";
+export const RULES_ABOUT = "How new things in inbox/ are filed when a session starts. Each rule: a kind of file (and optionally the words its name starts with) and the folder it goes to. repo-fit adds a rule when you approve one; delete a rule's lines to stop it.";
 const sha = (abs) => createHash("sha256").update(readFileSync(abs)).digest("hex");
 
 export function readRules(root) {
@@ -94,9 +97,50 @@ export function capture(root, { apply = false, protect } = {}) {
   return { lines, filed, waiting: shown };
 }
 
+// The person's answer for one waiting item: Yes (--to), Yes and always (--to --always: a rule for its kind), Not now.
+export function answer(root, item, { to, always = false, notNow = false, apply = false } = {}) {
+  item = item.replace(/^\.\//, "");
+  const state = inboxState(root);
+  const it = state.items.find((i) => i.path === item);
+  if (!it) return { ok: false, text: `❌ ${item} is not in inbox/.` };
+  const rules = state.cfg;
+  const save = (next) => `${JSON.stringify({ about: rules.about ?? RULES_ABOUT, rules: next.rules, notNow: next.notNow }, null, 2)}\n`;
+  if (notNow) {
+    // Quiet until more of this kind arrive than are waiting now.
+    const waiting = state.items.filter((i) => !i.rule && !i.dupOf && i.kind === it.kind).length;
+    if (!apply) return { ok: true, text: `Dry run: would keep ${waiting} waiting ${it.kind} item(s) quiet until another one arrives. Nothing was changed.` };
+    writeFileSync(join(root, RULES), save({ rules: rules.rules, notNow: { ...rules.notNow, [it.kind]: waiting } }));
+    return { ok: true, text: `✅ Not now: the briefing stays quiet about these until another ${it.kind} arrives in inbox/.` };
+  }
+  if (!to) return { ok: false, text: "❌ Say where it goes: --to <folder>, or --not-now." };
+  const folder = to.replace(/\/+$/, "");
+  const plan = planMoves(root, [{ from: item, to: `${folder}/${posix.basename(item)}`, why: "your answer" }]);
+  if (!plan.moves.length) return { ok: false, text: `❌ It stays: ${plan.refused[0]?.why ?? "nothing to move"}` };
+  const rule = always ? { kind: it.kind, to: folder } : null;
+  if (!apply) return { ok: true, text: `Dry run: would move \`${item}\` → \`${plan.moves[0].to}\`${rule ? `, and from now on file new ${it.kind} items in inbox/ to ${folder}/` : ""}. Nothing was changed. Run again with --apply.` };
+  const r = applyMoves(root, plan, {
+    step: "file",
+    writes: (x) => {
+      const out = pages(x);
+      if (rule && !rules.rules.some((y) => y.kind === rule.kind && !y.starts)) out.set(RULES, save({ rules: [...rules.rules, rule], notNow: rules.notNow }));
+      return out;
+    },
+  });
+  return { ok: r.ok, text: `${r.text}${r.ok && rule ? `\n📥 New rule: new ${it.kind} items in inbox/ go to ${folder}/ when a session starts.` : ""}` };
+}
+
 // Run directly (not imported). The real path, because a folder can have two names (macOS: /var and /private/var).
 if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-  const { lines } = capture(root, { apply: process.argv.includes("--apply") });
-  console.log(lines.length ? lines.join("\n") : "📥 The inbox is empty, or nothing in it matches a rule.");
+  const a = process.argv.slice(2);
+  const val = (k) => (a.includes(k) ? a[a.indexOf(k) + 1] : undefined);
+  const item = a.find((x, i) => !x.startsWith("--") && a[i - 1] !== "--to");
+  if (item) {
+    const r = answer(root, item, { to: val("--to"), always: a.includes("--always"), notNow: a.includes("--not-now"), apply: a.includes("--apply") });
+    console.log(r.text);
+    if (!r.ok) process.exitCode = 1;
+  } else {
+    const { lines } = capture(root, { apply: a.includes("--apply") });
+    console.log(lines.length ? lines.join("\n") : "📥 The inbox is empty, or nothing in it matches a rule.");
+  }
 }

@@ -89,3 +89,14 @@ test("a new kind: Yes files it, Yes-and-always adds a rule, Not now hides it unt
   write(dir, "inbox/idea-2.md", "# Idea 2\n\nMore.\n");
   assert.match(session(sb, dir).out, /📥 Inbox: 3 waiting/, "more of that kind: it asks again (with untitled.md and idea.md)");
 }));
+
+test("in a later session the folder's own script takes the answer (no repo-fit needed), and the rulebook says how", sandboxed((sb) => {
+  const dir = organized(sb);
+  assert.match(read(dir, "AGENTS.md"), /ask the person once per kind.*file\.mjs <item> --to <folder>/s);
+  write(dir, "inbox/random-thought.md", "# A thought\n\nMaybe learn the piano.\n");
+  const dry = script(sb, dir, "file.mjs", ["inbox/random-thought.md", "--to", "notes"]);
+  assert.match(dry.out, /Dry run: would move/);
+  const r = script(sb, dir, "file.mjs", ["inbox/random-thought.md", "--to", "notes", "--apply"]);
+  assert.equal(r.status, 0, r.out);
+  assert.ok(has(dir, "notes/random-thought.md"));
+}));

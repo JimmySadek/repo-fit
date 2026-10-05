@@ -218,7 +218,7 @@ export function pages(root, opts = {}) {
 }
 
 // The pointer the rulebook carries: a few lines that send every session to the map first.
-export const POINTER = `<!-- repo-fit:pointer begin -->\n**Start at [MAP.md](MAP.md).** It lists every area of this folder in one line; each area's index page lists its notes. Open only what the task needs.\n<!-- repo-fit:pointer end -->`;
+export const POINTER = `<!-- repo-fit:pointer begin -->\n**Start at [MAP.md](MAP.md).** It lists every area of this folder in one line; each area's index page lists its notes. Open only what the task needs. New things go in \`inbox/\`; when the briefing says items are waiting, ask the person once per kind (Yes, Yes and always, Not now) and run \`node scripts/playbook/file.mjs <item> --to <folder> [--always]\` or \`--not-now\`, as a dry run first, then with \`--apply\`.\n<!-- repo-fit:pointer end -->`;
 export const withPointer = (text) => (MARK("pointer").test(text) ? text.replace(MARK("pointer"), () => POINTER) : `${text.trimEnd()}\n\n${POINTER}\n`);
 export const hasPointer = (text) => MARK("pointer").test(text);
 

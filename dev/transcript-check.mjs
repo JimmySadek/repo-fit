@@ -76,7 +76,12 @@ export function checkTranscript(text) {
       const m = cmd.match(REPO_FIT);
       if (!m) continue;
       if (m[1] === "status") {
-        planMade = true; // the checkup can carry a plan: its screen must be shown before any question
+        // The checkup can carry the organize plan: its screen must be shown before any question, and it counts as
+        // the organize dry run for the same folder.
+        planMade = true;
+        const k = same(cmd.slice(cmd.search(REPO_FIT)).replace(/\bstatus\b/, "organize"));
+        shown.add(k);
+        approved.delete(k);
         continue;
       }
       const writes_ = m[1] === "init" ? !/--dry-run/.test(cmd) : /--apply\b/.test(cmd);

@@ -7,7 +7,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { root, today, git, run, config, changedFiles, matchesAny, slug, paths } from "./lib.mjs";
+import { root, today, git, run, config, changedFiles, matchesAny, slug, paths, ownChanges } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const arg = (name, fallback) => {
@@ -32,7 +32,10 @@ if (input.stop_hook_active) process.exit(0);
 
 const emit = (obj) => console.log(JSON.stringify(obj));
 const cfg = config();
-const before = changedFiles();
+// What repo-fit itself just changed (moves, its map) is not the person's unsaved work: left out of the reminder.
+const own = ownChanges();
+const mine = (list) => list?.filter((p) => !own.has(p)) ?? null;
+const before = mine(changedFiles());
 if (before === null) {
   if (report) console.log("Not a Git repository: nothing to save.");
   process.exit(0);
@@ -74,7 +77,7 @@ let saved = null;
 if (!report && cfg.autosave && allow.length) saved = autosave(allow);
 
 // What is left for the assistant to finish.
-const after = changedFiles() ?? [];
+const after = mine(changedFiles()) ?? [];
 const left = new Map();
 const show = (files) => files.slice(0, 6).join(", ") + (files.length > 6 ? `, and ${files.length - 6} more` : "");
 // With autosave on, uncommitted files outside its list are left over. With it off, saving is the repo's own business.

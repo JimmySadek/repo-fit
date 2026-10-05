@@ -119,6 +119,12 @@ test("transcript check: a folder written as a shell variable in the dry run and 
   assert.ok(r.ok, r.problems.join("; "));
 });
 
+test("transcript check: on a re-run, the checkup's plan must be shown before the question too", () => {
+  const STATUS = 'node /x/bin/repo-fit.mjs status /r';
+  assert.match(checkTranscript([start, bash(STATUS), say("Mostly tidy."), ask("q1", "Organize it?")].join("\n")).problems.join(), /before showing the before and after/);
+  assert.ok(checkTranscript([start, bash(STATUS), say(SCREEN), ask("q1", "Organize it?")].join("\n")).ok);
+});
+
 test("transcript check: a quoted path, a hand edit and a housekeeping option are all caught", () => {
   const quoted = 'node "/x/bin/repo-fit.mjs" apply /r --steps A-01 --hooks none';
   const r = checkTranscript([start, bash(quoted), bash(`${quoted} --apply`)].join("\n"));

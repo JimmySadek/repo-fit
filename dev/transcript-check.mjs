@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 const MAX_QUESTIONS = 3;
 // Organizing (archive, old notes, unlinked notes) is on topic since the redesign; these are still not repo-fit's to ask.
 const OFF_TOPIC = /\b(CI|workflows?|GitHub Actions|deploy\w*|big files?|large files?|models?|which (?:AI )?tools|link (?:the|this|these|an?) \w+ note|\.gitignore)\b/i;
-const REPO_FIT = /repo-fit(?:\.mjs)?["']?\s+(apply|update|skip|init|undo|connect|tools|hooks|organize|file)\b/;
+const REPO_FIT = /repo-fit(?:\.mjs)?["']?\s+(apply|update|skip|init|undo|connect|tools|hooks|organize|file|status)\b/;
 // The before/after screen: the organize plan's two columns, or the same in the assistant's own words.
 const SCREEN = /(your folder today|before)[\s\S]*\bafter\b/i;
 // A dry run and its write are the same command without the flags that only switch writing or the view on.
@@ -75,6 +75,10 @@ export function checkTranscript(text) {
       const cmd = raw.replace(/\$\{?([A-Za-z_]\w*)\}?/g, (all, v) => (v in vars ? vars[v] : all));
       const m = cmd.match(REPO_FIT);
       if (!m) continue;
+      if (m[1] === "status") {
+        planMade = true; // the checkup can carry a plan: its screen must be shown before any question
+        continue;
+      }
       const writes_ = m[1] === "init" ? !/--dry-run/.test(cmd) : /--apply\b/.test(cmd);
       const key = same(cmd.slice(cmd.search(REPO_FIT)));
       if (!writes_) {

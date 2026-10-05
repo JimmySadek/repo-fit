@@ -204,6 +204,37 @@ export function markdownFiles() {
   return out.sort();
 }
 
+// Paths repo-fit itself changed and that are still exactly as it left them (from its receipts not undone): moves,
+// link fixes, its own pages. The end-of-reply reminder leaves these out: they are not the person's unsaved work.
+export function ownChanges() {
+  const dir = join(root, ".playbook/receipts");
+  const out = new Set();
+  if (!existsSync(dir)) return out;
+  const sum = (p, text) => {
+    try {
+      const b = readFileSync(join(root, p));
+      return createHash("sha256").update(text ? b.toString("utf8") : b).digest("hex");
+    } catch {
+      return null;
+    }
+  };
+  for (const n of readdirSync(dir).filter((x) => x.endsWith(".json") && !existsSync(join(dir, `${x}.undone`)))) {
+    try {
+      const rc = JSON.parse(readFileSync(join(dir, n), "utf8"));
+      const edited = new Map((rc.entries ?? []).filter((e) => e.type === "edit").map((e) => [e.path, e.after]));
+      for (const e of rc.entries ?? []) {
+        // Still exactly as repo-fit left it? Then it is repo-fit's change; once the person edits it, it is theirs.
+        const at = e.type === "move" ? e.to : e.path;
+        const same = e.type === "move" ? sum(at) === e.hash || sum(at, true) === edited.get(at) : sum(at, true) === e.after || e.type === "create" && sum(at, true) === null;
+        if (same) for (const p of [e.path, e.from, e.to]) if (p) out.add(p);
+      }
+    } catch {
+      /* not a receipt repo-fit can read */
+    }
+  }
+  return out;
+}
+
 export function coverage(cfg = config()) {
   const files = markdownFiles();
   const set = new Set(files);

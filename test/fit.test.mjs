@@ -6,7 +6,7 @@ import { renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { makeFixture, makeBytes } from "../dev/fixtures.mjs";
-import { cli, has, read, sandboxed, script, write } from "./helpers.mjs";
+import { cli, git, has, read, sandboxed, script, write } from "./helpers.mjs";
 
 const ME = { REPO_FIT_TODAY: "2026-10-05", GIT_AUTHOR_NAME: "Test Person", GIT_AUTHOR_EMAIL: "test@example.com", GIT_COMMITTER_NAME: "Test Person", GIT_COMMITTER_EMAIL: "test@example.com" };
 
@@ -96,4 +96,29 @@ test("about every 2 weeks the briefing suggests a deeper review; the review stam
   assert.match(r.out, /may cover the same topic: .*Meeting notes\.md.*meeting-notes \(1\)\.md/);
   assert.match(r.out, /Nothing changes without/);
   assert.doesNotMatch(start(sb, dir), /🆕/, "after a review, quiet for 2 weeks");
+}));
+
+test("when something can be fixed, the checkup itself shows before → after → why, so it is on screen before any question", sandboxed((sb) => {
+  const dir = setUp(sb, "spaghetti");
+  write(dir, "thoughts.md", "# Thoughts\n\nJust saved here.\n");
+  write(dir, "inbox/piano-idea.md", "# Piano\n\nMaybe learn the piano.\n");
+  start(sb, dir);
+  const c = checkup(sb, dir);
+  assert.match(c, /Your folder today[\s\S]*After one yes/);
+  assert.match(c, /--apply --plan \w+/);
+  assert.match(c, /inbox\/piano-idea\.md → notes\/piano-idea\.md/);
+  assert.ok(c.indexOf("Your folder today") < c.indexOf("What can fix it"));
+}));
+
+test("the end-of-reply reminder does not ask to keep or commit what repo-fit itself just changed", sandboxed((sb) => {
+  const dir = setUp(sb, "spaghetti");
+  git(sb, dir, ["add", "-A"], ME);
+  git(sb, dir, ["commit", "-q", "-m", "organized last week"], ME); // as in the live run
+  write(dir, "inbox/IMG_3001.jpg", makeBytes.jpg("photo"));
+  write(dir, "thoughts.md", "# Thoughts\n\nSaved at the top.\n");
+  start(sb, dir); // files the photo and rebuilds the map
+  const code = checkup(sb, dir).match(/--apply --plan (\w+)/)[1];
+  assert.equal(cli(sb, ["organize", dir, "--apply", "--plan", code], { env: ME }).status, 0); // a yes to the plan
+  const r = script(sb, dir, "autosave.mjs", ["--event", "stop", "--host", "Claude Code"], { input: "{}" });
+  assert.doesNotMatch(r.out, /MAP\.md|IMG_3001|notes\/INDEX\.md|thoughts\.md/, r.out);
 }));

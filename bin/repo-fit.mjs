@@ -286,10 +286,28 @@ async function status(target) {
     items.push(f.broken.length ? [false, `${f.broken.length} broken ${f.broken.length === 1 ? "link" : "links"}: ${few(f.broken.map((x) => `${x.file} → ${x.dest}`))}`] : [true, "Links work"]);
     if (f.offIndex.length) items.push([false, `${f.offIndex.length} ${f.offIndex.length === 1 ? "note is" : "notes are"} not on any index page: ${few(f.offIndex)}`]);
     var old = f.old;
+    var fix = f;
   }
   items.push(managed.length ? [false, `Behind: this folder has repo-fit ${pj.playbook}, and ${version} is ready`] : [true, `repo-fit ${version}: Up to date`]);
   const off = items.filter(([ok]) => !ok).length;
   console.log([off ? `⚠️ Your folder needs a look: ${off} ${off === 1 ? "thing" : "things"}` : "✅ Your folder is fit", ...items.map(([ok, s]) => `   ${ok ? "✅" : "⚠️"} ${s}`)].join("\n"));
+  // Not fit: the before → after → why for what repo-fit can fix, on the same screen, so it is shown before any question.
+  if (fix?.loose.length) {
+    const { organizePlan, screen } = await import("../lib/organize.mjs");
+    const p = organizePlan(resolve(target));
+    if (p.batches.length) console.log(`\n${screen(p, target).replace(/\n\n/, `\n\n${await safeLine(target)}\n\n`)}`);
+  }
+  if (fix?.inbox.length) {
+    const HOME = { note: "notes", image: "media", media: "media", document: "documents", data: "data" };
+    let rules = [];
+    try {
+      rules = JSON.parse(readFileSync(join(target, "inbox/rules.json"), "utf8")).rules ?? [];
+    } catch {
+      /* no rules yet */
+    }
+    const to = (i) => `${rules.find((r) => r.kind === i.kind && !r.starts)?.to ?? HOME[i.kind] ?? "notes"}/${basename(i.path)}`;
+    console.log(["", "**Waiting in inbox/** (one question per kind: Yes, Yes and always, Not now). Suggested:", ...fix.inbox.map((i) => `- ${i.path} → ${to(i)}`)].join("\n"));
+  }
   console.log(off ? "\nWhat can fix it: files at the top go in the organize plan (`organize`); for items waiting in inbox/, one question per kind; an update shows what it changes (`update`). Broken links are yours to fix; the list says where." : "\nNothing to change.");
   if (old?.length) console.log(`\n🆕 ${old.length} old ${old.length === 1 ? "note" : "notes"} (not changed for 180+ days): worth a look in the next review.`);
   for (const l of notAdoptedLines(notAdopted)) console.log(l);

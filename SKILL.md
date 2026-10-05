@@ -44,7 +44,9 @@ Do not paste the reports. They are your working notes.
 
 ## 2. Show
 
-**First, the organize plan**, exactly as `organize` printed it: the two columns (today, after) as a code block, and the "Why this is better for you" lines. Then one or two sentences in your own words about what this means for **them**, using their real folder names ("your 14 loose notes go to notes/, your trip notes together in notes/japan-trip/"). Say plainly: nothing is deleted, code and the files it uses stay, links are updated, one command undoes it all. If `organize` says the folder is already organized, say so in one line: that is a good result.
+**First, safety.** The screen starts with a 🛟 line: Git saves a snapshot of the folder as it is before anything changes (or Git is started here first), so they can always go back. Say it in one plain sentence, and that it is highly recommended. If it says Git does not know their name and email, give the two lines as `bash` blocks and wait: nothing can change before they run them. If Git is not installed, give the install line and say repo-fit's own undo still covers everything; they can install Git first or go ahead.
+
+**Then the organize plan**, exactly as `organize` printed it: the two columns (today, after) as a code block, and the "Why this is better for you" lines. Then one or two sentences in your own words about what this means for **them**, using their real folder names ("your 14 loose notes go to notes/, your trip notes together in notes/japan-trip/"). Say plainly: nothing is deleted, code and the files it uses stay, links are updated, one command undoes it all. If `organize` says the folder is already organized, say so in one line: that is a good result.
 
 Then, in about 8 lines, plain words, no step IDs:
 
@@ -60,7 +62,7 @@ If nothing is recommended and nothing is behind, say the repo already has what m
 
 Only after the screen above. The question repeats the plan in one line ("Organize it all: 33 moves, nothing deleted, undo any time?").
 
-1. **Organize it all (Recommended).** The yes approves every dry run shown: the recommended `apply`, the `organize` plan and, for an older setup, the `update`.
+1. **Organize it all (Recommended).** The yes approves every dry run shown: the snapshot, the recommended `apply`, the `organize` plan and, for an older setup, the `update`.
 2. **Show me the full list first.** Show the `--list` output (moves grouped by kind, each with its reason, and what stays and why), then ask once more: organize it all, or not now.
 3. **Not now, just the map.** Apply only the recommended set (it includes the map, `MAP.md`). Nothing moves.
 
@@ -74,7 +76,7 @@ Ask a second question only for what the code cannot decide: an edit to an existi
 
 ## 4. Apply
 
-Run exactly what was approved, with `--apply`, in this order: `update <repo> --apply` for an older setup, then **`organize <repo> --apply --plan <code>` first**, with the code from the command the screen printed (it ties the yes to the plan they saw), then `apply <repo> --steps <ids> <flags> --apply`. Organize goes first so the setup's new files cannot change the plan they approved. One step per command: do not chain them with `;` or `&&`. A new repo: `init` with the same flags, without `--dry-run`. If `organize --apply` refuses because the folder changed after the screen, show the new screen it prints and ask again. If it says it put everything back, say so plainly: nothing was lost. Every write keeps a backup and a receipt; `undo <repo> --apply` puts things back, the organizing in one step. Say that once.
+Run exactly what was approved, with `--apply`, in this order: `update <repo> --apply` for an older setup, then **`organize <repo> --apply --plan <code>` first**, with the code from the command the screen printed (it ties the yes to the plan they saw), then `apply <repo> --steps <ids> <flags> --apply`. Organize goes first so the setup's new files cannot change the plan they approved. One step per command: do not chain them with `;` or `&&`. A new repo: `init` with the same flags, without `--dry-run`. The first command that writes saves the snapshot by itself; say it happened. If Git will not save it, nothing changes: show what Git said and stop. Never retry with `--no-snapshot` unless the person asks for it. If `organize --apply` refuses because the folder changed after the screen, show the new screen it prints and ask again. If it says it put everything back, say so plainly: nothing was lost. Every write keeps a backup and a receipt; `undo <repo> --apply` puts things back, the organizing in one step. Say that once.
 
 Verify, and say what you checked: `node scripts/playbook/brief.mjs --text` prints the briefing, `node scripts/playbook/check.mjs` passes, `MAP.md` lists the new folders, plus the repo's own checks.
 

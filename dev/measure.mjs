@@ -31,7 +31,8 @@ function repoFitAt(ref, tmp) {
 function env(tmp) {
   const home = join(tmp, "home");
   mkdirSync(home, { recursive: true });
-  const e = { ...process.env, HOME: home, USERPROFILE: home, REPO_FIT_CONFIG: join(home, "cfg"), GIT_CONFIG_NOSYSTEM: "1", GIT_TERMINAL_PROMPT: "0", REPO_FIT_UPDATE_CHECK: "off" };
+  // The person's Git knows their name (Safe start needs it to save a snapshot).
+  const e = { ...process.env, GIT_AUTHOR_NAME: "Fixture Person", GIT_AUTHOR_EMAIL: "person@example.com", GIT_COMMITTER_NAME: "Fixture Person", GIT_COMMITTER_EMAIL: "person@example.com", HOME: home, USERPROFILE: home, REPO_FIT_CONFIG: join(home, "cfg"), GIT_CONFIG_NOSYSTEM: "1", GIT_TERMINAL_PROMPT: "0", REPO_FIT_UPDATE_CHECK: "off" };
   delete e.REPO_FIT_TODAY;
   return e;
 }

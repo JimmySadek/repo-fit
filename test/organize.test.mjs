@@ -7,9 +7,9 @@ import { makeFixture } from "../dev/fixtures.mjs";
 import { find, locator, loose, oneHome, orient, safety, sameTree, snapshot } from "../dev/score.mjs";
 import { organizePlan } from "../lib/organize.mjs";
 import { applyMoves, planMoves } from "../lib/move.mjs";
-import { cli, has, read, repo, sandboxed, script, write } from "./helpers.mjs";
+import { cli, git, has, read, repo, sandboxed, script, write } from "./helpers.mjs";
 
-const DAY = { REPO_FIT_TODAY: "2026-10-05" };
+const DAY = { REPO_FIT_TODAY: "2026-10-05", GIT_AUTHOR_NAME: "Test Person", GIT_AUTHOR_EMAIL: "test@example.com", GIT_COMMITTER_NAME: "Test Person", GIT_COMMITTER_EMAIL: "test@example.com" };
 const dest = (p, from) => p.batches.flatMap((b) => b.moves).find((m) => m.from === from)?.to;
 
 test("the plan for an everything-folder: kinds into folders, name groups, old folders and copies archived, uncertain to inbox, code stays", sandboxed((sb) => {
@@ -149,4 +149,16 @@ test("after the setup made docs/ for its own pages, documents still go to docume
   const { dir } = makeFixture("spaghetti", sb.dir);
   write(dir, "docs/00-home/current.md", "# Current\n");
   assert.equal(dest(organizePlan(dir, { today: "2026-10-05" }), "Invoice-2026-03.pdf"), "documents/invoice/Invoice-2026-03.pdf");
+}));
+
+test("old notes stay reported as old after they are moved and the move is committed", sandboxed((sb) => {
+  const { dir } = makeFixture("spaghetti", sb.dir);
+  const rec = JSON.parse(cli(sb, ["audit", dir, "--json"]).stdout).plan.recommended;
+  const shown = cli(sb, ["organize", dir], { env: DAY }).stdout.match(/--apply --plan (\w+)/)[1];
+  assert.equal(cli(sb, ["organize", dir, "--apply", "--plan", shown], { env: DAY }).status, 0);
+  assert.equal(cli(sb, ["apply", dir, "--steps", rec.steps.join(","), ...rec.flags.split(" "), "--apply"], { env: DAY }).status, 0);
+  git(sb, dir, ["add", "-A"], DAY);
+  git(sb, dir, ["commit", "-q", "-m", "organized"], DAY);
+  const out = script(sb, dir, "check.mjs").out;
+  assert.match(out, /untouched for 180\+ days:.*notes\/book-notes-atomic-habits\.md/, out);
 }));

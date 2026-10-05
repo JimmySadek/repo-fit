@@ -292,7 +292,17 @@ function showDiff(rel, oldText, newText) {
   return r.stdout;
 }
 
-function update(target, apply) {
+// Safe start: save the folder in Git as it is before the first change (lib/safe.mjs). Stops the run if Git will not.
+async function safeStart(target) {
+  if (process.argv.includes("--no-snapshot")) return console.log("⚠️ No snapshot (--no-snapshot): repo-fit's own undo still takes back what it changes.\n");
+  const { snapshot } = await import("../lib/safe.mjs");
+  const s = snapshot(resolve(target));
+  console.log(`${s.text}\n`);
+  if (!s.ok) process.exit(1);
+}
+const safeLine = async (target) => (await import("../lib/safe.mjs")).snapshotPlan(resolve(target)).line;
+
+async function update(target, apply) {
   if (!target || !existsSync(join(target, "playbook.json"))) fail(`${target}: no playbook.json. Run "repo-fit init" first (it never overwrites files).`, 2);
   const { changes, notAdopted, pj } = plan(target);
   for (const n of hookNotes(target, pj)) console.log(`⚠️ ${n}`);
@@ -300,7 +310,8 @@ function update(target, apply) {
   for (const l of newsLines(pj, notAdopted)) console.log(l);
   if (!changes.length) return console.log("✅ Up to date. Nothing to change.");
   for (const c of changes) console.log(showDiff(c.rel, c.old, c.next));
-  if (!apply) return console.log(`Dry run: ${changes.length} file(s) would change. Run again with --apply after review.`);
+  if (!apply) return console.log(`Dry run: ${changes.length} file(s) would change. Run again with --apply after review.\n\n${await safeLine(target)}`);
+  await safeStart(target);
   const w = writeAll(resolve(target), changes.map((c) => ({ step: "update", type: existsSync(join(target, c.rel)) ? "edit" : "create", path: c.rel, old: c.old, content: c.next })));
   console.log(`Applied ${changes.length} file(s). Nothing was committed. Receipt: ${w.receipt}. Backups: .playbook/backups/${w.ts}/. Undo with: node bin/repo-fit.mjs undo ${target} --apply`);
 }
@@ -381,6 +392,7 @@ switch (process.argv[2]) {
     const res = connect(pos[0], { host: typeof opt.host === "string" ? opt.host : undefined, owner: typeof opt.owner === "string" ? opt.owner : undefined, name: typeof opt.name === "string" ? opt.name : undefined, apply: Boolean(opt.apply) });
     console.log(res.text);
     if (!res.ok) process.exitCode = 1;
+    else if (!opt.apply && /would be written/.test(res.text)) console.log(`\n${await safeLine(pos[0])}`);
     break;
   }
   case "apply": {
@@ -388,6 +400,7 @@ switch (process.argv[2]) {
     const wordCap = opt["word-cap"] === undefined ? undefined : Number(opt["word-cap"]);
     if (wordCap !== undefined && !(Number.isInteger(wordCap) && wordCap > 0)) fail("--word-cap must be a whole number of words, for example --word-cap 1500");
     const { apply } = await import("../lib/apply.mjs");
+    if (opt.apply) await safeStart(pos[0]);
     const list = (v) => (typeof v === "string" ? v.split(",").map((s) => s.trim()).filter(Boolean) : null);
     const res = apply(pos[0], {
       steps: list(opt.steps), tool: typeof opt.tool === "string" ? opt.tool : "both", hooks: typeof opt.hooks === "string" ? opt.hooks : "all",
@@ -451,11 +464,16 @@ switch (process.argv[2]) {
         console.log(`❌ The folder changed since you saw it, so nothing was moved. Here is the plan as it is now; say yes to this one instead.\n\n${screen(p, pos[0])}`);
         process.exit(1);
       }
+      if (p.batches.length) await safeStart(root);
       const r = organizeApply(root, p);
       console.log(r.text);
       if (!r.ok) process.exit(1);
       if (p.batches.length) console.log(`\nThe map (MAP.md) and the index pages were rebuilt. Undo everything with one command: repo-fit undo ${pos[0]} --apply`);
-    } else console.log(opt.list ? list(p) : screen(p, pos[0]));
+    } else {
+      const text = opt.list ? list(p) : screen(p, pos[0]);
+      // The snapshot line goes right under the title, before the plan: the one yes covers it.
+      console.log(p.batches.length ? text.replace(/\n\n/, `\n\n${await safeLine(root)}\n\n`) : text);
+    }
     break;
   }
   case "map": {
@@ -487,7 +505,7 @@ switch (process.argv[2]) {
     break;
   case "init": init(pos[0], opt); break;
   case "status": status(pos[0]); break;
-  case "update": update(pos[0], Boolean(opt.apply)); break;
+  case "update": await update(pos[0], Boolean(opt.apply)); break;
   case "skip": skip(pos[0], pos[1], opt); break;
   case "hooks": hooks(pos[0], opt); break;
   case "help":

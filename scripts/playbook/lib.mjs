@@ -269,7 +269,7 @@ export function coverage(cfg = config()) {
   // Last commit date per file, one git call. An uncommitted edit counts as today.
   const changed = new Map();
   let when = "";
-  for (const line of (git(["log", "--format=@%cs", "--name-only", "-n", "3000"]) ?? "").split("\n")) {
+  for (const line of (git(["log", "--format=@%cs", "--name-only", "--diff-filter=AMR", "-n", "3000"]) ?? "").split("\n")) {
     if (line.startsWith("@")) when = line.slice(1);
     else if (line && !changed.has(line)) changed.set(line, when);
   }
@@ -297,8 +297,9 @@ export function coverage(cfg = config()) {
       if (same) movedFrom.set(e.to, movedFrom.get(e.from) ?? e.from);
     }
   }
+  // Also once the move is committed: a move is not an edit, so the note keeps the date of the place it came from.
   for (const [to, from] of movedFrom) {
-    if (changed.has(from) && !changed.has(to)) {
+    if (changed.has(from)) {
       changed.set(to, changed.get(from));
       dirty.delete(to);
     }

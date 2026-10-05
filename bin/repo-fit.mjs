@@ -26,7 +26,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSyn
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { defaultOwner, hookFile, mergeHooks, recordersFor, writeAll } from "../lib/apply.mjs";
 import { since } from "../lib/versions.mjs";
 import { coreBlock, repoCoreVars } from "../lib/core.mjs";
@@ -99,7 +99,7 @@ function guidanceCheck() {
 const fill = (text, v) =>
   text.replaceAll("{{version}}", version).replaceAll("{{name}}", v.name ?? "").replaceAll("{{owner}}", v.owner ?? "").replaceAll("{{current}}", "docs/00-home/current.md").replaceAll("{{date}}", today());
 const BLOCK_RE = /<!-- playbook:core v\S+ begin[^>]*-->[\s\S]*?<!-- playbook:core end -->/;
-const VENDORED = ["lib.mjs", "brief.mjs", "check.mjs", "autosave.mjs", "map.mjs", "move.mjs", "file.mjs"];
+const VENDORED = ["lib.mjs", "brief.mjs", "check.mjs", "autosave.mjs", "map.mjs", "move.mjs", "file.mjs", "fit.mjs"];
 const vendoredSource = (f) => readFileSync(join(here, "scripts/playbook", f), "utf8");
 function* files(dir, base = dir) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -267,20 +267,35 @@ function hooks(target, opt) {
   console.log(`✅ The briefing is on${mode === "all" ? ", with autosave" : ""}. Every new session in this folder starts with it.${tools.includes("codex") ? " Codex: run /hooks once and allow it." : ""}\nTo turn it off: repo-fit undo ${target} --apply   Receipt: ${w.receipt}`);
 }
 
-function status(target) {
+// The checkup a re-run starts with: one screen, ✅ for what is fine and ⚠️ only for real problems. "Nothing to
+// change" is a good result. It uses the folder's own fit check, so it judges exactly what its briefing judges.
+async function status(target) {
   if (!target || !existsSync(join(target, "playbook.json"))) fail(`${target}: no playbook.json. Run "repo-fit init" first.`, 2);
-  const g = guidanceState();
   const { changes, notAdopted, pj } = plan(target);
-  console.log(`Repo:     playbook ${pj.playbook}, guidance reviewed ${pj.guidance?.reviewed ?? "never"}, tools ${(pj.tools ?? []).join(", ")}, models ${(pj.models ?? []).join(", ") || "none named"}`);
-  console.log(`Playbook: ${version}, guidance reviewed ${g.reviewed}${g.overdue.length ? ` (⚠️ overdue: ${g.overdue.join(", ")})` : ""}`);
   const notes = hookNotes(target, pj);
   const managed = changes.filter((c) => !c.stamp);
-  if (managed.length) console.log(`⏳ Behind. Files that would change: ${changes.map((c) => c.rel).join(", ")}`);
-  else if (changes.length) console.log(`✅ The adopted parts are current. Only the version stamp in playbook.json would move to ${version} (update --apply).`);
-  else console.log("✅ Up to date.");
+  const items = [];
+  const own = join(resolve(target), "scripts/playbook/fit.mjs");
+  if (existsSync(own)) {
+    const { fitFacts } = await import(pathToFileURL(own).href);
+    const f = fitFacts();
+    const few = (list) => list.slice(0, 3).join(", ") + (list.length > 3 ? ", …" : "");
+    items.push(f.mapStale.length ? [false, "The map is out of date. It updates by itself when the next session starts."] : [true, "Map up to date"]);
+    items.push(f.inbox.length ? [false, `${f.inbox.length} ${f.inbox.length === 1 ? "item" : "items"} waiting in inbox/: ${few(f.inbox.map((i) => i.path.replace(/^inbox\//, "")))}`] : [true, "Inbox empty"]);
+    items.push(f.loose.length ? [false, `${f.loose.length} ${f.loose.length === 1 ? "file" : "files"} loose at the top: ${few(f.loose)}`] : [true, "0 loose files at the top"]);
+    items.push(f.broken.length ? [false, `${f.broken.length} broken ${f.broken.length === 1 ? "link" : "links"}: ${few(f.broken.map((x) => `${x.file} → ${x.dest}`))}`] : [true, "Links work"]);
+    if (f.offIndex.length) items.push([false, `${f.offIndex.length} ${f.offIndex.length === 1 ? "note is" : "notes are"} not on any index page: ${few(f.offIndex)}`]);
+    var old = f.old;
+  }
+  items.push(managed.length ? [false, `Behind: this folder has repo-fit ${pj.playbook}, and ${version} is ready`] : [true, `repo-fit ${version}: Up to date`]);
+  const off = items.filter(([ok]) => !ok).length;
+  console.log([off ? `⚠️ Your folder needs a look: ${off} ${off === 1 ? "thing" : "things"}` : "✅ Your folder is fit", ...items.map(([ok, s]) => `   ${ok ? "✅" : "⚠️"} ${s}`)].join("\n"));
+  console.log(off ? "\nWhat repo-fit can do about it: loose files and the inbox are in the organize plan (`organize`), an update shows what it changes (`update`). Broken links are yours to fix; the list says where." : "\nNothing to change.");
+  if (old?.length) console.log(`\n🆕 ${old.length} old ${old.length === 1 ? "note" : "notes"} (not changed for 180+ days): worth a look in the next review.`);
   for (const l of notAdoptedLines(notAdopted)) console.log(l);
   for (const l of newsLines(pj, notAdopted)) console.log(l);
   for (const n of notes) console.log(`⚠️ ${n}`);
+  if (managed.length) console.log(`Files an update would change: ${changes.map((c) => c.rel).join(", ")}`);
   if (managed.length || notes.length) process.exitCode = 1;
 }
 
@@ -523,7 +538,7 @@ switch (process.argv[2]) {
     else fail("Usage: repo-fit guidance check");
     break;
   case "init": init(pos[0], opt); break;
-  case "status": status(pos[0]); break;
+  case "status": await status(pos[0]); break;
   case "update": await update(pos[0], Boolean(opt.apply)); break;
   case "skip": skip(pos[0], pos[1], opt); break;
   case "hooks": hooks(pos[0], opt); break;

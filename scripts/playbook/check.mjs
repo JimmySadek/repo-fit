@@ -1,11 +1,20 @@
 // Repo checks: required files, board, links, folder indexes. Read-only. Exit 1 on errors.
 //   node scripts/playbook/check.mjs
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { markReviewed, reviewText } from "./fit.mjs";
 import { dirname, join, relative, resolve } from "node:path";
 import { root, config, readBoard, analyseBoard, paths, coverage, bodyWords } from "./lib.mjs";
 
 const cfg = config();
 const P = paths();
+// --review: what a script can find for a deeper review (near copies, old notes). The assistant proposes; nothing
+// changes without a yes. Remembers the date, so the briefing suggests the next one in about two weeks.
+if (process.argv.includes("--review")) {
+  console.log(reviewText());
+  markReviewed();
+  process.exit(0);
+}
+
 const errors = [];
 const warnings = [];
 

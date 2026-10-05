@@ -134,7 +134,7 @@ test("live-run order: the plan shown is applied first, then the setup; the folde
   assert.equal(o2.covered, o2.entries, "the map also lists the folders the setup added");
   const check = script(sb, dir, "check.mjs");
   assert.equal(check.status, 0, check.out);
-  assert.doesNotMatch(script(sb, dir, "brief.mjs", ["--text"]).out, /missing/i);
+  assert.doesNotMatch(script(sb, dir, "brief.mjs", ["--text"]).out, /board .*is missing|❌/i);
 }));
 
 test("organize --apply refuses a plan other than the one shown, and moves nothing", sandboxed((sb) => {

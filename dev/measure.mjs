@@ -105,11 +105,16 @@ export function measureOne(rf, name, tmp) {
     safety: safety(before, after, truth, locate),
   };
   // New input: drop the planted items, start a session, see where they ended up.
+  // Slice 6: the checkup a re-run starts with, right after the setup (before new things arrive).
+  const check = run(process.execPath, [join(rf, "bin/repo-fit.mjs"), "status", dir], dir, e).out;
+  res.checkup = /✅ Your folder is fit/.test(check) ? "fit" : (check.match(/needs a look: (\d+)/)?.[1] ?? null);
   const into = dropItems(dir, truth, existsSync(join(dir, "inbox")));
   const dropHashes = Object.fromEntries(truth.drops.map((d) => [d.name, sha(d.make === "md" ? Buffer.from(d.text) : makeBytes[d.make](`drop-${d.name}`))]));
   adapter.session(dir, e);
   const afterSession = snapshot(dir);
   res.newInput = { droppedInto: into || "(top of the folder)", ...landed(afterSession, truth, dropHashes, locator(before, afterSession)) };
+  // Slice 6: after new things arrived and a session started, is every note still within two links of the map?
+  res.mapAfterNew = find(afterSession);
   // Undo, on a fresh copy of the same folder: set up, undo everything, compare with the original.
   const b = makeFixture(name, join(tmp, "b"));
   const beforeB = snapshot(b.dir);
@@ -133,6 +138,8 @@ export function table(results, label) {
     ["One home: exact copies resolved", (r) => `${r.oneHome.exact.resolved}/${r.oneHome.exact.total}`],
     ["One home: near copies resolved", (r) => `${r.oneHome.near.resolved}/${r.oneHome.near.total}`],
     ["New input landed right", (r) => `${r.newInput.found}/${r.newInput.total}`],
+    ["Map current after new things arrive", (r) => `${pct(r.mapAfterNew.found, r.mapAfterNew.total)} (${r.mapAfterNew.found}/${r.mapAfterNew.total})`],
+    ["Checkup right after setup", (r) => (r.checkup === "fit" ? "✅ fit" : r.checkup ? `⚠️ ${r.checkup} to look at` : "n/a")],
     ["Nothing rots: problems surfaced", (r) => `${r.rot.found}/${r.rot.total}`],
     ["Open work in one list", (r) => `${r.openWork.found}/${r.openWork.total}`],
     ["Safety: no file lost", (r) => (r.safety.lost.length ? `❌ ${r.safety.lost.length} lost` : "✅")],

@@ -9,6 +9,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { root, git, config, readBoard, analyseBoard, paths, coverage, preview, updateNotice } from "./lib.mjs";
 import { capture } from "./file.mjs";
+import { fitFacts, fitLines, rebuildMap } from "./fit.mjs";
 
 const args = process.argv.slice(2);
 const hook = args.includes("--hook");
@@ -34,6 +35,10 @@ out.push(
 );
 
 out.push(...inbox.lines);
+// The map is repo-fit's own page: at session start it follows the folder by itself (notes added, renamed, removed).
+if ((hook || args.includes("--file")) && !preview && rebuildMap(cfg).length) out.push("✅ Map updated: notes were added, renamed or removed.");
+// What is off, one short line each. Quiet when all is well.
+out.push(...fitLines(fitFacts(cfg)));
 
 // A newer repo-fit that matters for this repo (see updateNotice: once a day, package name only, silent on failure).
 const notice = preview ? null : await updateNotice(cfg.playbook);
@@ -89,15 +94,6 @@ if (existsSync(oq)) {
 
 // 🧹 review queue: notes nothing links to, notes untouched for a long time, notes past their review_after date
 // Up to 3 notes are named. More than that is a count only, so the brief stays short every session; check lists them all.
-const cov = coverage(cfg);
-const total = cov.orphans.length + cov.stale.length + cov.due.length;
-const named = (rows, f) => (total <= 3 ? ` (${list(rows, f)})` : "");
-const queue = [];
-if (cov.orphans.length) queue.push(`${cov.orphans.length} nobody links to${named(cov.orphans, (p) => short(p, 45))}`);
-if (cov.stale.length) queue.push(`${cov.stale.length} untouched ${cov.staleNoteDays}+ days${named(cov.stale, (s) => `${short(s.path, 45)} ${s.date}`)}`);
-if (cov.due.length) queue.push(`${cov.due.length} due for review${named(cov.due, (s) => `${short(s.path, 45)} ${s.date}`)}`);
-if (queue.length) out.push(`🧹 Review queue: ${queue.join(" · ")}.${total > 3 ? " `node scripts/playbook/check.mjs` lists them." : ""} Link, merge or archive them when you touch that topic.`);
-
 // 📝 log and current view
 const logPath = join(root, P.log);
 if (existsSync(logPath) && lastDate && !readFileSync(logPath, "utf8").includes(`- ${lastDate}`)) {
@@ -113,7 +109,7 @@ const text = out.join("\n");
 if (!hook) {
   console.log(text);
 } else {
-  const forModel = `${text}\n\nSession brief, read from files. Show the top of it to the user in 3 to 5 lines before starting, and refresh Git facts before relying on it.`;
+  const forModel = `${text}\n\nSession brief, read from files. Show the top of it to the user in 3 to 5 lines before starting, and refresh Git facts before relying on it.${inbox.waiting?.length ? " For the 📥 items waiting, follow the inbox lines in AGENTS.md: ask once per kind with exactly Yes, Yes and always, Not now; never delete, merge or commit them." : ""}${/🆕 Two weeks/.test(text) ? " For a review, run node scripts/playbook/check.mjs --review and propose; nothing changes without a yes." : ""}`;
   // Both tools read hookSpecificOutput.additionalContext. Codex shows systemMessage as a warning, so it gets none.
   const context = { hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: forModel } };
   const payload = format === "codex" ? context : { systemMessage: text, ...context };

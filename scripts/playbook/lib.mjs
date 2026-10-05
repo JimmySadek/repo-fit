@@ -266,13 +266,22 @@ export function coverage(cfg = config()) {
   const skip = (f) => ROOT_NAMES.has(f) || /(^|\/)(AGENTS|CLAUDE|GEMINI)\.md$/.test(f) || EXPECTED_UNLINKED.test(f) || /(^|\/)README\.md$/i.test(f) || matchesAny(f, cfg.reviewIgnore ?? []) || matchesAny(f, (cfg.protectedPaths ?? []).map((p) => (p.endsWith("/") ? `${p}**` : p)));
   const orphans = files.filter((f) => inbound.get(f) === 0 && !skip(f) && !roles.has(f) && !generated.has(f));
 
-  // Last commit date per file, one git call. An uncommitted edit counts as today.
+  // Last commit date per file, one git call. An uncommitted edit counts as today. A repo-fit snapshot ("saved as it
+  // was before repo-fit changed anything") is not a change to a note, so its date does not count: without another
+  // commit, the file's own date does (also for a folder with no Git at all).
   const changed = new Map();
   let when = "";
-  for (const line of (git(["log", "--format=@%cs", "--name-only", "--diff-filter=AMR", "-n", "3000"]) ?? "").split("\n")) {
-    if (line.startsWith("@")) when = line.slice(1);
-    else if (line && !changed.has(line)) changed.set(line, when);
+  for (const line of (git(["log", "--format=@%cs%x09%s", "--name-only", "--diff-filter=AMR", "-n", "3000"]) ?? "").split("\n")) {
+    if (line.startsWith("@")) when = line.includes("\trepo-fit: snapshot") ? null : line.slice(1, 11);
+    else if (line && when && !changed.has(line)) changed.set(line, when);
   }
+  const fileDate = (f) => {
+    try {
+      return statSync(join(root, f)).mtime.toLocaleDateString("sv-SE");
+    } catch {
+      return null;
+    }
+  };
   const dirty = new Set(changedFiles() ?? []);
   // A note repo-fit moved (and whose only change since is its links) keeps the date of where it came from: a move is
   // not a change to the note. The receipts of moves not undone say where each file came from.
@@ -299,10 +308,8 @@ export function coverage(cfg = config()) {
   }
   // Also once the move is committed: a move is not an edit, so the note keeps the date of the place it came from.
   for (const [to, from] of movedFrom) {
-    if (changed.has(from)) {
-      changed.set(to, changed.get(from));
-      dirty.delete(to);
-    }
+    changed.set(to, changed.get(from) ?? fileDate(to)); // a move keeps the file's own date too
+    dirty.delete(to);
   }
   const t = today();
   const cutoff = new Date(Date.now() - cfg.staleNoteDays * 864e5).toLocaleDateString("sv-SE");
@@ -315,8 +322,8 @@ export function coverage(cfg = config()) {
       if (review < t) due.push({ path: f, date: review }); // a planned review date replaces the age rule
       continue;
     }
-    if (dirty.has(f)) continue;
-    const last = changed.get(f);
+    if (dirty.has(f) && changed.has(f)) continue; // edited since its last commit: not old
+    const last = changed.get(f) ?? fileDate(f);
     if (last && last < cutoff) stale.push({ path: f, date: last });
   }
   stale.sort((a, b) => a.date.localeCompare(b.date) || a.path.localeCompare(b.path));

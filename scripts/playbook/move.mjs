@@ -189,6 +189,27 @@ function workingLinks(root, list) {
   return { n, folderTargets };
 }
 
+// Every link between notes: where each one goes, and which ones point at nothing (broken). For the fit check.
+export function linkReport(root, list = files(root)) {
+  const index = new Map(list.map((p) => [nfc(p), p]));
+  const folders = folderSet(list, root);
+  const names = nameMap(list);
+  const edges = new Map();
+  const broken = [];
+  for (const f of list.filter((p) => NOTE.test(p))) {
+    const text = readText(root, f);
+    if (text === null) continue;
+    const to = new Set();
+    for (const l of scanLinks(text)) {
+      const r = resolve(index, folders, names, f, l);
+      if (r) to.add(r.path);
+      else if (!l.dest.startsWith("/")) broken.push({ file: f, dest: l.dest }); // "/..." may be a website address
+    }
+    edges.set(f, to);
+  }
+  return { edges, broken };
+}
+
 // The new destination text for a link, in the old one's style.
 function rewrite(link, r, fromNow, target) {
   if (r.bare) {

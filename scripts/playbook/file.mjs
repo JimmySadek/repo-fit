@@ -11,7 +11,7 @@ import { existsSync, readFileSync, realpathSync, statSync, writeFileSync } from 
 import { basename, dirname, join, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { applyMoves, files, planMoves } from "./move.mjs";
-import { kindOf, nameWords, pages } from "./map.mjs";
+import { kindOf, nameWords, pages, scan } from "./map.mjs";
 
 const RULES = "inbox/rules.json";
 export const RULES_ABOUT = "How new things in inbox/ are filed when a session starts. Each rule: a kind of file (and optionally the words its name starts with) and the folder it goes to. repo-fit adds a rule when you approve one; delete a rule's lines to stop it.";
@@ -70,7 +70,10 @@ export function capture(root, { apply = false, protect } = {}) {
   const { cfg, items } = inboxState(root);
   const lines = [];
   let filed = [];
-  const matched = items.filter((i) => i.rule);
+  // Loose files at the top follow the same rules (maintainer, 5 Oct): one that matches is filed too. The move engine
+  // still keeps whatever code or rules name where it is.
+  const top = readRules(root) ? scan(root, { protect }).loose.map((l) => ({ path: l.path, rule: ruleFor(cfg.rules, l.path) })).filter((l) => l.rule) : [];
+  const matched = [...items.filter((i) => i.rule), ...top];
   if (apply && matched.length) {
     const plan = planMoves(root, matched.map((i) => ({ from: i.path, to: `${i.rule.to}/${posix.basename(i.path)}`, why: "your standing rule" })), { protect });
     const r = plan.moves.length ? applyMoves(root, plan, { step: "file", writes: (x) => pages(x, { protect }) }) : { ok: true };

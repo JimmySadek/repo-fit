@@ -113,6 +113,7 @@ The briefing files what matches a rule by itself and says so ("📥 Filed by you
 
 The CLI already guarantees dry runs, backups, receipts, undo, no overwrites, and no commits to `main`. These rules are what it cannot enforce:
 
+- **Copy every screen you ask about into your reply, as printed, before the question.** The person does not see tool output: it is folded away on their screen.
 - Add `--apply` to `apply`, `update`, `organize`, `skip` or `hooks`, or run `init` without `--dry-run`, only after the person said yes to that exact dry run. Invoking the skill is not that yes.
 - **Write only what the approved dry run shows.** No hand edits, not even to tidy a file repo-fit just wrote. If something it wrote looks wrong, say so in the recap; that is a repo-fit bug to report.
 - **If a safety check blocks a step, do not work around it** and do not offer a path that will hit the same block later. Say in one plain sentence what was blocked and why, and give the person the exact command to run themselves in a `bash` block.

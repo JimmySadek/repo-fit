@@ -90,7 +90,7 @@ export function checkTranscript(text) {
         if (["apply", "update", "skip", "init", "organize", "hooks", "file", "remove"].includes(m[1])) {
           shown.add(key); // a dry run the user must answer
           approved.delete(key);
-          if (m[1] === "organize") planMade = true;
+          if (m[1] === "organize" || m[1] === "remove") planMade = true; // its screen must be in the reply before a question
         }
       } else {
         writes.push({ command: cmd.slice(0, 160), approved: approved.has(key) });
@@ -105,7 +105,7 @@ export function checkTranscript(text) {
     ...(questions.length > MAX_QUESTIONS ? [`${questions.length} questions, more than ${MAX_QUESTIONS}`] : []),
     ...offTopic.map((q) => `off-topic question: ${q.slice(0, 120)}`),
     ...unapproved.map((w) => `wrote without an answer after the dry run: ${w.command}`),
-    ...early.map((q) => `asked before showing the before and after of the organize plan: ${q.slice(0, 120)}`),
+    ...early.map((q) => `asked before showing the before and after of the plan: ${q.slice(0, 120)}`),
   ];
   return { questions, writes, problems, ok: problems.length === 0 };
 }

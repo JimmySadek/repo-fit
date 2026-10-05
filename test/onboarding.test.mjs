@@ -133,7 +133,13 @@ test("transcript check: the organize plan shown inside the checkup counts as its
 test("transcript check: remove needs a yes after its dry run", () => {
   const RM = "node /x/bin/repo-fit.mjs remove /r";
   assert.match(checkTranscript([start, bash(`${RM} --apply`)].join("\n")).problems.join(), /wrote without an answer/);
-  assert.ok(checkTranscript([start, bash(RM), ask("q1", "Remove repo-fit's parts?"), answer("q1"), bash(`${RM} --apply`)].join("\n")).ok);
+  assert.ok(checkTranscript([start, bash(RM), say("**Before → after**: playbook.json → set aside"), ask("q1", "Remove repo-fit's parts?"), answer("q1"), bash(`${RM} --apply`)].join("\n")).ok);
+});
+
+test("transcript check: the remove screen must be in the reply before the question, not only in the tool output", () => {
+  const RM = "node /x/bin/repo-fit.mjs remove /r";
+  assert.match(checkTranscript([start, bash(RM), ask("q1", "Remove repo-fit?")].join("\n")).problems.join(), /before showing the before and after/);
+  assert.ok(checkTranscript([start, bash(RM), say("**Before → after** (repo-fit's own parts only):\n- playbook.json → set aside"), ask("q1", "Remove repo-fit?")].join("\n")).ok);
 });
 
 test("transcript check: a quoted path, a hand edit and a housekeeping option are all caught", () => {

@@ -130,6 +130,12 @@ test("transcript check: the organize plan shown inside the checkup counts as its
   assert.ok(r.ok, r.problems.join("; "));
 });
 
+test("transcript check: remove needs a yes after its dry run", () => {
+  const RM = "node /x/bin/repo-fit.mjs remove /r";
+  assert.match(checkTranscript([start, bash(`${RM} --apply`)].join("\n")).problems.join(), /wrote without an answer/);
+  assert.ok(checkTranscript([start, bash(RM), ask("q1", "Remove repo-fit's parts?"), answer("q1"), bash(`${RM} --apply`)].join("\n")).ok);
+});
+
 test("transcript check: a quoted path, a hand edit and a housekeeping option are all caught", () => {
   const quoted = 'node "/x/bin/repo-fit.mjs" apply /r --steps A-01 --hooks none';
   const r = checkTranscript([start, bash(quoted), bash(`${quoted} --apply`)].join("\n"));

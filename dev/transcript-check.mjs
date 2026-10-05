@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 const MAX_QUESTIONS = 3;
 // Organizing (archive, old notes, unlinked notes) is on topic since the redesign; these are still not repo-fit's to ask.
 const OFF_TOPIC = /\b(CI|workflows?|GitHub Actions|deploy\w*|big files?|large files?|models?|which (?:AI )?tools|link (?:the|this|these|an?) \w+ note|\.gitignore)\b/i;
-const REPO_FIT = /repo-fit(?:\.mjs)?["']?\s+(apply|update|skip|init|undo|connect|tools|hooks|organize|file|status)\b/;
+const REPO_FIT = /repo-fit(?:\.mjs)?["']?\s+(apply|update|skip|init|undo|connect|tools|hooks|organize|file|status|remove)\b/;
 // The before/after screen: the organize plan's two columns, or the same in the assistant's own words.
 const SCREEN = /(your folder today|before)[\s\S]*\bafter\b/i;
 // A dry run and its write are the same command without the flags that only switch writing or the view on.
@@ -87,7 +87,7 @@ export function checkTranscript(text) {
       const writes_ = m[1] === "init" ? !/--dry-run/.test(cmd) : /--apply\b/.test(cmd);
       const key = same(cmd.slice(cmd.search(REPO_FIT)));
       if (!writes_) {
-        if (["apply", "update", "skip", "init", "organize", "hooks", "file"].includes(m[1])) {
+        if (["apply", "update", "skip", "init", "organize", "hooks", "file", "remove"].includes(m[1])) {
           shown.add(key); // a dry run the user must answer
           approved.delete(key);
           if (m[1] === "organize") planMade = true;

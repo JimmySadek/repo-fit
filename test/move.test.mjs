@@ -162,7 +162,9 @@ test("the yes is tied to the exact plan: a file changed after the preview means 
   assert.ok(has(d, "notes/a.md") && !has(d, "topics/a.md"));
 }));
 
-test("a failure halfway rolls everything back and says so", sandboxed((sb) => {
+// It forces the failure with a read-only folder; Windows ignores those folder permissions, so the move would succeed.
+// The roll-back itself is tested on every system by the crash test below.
+test("a failure halfway rolls everything back and says so", { skip: process.platform === "win32" && "a read-only folder does not block a write on Windows" }, sandboxed((sb) => {
   const d = folder(sb, "x", { "a.md": "# A\n\n[b](b.md)\n", "b.md": "# B\n\n[a](a.md)\n", "locked/keep.md": "# Keep\n" });
   const before = snapshot(d);
   const plan = planMoves(d, [{ from: "a.md", to: "notes/a.md" }, { from: "b.md", to: "locked/b.md" }]);

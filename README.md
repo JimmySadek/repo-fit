@@ -31,7 +31,7 @@ You do not need to be a developer. You need an AI assistant and about 10 minutes
 | **One list of everything open** | Tasks, questions and ideas live in one place, each with an owner and a next step. Nothing is "somewhere in a chat". |
 | **Your work saved automatically, safely** | Small automatic saves while you work. Never on your main version, never sent anywhere. You stay in control. |
 | **A memory that does not rot** | Your assistant gets reminded of notes nobody links to and notes that went quiet, so they get merged, linked or archived. |
-| **The same rules for every assistant** | One short rulebook that Claude Code and Codex both read: capture by default, search before saying "unknown", ask before deciding. |
+| **The same rules for every assistant** | One short rulebook that Claude Code and Codex both read. repo-fit adds five short rules after yours (write it down, search before saying "unknown", never invent agreement), and yours win where they overlap. |
 | **It fits what you already have** | Your own files stay where they are. repo-fit points at them instead of making copies. |
 
 Here is a real briefing from a small test project (two lines left out to keep it short):
@@ -46,11 +46,10 @@ Here is a real briefing from a small test project (two lines left out to keep it
 ## How it works
 
 ```
-1. LOOK          2. CHOOSE                3. WORK
-It reads your    It suggests what is      Every session: briefing,
-project and      missing. You say yes     one open list, automatic
-reports. It      or no to each step.      saves, reminders.
-changes nothing. Nothing is overwritten.
+1. LOOK          2. SEE                   3. CHOOSE ONCE           4. WORK
+It reads your    It shows the briefing    Recommended set, or      Every session starts
+project. It      your sessions would      pick pieces, or just     with the briefing.
+changes nothing. start with.              the report.
 ```
 
 Every change is shown to you first, keeps a backup, and can be undone with one command. It never uploads your files anywhere.
@@ -63,11 +62,13 @@ Open your project in **Claude Code** or **Codex** and paste this:
 Install the repo-fit skill with `npx skills add JimmySadek/repo-fit -g -a claude-code codex -y`, then use it to set up this project. Before you change anything, show me what you would change and explain it in plain words.
 ```
 
-That's it. Your assistant installs repo-fit, looks at your project, tells you what is already fine, suggests what is missing, and asks for your yes on each step. Say no to anything you don't want.
+That's it. Your assistant installs repo-fit, looks at your project, shows you the briefing your sessions would start with, and asks you one question: set up the recommended pieces, pick your own, or just see the report. Your own files and rules stay as they are.
 
-**Next session,** open the project again. The briefing appears by itself.
+**One step is yours:** your assistant gives you one line to run that turns on the briefing, and a short reminder at the end of each reply when something changed but was not written down. Claude Code does not let an assistant change how your sessions start, so it asks you. **Next session,** open the project again and the briefing appears by itself.
 
-**To update later,** paste: `Update repo-fit with npx skills update -g -y`
+**Updates:** repo-fit does not update itself. When a release matters for your project, the briefing tells you in one line, with why. Then paste: `Update repo-fit with npx skills update -g -y, then run /repo-fit here`.
+
+**Using Claude Code? Install it as a plugin instead,** and it can update itself. In Claude Code, run `/plugin marketplace add JimmySadek/repo-fit`, then `/plugin install repo-fit@repo-fit`. To get new versions automatically: `/plugin` → **Marketplaces** → **repo-fit** → **Enable auto-update** (it is off until you turn it on). The skill is then `/repo-fit:repo-fit`.
 
 **What your computer needs:** [Node.js](https://nodejs.org), version 18 or newer. It is a free program; if it is missing, your assistant will tell you.
 
@@ -83,14 +84,14 @@ Everything else is in the [technical reference](docs/reference.md).
 
 - **It changes nothing without showing you first.** Every step is a preview, then your yes.
 - **Everything it writes can be undone.** It keeps a backup and a receipt of each change.
-- **Your files never leave your computer.** It does not upload, publish, or send anything. The one exception is optional and asks first: creating an empty, private backup location for your project on GitHub or GitLab.
+- **Your files never leave your computer.** It does not upload, publish, or send anything. Two small exceptions: once a day the briefing asks npm whether a newer repo-fit exists (only the name "repo-fit" is sent; turn it off with `repo-fit prefs set updateCheck off`), and, only if you ask, it creates an empty, private backup location for your project on GitHub or GitLab.
 - **It never reads the contents of files that look like secrets** (passwords, keys). It only warns you if such a file is in a risky place.
 
 The [full list of what it reads and when it uses the network](docs/reference.md#security-and-privacy) is in the reference.
 
 ## Where this stands
 
-**Public beta, version 0.5.0.** Built and used by one person so far, on a Mac, with Claude Code. Automated tests pass on Mac, Linux and Windows. Codex support is written to the official documentation but has not been tried live yet. If you try it, [tell us what happened](https://github.com/JimmySadek/repo-fit/issues): that is the most useful thing you can do right now.
+**Public beta, version 0.6.0.** Built and used by one person so far, on a Mac, with Claude Code. Automated tests pass on Mac, Linux and Windows. Codex support is written to the official documentation but has not been tried live yet. If you try it, [tell us what happened](https://github.com/JimmySadek/repo-fit/issues): that is the most useful thing you can do right now.
 
 ## For developers
 

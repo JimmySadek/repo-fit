@@ -3,6 +3,7 @@
 //   repo-fit detect <repo> [--json]                           read-only: machine, repo, existing tools, what it would ask
 //   repo-fit audit <repo> [--area <folder>] [--json] [--out <file>]
 //                                                             read-only report and plan for an existing repo
+//   repo-fit preview <repo>                                   read-only: the session brief the recommended set would give
 //   repo-fit apply <repo> [--steps A-01,...] [--tool ..] [--hooks all|brief|none] [--autosave on|off] [--apply]
 //                                                             dry run by default; --apply writes, backs up, and writes a receipt
 //   repo-fit undo <repo> [--receipt <file>] [--apply]         put back what the last apply changed (dry run by default)
@@ -17,12 +18,14 @@
 //                                                             add the Starter kit. Never overwrites a file.
 //   repo-fit status <repo>                                    is the repo behind this playbook?
 //   repo-fit update <repo> [--apply]                          show what would change (default), or apply it
+//   repo-fit hooks <repo> [--hooks brief|all] [--apply]       turn on the start-of-session briefing; the person runs it
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { defaultOwner, recordersFor, writeAll } from "../lib/apply.mjs";
+import { defaultOwner, hookFile, mergeHooks, recordersFor, writeAll } from "../lib/apply.mjs";
+import { since } from "../lib/versions.mjs";
 import { coreBlock, repoCoreVars } from "../lib/core.mjs";
 
 const here = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -204,8 +207,10 @@ function hookNotes(target, pj) {
   const has = (rel) => existsSync(join(target, rel)) && readFileSync(join(target, rel), "utf8").includes("scripts/playbook/");
   // Hooks matter only where the scripts were adopted with hooks.
   if (existsSync(join(target, "scripts/playbook")) && pj.hooks !== "none") {
-    if (tools.includes("claude-code") && !has(".claude/settings.json")) notes.push("Claude Code hooks are not set up: merge kits/tools/claude-code/.claude/settings.json into .claude/settings.json.");
-    if (tools.includes("codex") && !has(".codex/hooks.json")) notes.push("Codex hooks are not set up: see kits/tools/codex/.codex/hooks.json (needs /hooks trust).");
+    const off = [tools.includes("claude-code") && !has(".claude/settings.json") ? "Claude Code" : null, tools.includes("codex") && !has(".codex/hooks.json") ? "Codex" : null].filter(Boolean);
+    if (off.length) notes.push(`The start-of-session briefing is not turned on for ${off.join(" and ")}. The person turns it on with: repo-fit hooks ${target} --apply`);
+    const noReminder = tools.includes("claude-code") && has(".claude/settings.json") && !readFileSync(join(target, ".claude/settings.json"), "utf8").includes("autosave.mjs");
+    if (noReminder) notes.push(`The end-of-reply reminder ("did we write down what matters?") is not on. The person turns it on with: repo-fit hooks ${target} --apply`);
   }
   // guidance/claude-code.md C1: with a CLAUDE.md present, Claude Code reads only that file, so it must import AGENTS.md.
   const claudeMd = join(target, "CLAUDE.md");
@@ -216,6 +221,48 @@ function hookNotes(target, pj) {
 }
 
 const notAdoptedLines = (list) => list.map((n) => (n.reason !== undefined ? `➖ Skipped on purpose: ${n.part} (${n.step}): ${n.reason || "no reason given"}` : `➖ Not adopted: ${n.part} (${n.step}). Add it with "apply --steps ${n.step}", or record why not with "skip <repo> ${n.step} --reason ..."`));
+
+// What changed since the version this repo has, and steps it skipped that changed since: worth a second look.
+function newsLines(pj, notAdopted) {
+  const { news, steps } = since(pj.playbook ?? "0.0.0");
+  const out = news.length ? [`🆕 New since ${pj.playbook ?? "your version"}:`, ...news.map((n) => `   • ${n.text}`)] : [];
+  for (const n of notAdopted) if (n.reason !== undefined && steps[n.step]) out.push(`👀 Worth a second look: ${n.part} (${n.step}), skipped because "${n.reason || "no reason given"}". ${steps[n.step]} To add it: skip <repo> ${n.step} --remove --apply, then apply <repo> --steps ${n.step}.`);
+  return out;
+}
+
+// Turn on the start-of-session briefing (and autosave, with --hooks all): the hook files for the repo's tools, merged
+// with the hooks already there. Claude Code's auto mode blocks an assistant from writing these, so the person runs it.
+function hooks(target, opt) {
+  if (!target || !existsSync(target)) fail("Usage: repo-fit hooks <repo> [--hooks brief|all] [--apply]");
+  const root = resolve(target);
+  if (!existsSync(join(root, "scripts/playbook/brief.mjs"))) fail(`${target}: the briefing script is not there yet. Add it first: repo-fit apply ${target} --steps A-10 --hooks none`, 2);
+  const pjPath = join(root, "playbook.json");
+  let pj = {};
+  try {
+    pj = JSON.parse(readFileSync(pjPath, "utf8"));
+  } catch {
+    /* no playbook.json: both tools, briefing only */
+  }
+  const mode = opt.hooks === "all" || opt.hooks === "brief" ? opt.hooks : pj.autosave ? "all" : "brief";
+  const tools = pj.tools ?? ["claude-code", "codex"];
+  const items = [];
+  const add = (rel, kitRel) => {
+    const old = existsSync(join(root, rel)) ? readFileSync(join(root, rel), "utf8") : "";
+    const next = old ? mergeHooks(old, hookFile(kitRel, mode)) : `${JSON.stringify(hookFile(kitRel, mode), null, 2)}\n`;
+    if (next !== old) items.push({ step: "hooks", type: old ? "edit" : "create", path: rel, old, content: next });
+  };
+  if (tools.includes("claude-code")) add(".claude/settings.json", "claude-code/.claude/settings.json");
+  if (tools.includes("codex")) add(".codex/hooks.json", "codex/.codex/hooks.json");
+  if (existsSync(pjPath) && pj.hooks !== mode) {
+    const old = readFileSync(pjPath, "utf8");
+    items.push({ step: "hooks", type: "edit", path: "playbook.json", old, content: `${JSON.stringify({ ...pj, hooks: mode }, null, 2)}\n` });
+  }
+  if (!items.length) return console.log("✅ The start-of-session briefing is already on.");
+  for (const it of items) console.log(showDiff(it.path, it.old, it.content));
+  if (!opt.apply) return console.log(`Dry run: ${items.length} file(s) would change. Run again with --apply to turn the briefing on.`);
+  const w = writeAll(root, items);
+  console.log(`✅ The briefing is on${mode === "all" ? ", with autosave" : ""}. Every new session in this folder starts with it.${tools.includes("codex") ? " Codex: run /hooks once and allow it." : ""}\nTo turn it off: repo-fit undo ${target} --apply   Receipt: ${w.receipt}`);
+}
 
 function status(target) {
   if (!target || !existsSync(join(target, "playbook.json"))) fail(`${target}: no playbook.json. Run "repo-fit init" first.`, 2);
@@ -229,6 +276,7 @@ function status(target) {
   else if (changes.length) console.log(`✅ The adopted parts are current. Only the version stamp in playbook.json would move to ${version} (update --apply).`);
   else console.log("✅ Up to date.");
   for (const l of notAdoptedLines(notAdopted)) console.log(l);
+  for (const l of newsLines(pj, notAdopted)) console.log(l);
   for (const n of notes) console.log(`⚠️ ${n}`);
   if (managed.length || notes.length) process.exitCode = 1;
 }
@@ -247,6 +295,7 @@ function update(target, apply) {
   const { changes, notAdopted, pj } = plan(target);
   for (const n of hookNotes(target, pj)) console.log(`⚠️ ${n}`);
   for (const l of notAdoptedLines(notAdopted)) console.log(l);
+  for (const l of newsLines(pj, notAdopted)) console.log(l);
   if (!changes.length) return console.log("✅ Up to date. Nothing to change.");
   for (const c of changes) console.log(showDiff(c.rel, c.old, c.next));
   if (!apply) return console.log(`Dry run: ${changes.length} file(s) would change. Run again with --apply after review.`);
@@ -277,7 +326,8 @@ const HELP = `repo-fit ${version}: a small foundation for any repo, new or exist
 Look (read-only):
   detect <repo> [--json]                     machine, repo, existing tools, what it would ask
   audit <repo> [--area <folder>] [--json] [--out <file>]
-                                             report and plan for an existing repo
+                                             report and plan for an existing repo, with the recommended set
+  preview <repo>                             the session brief the recommended set would give
   tools <repo> [--json] [--offline]          tool versions vs the limits in guidance/gates.json
   status <repo>                              is the repo behind this playbook?
   guidance check                             which guidance is due for a refresh
@@ -286,6 +336,7 @@ Change (dry run first):
   init <repo> [--dry-run] [--tool claude|codex|both] [--models a,b] [--autosave on|off] [--no-hooks] [--name N] [--owner O]
   apply <repo> [--steps A-01,...] [--tool ..] [--hooks all|brief|none] [--autosave on|off] [--claude-link merge] [--word-cap N] [--show] [--apply]
   update <repo> [--apply]                    bring the adopted parts up to this playbook version
+  hooks <repo> [--hooks brief|all] [--apply] turn on the start-of-session briefing (the person runs this)
   skip <repo> <ID> --reason "..." [--remove] [--apply]
                                              record a step you leave out on purpose (audit, status, update respect it)
   undo <repo> [--receipt <file>] [--force] [--apply]
@@ -361,6 +412,27 @@ switch (process.argv[2]) {
     } else console.log(text);
     break;
   }
+  case "preview": {
+    if (!pos[0]) fail("Usage: repo-fit preview <repo>");
+    const { audit, placeNew } = await import("../lib/audit.mjs");
+    const a = audit(pos[0]);
+    if (!a.detect.repo.exists) fail(`Not a folder: ${a.root}`);
+    // The settings the recommended set would write, so the brief reads the repo the way it will after the apply.
+    // A repo that already has playbook.json is shown with its own settings.
+    const rec = a.plan.recommended;
+    const role = { "A-02": "board", "A-03": "current" };
+    const paths = Object.fromEntries(Object.entries(a.mapping).filter(([, p]) => p));
+    for (const id of rec.steps) if (role[id]) paths[role[id]] = placeNew(a.mapping, role[id]);
+    const quiet = rec.flags.includes("--autosave off");
+    const cfg = {
+      paths, required: Object.entries(paths).filter(([k]) => ["current", "board", "log", "questions", "people", "decisions", "lessons"].includes(k)).map(([, p]) => p),
+      autosave: !quiet, protectedBranches: a.own.topics.mainBranch && quiet ? [] : ["main", "master"], currentWordCap: a.details.current?.cap ?? a.details.current?.playbookCap ?? 900,
+    };
+    const r = spawnSync(process.execPath, [join(here, "scripts/playbook/brief.mjs"), "--text"], { encoding: "utf8", env: { ...process.env, REPO_FIT_PREVIEW_ROOT: a.root, REPO_FIT_PREVIEW_CONFIG: JSON.stringify(cfg) } });
+    if (r.status !== 0) fail(r.stderr || "The brief did not run.");
+    console.log(`${existsSync(join(a.root, "scripts/playbook/brief.mjs")) ? "The briefing this repo's sessions start with today" : "The briefing this repo's sessions would start with after the recommended set"}. Nothing was written.\n\n${r.stdout.trimEnd()}`);
+    break;
+  }
   case "detect": {
     if (!pos[0]) fail("Usage: repo-fit detect <repo> [--json]");
     const { detect, format } = await import("../lib/detect.mjs");
@@ -376,6 +448,7 @@ switch (process.argv[2]) {
   case "status": status(pos[0]); break;
   case "update": update(pos[0], Boolean(opt.apply)); break;
   case "skip": skip(pos[0], pos[1], opt); break;
+  case "hooks": hooks(pos[0], opt); break;
   case "help":
   case "--help":
   case undefined:

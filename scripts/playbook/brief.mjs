@@ -1,10 +1,11 @@
-// Session brief. Read-only: it never writes, commits or contacts anything.
+// Session brief. Read-only in the repo: it never writes, commits or pushes there. Once a day it may ask npm for the
+// latest repo-fit version (package name only) and cache the answer in ~/.config/repo-fit/; see updateNotice in lib.mjs.
 //   node scripts/playbook/brief.mjs --text                  for a person, or Codex without hooks
 //   node scripts/playbook/brief.mjs --hook                  Claude Code SessionStart hook (JSON)
 //   node scripts/playbook/brief.mjs --hook --format codex   Codex SessionStart hook (JSON)
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { root, git, config, readBoard, analyseBoard, paths, coverage } from "./lib.mjs";
+import { root, git, config, readBoard, analyseBoard, paths, coverage, preview, updateNotice } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const hook = args.includes("--hook");
@@ -26,9 +27,12 @@ out.push(
     (lastDate ? ` · last commit ${lastDate}${host ? ` by ${host}` : ""}` : " · no commits yet"),
 );
 
-if (cfg.protectedBranches.includes(branch)) {
-  out.push(`⚠️ On ${branch}: the playbook rule is never to commit here. ${cfg.autosave ? "Autosave will use a wip/ branch." : "Work on a branch."}`);
-}
+// A newer repo-fit that matters for this repo (see updateNotice: once a day, package name only, silent on failure).
+const notice = preview ? null : await updateNotice(cfg.playbook);
+if (notice) out.push(notice);
+
+// Which branch to work on is the repo's own rule. The brief only says where autosave puts its commits.
+if (cfg.autosave && cfg.protectedBranches.includes(branch)) out.push(`🌿 On ${branch}: autosave saves to a wip/ branch, not here.`);
 if (branch.startsWith("wip/")) {
   const base = cfg.protectedBranches.find((b) => git(["rev-parse", "--verify", "--quiet", `refs/heads/${b}`]) !== null);
   const ahead = base ? Number((git(["rev-list", "--count", `${base}..HEAD`]) ?? "0").trim()) : 0;
@@ -40,7 +44,14 @@ if (unfinished.length) out.push(`🚧 Setup not finished: ${unfinished.join(", "
 
 // 🔄 the board
 const board = readBoard();
-if (board.missing) {
+// A repo can adopt only some parts (`required` in playbook.json). Without a board, Git says where the last session stopped.
+const noBoard = board.missing && Array.isArray(cfg.required) && !cfg.required.includes(P.board);
+if (noBoard) {
+  const recent = (git(["log", "-3", "--format=%cs %s"]) ?? "").split("\n").filter(Boolean);
+  if (recent.length) out.push(`🕘 Recent: ${recent.map((l) => short(l, 70)).join(" · ")}`);
+} else if (board.missing && preview) {
+  out.push("➡️ The board starts empty. Say what you want to work on and it goes on the board.");
+} else if (board.missing) {
   out.push(`❌ The board (${P.board}) is missing. Run repo-fit init, or create it.`);
 } else if (board.external) {
   out.push(`🔄 Work is tracked in ${P.board} (not a playbook table). Read it for what is open.`);
@@ -69,12 +80,15 @@ if (existsSync(oq)) {
 }
 
 // 🧹 review queue: notes nothing links to, notes untouched for a long time, notes past their review_after date
+// Up to 3 notes are named. More than that is a count only, so the brief stays short every session; check lists them all.
 const cov = coverage(cfg);
+const total = cov.orphans.length + cov.stale.length + cov.due.length;
+const named = (rows, f) => (total <= 3 ? ` (${list(rows, f)})` : "");
 const queue = [];
-if (cov.orphans.length) queue.push(`${cov.orphans.length} nobody links to (${list(cov.orphans, (p) => short(p, 45))})`);
-if (cov.stale.length) queue.push(`${cov.stale.length} untouched ${cov.staleNoteDays}+ days (${list(cov.stale, (s) => `${short(s.path, 45)} ${s.date}`)})`);
-if (cov.due.length) queue.push(`${cov.due.length} due for review (${list(cov.due, (s) => `${short(s.path, 45)} ${s.date}`)})`);
-if (queue.length) out.push(`🧹 Review queue: ${queue.join(" · ")}. Link, merge, archive, or add a review_after date.`);
+if (cov.orphans.length) queue.push(`${cov.orphans.length} nobody links to${named(cov.orphans, (p) => short(p, 45))}`);
+if (cov.stale.length) queue.push(`${cov.stale.length} untouched ${cov.staleNoteDays}+ days${named(cov.stale, (s) => `${short(s.path, 45)} ${s.date}`)}`);
+if (cov.due.length) queue.push(`${cov.due.length} due for review${named(cov.due, (s) => `${short(s.path, 45)} ${s.date}`)}`);
+if (queue.length) out.push(`🧹 Review queue: ${queue.join(" · ")}.${total > 3 ? " `node scripts/playbook/check.mjs` lists them." : ""} Link, merge or archive them when you touch that topic.`);
 
 // 📝 log and current view
 const logPath = join(root, P.log);

@@ -11,9 +11,10 @@ Thanks for looking. repo-fit is small on purpose, so the bar for a change is "a 
 
 1. Branch from `main`.
 2. Every bug fix gets a test that fails without the fix. Every new behavior gets a test. Tests live in `test/` and run in a throwaway sandbox (see `test/helpers.mjs`).
-3. If you change a vendored script (`scripts/playbook/`) or the core block (`core/AGENTS.core.md`), bump `VERSION` and say so in `CHANGELOG.md`: adopted repos will show "behind" until they run `update`.
-4. Keep the README honest: say "untested" when something is untested, and never invent numbers.
-5. Open a pull request. Say what you checked and how.
+3. If you change a vendored script (`scripts/playbook/`) or the core block (`core/AGENTS.core.md`), bump `VERSION` and say so in `CHANGELOG.md`: adopted repos will show "behind" until they run `update`. A release bumps `VERSION`, `package.json` and `.claude-plugin/plugin.json` together, and adds an entry to `repoFit.releases` in `package.json`: plain words on why it matters, and `important: true` only when people should hear about it in their briefing.
+4. If you change `SKILL.md` or `INSTALL.md`, run `/repo-fit` once on a sample repo and check the run: `node dev/transcript-check.mjs <session.jsonl>` (see the Tests section of `docs/reference.md`).
+5. Keep the README honest: say "untested" when something is untested, and never invent numbers.
+6. Open a pull request. Say what you checked and how.
 
 ## Good first contributions
 

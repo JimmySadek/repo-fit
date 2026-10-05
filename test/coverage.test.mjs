@@ -113,9 +113,17 @@ test("audit maps an existing hubs folder and apply records it in playbook.json",
   assert.equal(json(d, "playbook.json").paths.hubs, "00-home/hubs");
 }));
 
-test("the core rules say to start at the hub and to work the review queue", sandboxed((sb) => {
+test("the core rules say to merge into the note that exists, and the brief carries the review queue", sandboxed((sb) => {
   const d = ready(sb);
-  const t = read(d, "AGENTS.md");
-  assert.match(t, /Start at the topic's hub/);
-  assert.match(t, /review queue/);
+  assert.match(read(d, "AGENTS.md"), /Merge into the note that exists/);
+}));
+
+test("a long review queue is a count in the brief, and check lists the notes", sandboxed((sb) => {
+  const d = ready(sb);
+  for (const n of ["a", "b", "c", "d", "e"]) write(d, `docs/notes/${n}.md`, `# ${n}\n`);
+  commit(sb, d, "add notes");
+  const b = brief(sb, d).out;
+  assert.match(b, /🧹 Review queue: 5 nobody links to\. `node scripts\/playbook\/check\.mjs` lists them\./);
+  assert.doesNotMatch(b, /docs\/notes\/a\.md/);
+  assert.match(check(sb, d).out, /5 note\(s\) nothing links to: .*docs\/notes\/a\.md/);
 }));

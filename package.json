@@ -1,6 +1,6 @@
 {
   "name": "repo-fit",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Give your project a memory: a session briefing, one list of everything open, safe automatic saves and one rulebook for Claude Code and Codex. Works on new and existing projects.",
   "type": "module",
   "bin": {
@@ -26,7 +26,16 @@
   "scripts": {
     "test": "node --test"
   },
-  "keywords": ["claude-code", "codex", "agent-skills", "ai-agents", "knowledge-base", "markdown", "productivity", "repository-setup"],
+  "keywords": [
+    "claude-code",
+    "codex",
+    "agent-skills",
+    "ai-agents",
+    "knowledge-base",
+    "markdown",
+    "productivity",
+    "repository-setup"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/JimmySadek/repo-fit.git"
@@ -34,5 +43,24 @@
   "homepage": "https://github.com/JimmySadek/repo-fit#readme",
   "bugs": "https://github.com/JimmySadek/repo-fit/issues",
   "author": "Jimmy Sadek",
-  "license": "MIT"
+  "license": "MIT",
+  "repoFit": {
+    "releases": [
+      {
+        "version": "0.6.0",
+        "important": true,
+        "why": "Setup now asks you once instead of a dozen times, and the shared rules in AGENTS.md shrink to 293 words that never override yours.",
+        "news": [
+          "The shared rules in AGENTS.md shrink from 774 to 293 words. They go after your own rules and say yours win where they overlap. No more rules about branches, when to commit, or board columns.",
+          "The briefing no longer says \"never commit on main\". Without a board, it shows your last three commits instead of an error.",
+          "A long list of unlinked notes in the briefing becomes a count, with one command that lists them.",
+          "You turn the start-of-session briefing on yourself with one line, because Claude Code does not let an assistant change how sessions start.",
+          "A reminder at the end of each reply: when files changed but nothing was written down, the assistant is asked once whether anything is worth keeping. It never pushes you to save; your rules decide that. Turn it on with the same one line as the briefing."
+        ],
+        "steps": {
+          "D-01": "The shared rules block is now 293 words, goes after your rules, and your rules win where they overlap. It no longer needs a table board or sets branch and commit rules."
+        }
+      }
+    ]
+  }
 }

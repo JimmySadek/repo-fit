@@ -32,32 +32,28 @@ test("D-01 writes the core block with the repo's own paths, not the Starter kit'
   assert.equal(r.status, 0, r.out);
   const b = block(read(d, "AGENTS.md"));
   assert.ok(b, "the block is added");
-  for (const p of ["`00-home/current.md`", "`decisions/`", "`data-bank/entity-register/registry.json`", "`source-archive/inputs/YYYY-MM-DD-topic.md`", "`system/templates/note.md`", "`00-home/open-questions.md`", "`00-home/log.md`"]) assert.ok(b.includes(p), `block names ${p}`);
+  for (const p of ["`00-home/current.md`", "`decisions/`", "`data-bank/entity-register/registry.json`", "`source-archive/inputs/`", "`system/templates/note.md`", "`00-home/open-questions.md`", "`00-home/log.md`"]) assert.ok(b.includes(p), `block names ${p}`);
   assert.doesNotMatch(b, /docs\//, "no Starter kit path is left");
   assert.match(read(d, "AGENTS.md"), /Our own rules\./, "the repo's own rules stay");
 }));
 
-test("a role the repo does not have is left out of the core block, and its lists stay numbered", sandboxed((sb) => {
+test("a role the repo does not have is left out of the core block", sandboxed((sb) => {
   const d = repo(sb, "bare", { files: { "AGENTS.md": "# Rules\n" } });
   assert.equal(apply(sb, d, "D-01", ["--apply"]).status, 0);
   const b = block(read(d, "AGENTS.md"));
   assert.doesNotMatch(b, /### Board/, "no board, no board section");
   assert.doesNotMatch(b, /board\.md|people\.md|decisions\.md|current\.md|templates\/note\.md|founder-input/);
-  assert.match(b, /binding only when recorded in the repository/);
-  assert.match(b, /name its folder as `inputs` under `paths`/);
+  assert.match(b, /A decision binds only with who decided and their words\. Never invent/);
+  assert.match(b, /Read the notes for the topic\./);
   assert.doesNotMatch(b, /\{\{|\}\}/, "no marker is left");
-  assert.doesNotMatch(b, /^\d+\.\s*$/m, "no empty list item");
-  for (const list of b.split(/\n### /)) {
-    const nums = [...list.matchAll(/^(\d+)\. /gm)].map((m) => Number(m[1]));
-    assert.deepEqual(nums, nums.map((_, i) => i + 1), `numbered 1 to n: ${list.slice(0, 40)}`);
-  }
+  assert.doesNotMatch(b, /^-\s*$/m, "no empty list item");
 }));
 
 test("a board made in the same run is named in the core block", sandboxed((sb) => {
   const d = ownLayout(sb);
   assert.equal(apply(sb, d, "A-02,D-01", ["--apply"]).status, 0);
   const b = block(read(d, "AGENTS.md"));
-  assert.match(b, /### Board\n`00-home\/board\.md` is the only place status lives/);
+  assert.match(b, /add, move or close items in `00-home\/board\.md`/);
 }));
 
 test("update and status keep the repo's paths in the core block", sandboxed((sb) => {

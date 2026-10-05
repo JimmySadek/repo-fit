@@ -8,37 +8,36 @@ Give this file to Claude Code, Codex or another agent, and say:
 
 ## What this is
 
-A small, balanced foundation for any repository, technical or notes: a rulebook both Claude Code and Codex read, a board, a session brief, a log, safe autosave, and guidance that stays current. It is **not** a second brain: no search, wiki or memory database. It works on a new repo and on an existing one, and it adapts to what is already there.
+A small foundation for any repository, code or notes. The parts that matter most: a short **briefing** at the start of every session, **one rulebook** that Claude Code and Codex both read, and the repo's **real commands** written into it. Notes repos can also get a current view and a board. It is **not** a second brain: no search, wiki or memory database. It works on a new repo and on an existing one, and it uses what is already there.
 
 ## Before you start
 
-1. **Find the playbook folder** (the one with `bin/repo-fit.mjs`, `SKILL.md` and this file; `npx skills add JimmySadek/repo-fit` puts it under the agent's skills folder). If you cannot find it, ask the user where it is, or tell them to get it as described in the README's "Get it" section. Do not download anything without asking.
+1. **Find the playbook folder** (the one with `bin/repo-fit.mjs`, `SKILL.md` and this file; `npx skills add JimmySadek/repo-fit` puts it under the agent's skills folder). If you cannot find it, ask the user where it is. Do not download anything without asking.
 2. **Node 18 or later** is needed (`node --version`). If it is missing, say so. Do not install it.
 3. **The target repo** is the folder the user is working in, unless told otherwise. If it is not a Git repository, do not run `git init` unless the user says so.
 4. Run commands from the playbook folder as `node bin/repo-fit.mjs <command> <repo>`. `node bin/repo-fit.mjs help` lists them all.
 
 ## Steps
 
-1. **Look first (read-only).** `detect <repo>`. It reports the tools installed, whether `gh` and `glab` are logged in, the Git host, the repo kind, existing rule files and task tools, and what it would ask. Change nothing yet.
-2. **Existing repo? Audit it (read-only).** `audit <repo>`. Walk the user through it in this order: the verdict, **Leave as is** (what the repo already covers: repo-fit adapts to it), **Conflicts with the core block**, then **Worth improving**, one decision at a time. Work delta-first: only the areas the user names. For a step the user declines, record why: `skip <repo> <ID> --reason "..."` (dry run, then `--apply`).
-3. **Check the tools.** `tools <repo> --json`. Follow `SKILL.md`, step 0d, for what to do with a needed or an optional update. Never install a missing tool. Never log in for the user.
-4. **Ask, only about what was found.** Which tools (Claude Code, Codex, both), which models, how automatic saving should be, and where big files live (only if the audit found heavy files). Do **not** ask what kind of repo it is: `detect` says, and there is one kit. For an existing repo, then ask which plan steps to apply, one decision at a time. One decision per question, with a recommended option. Do not ask about a tool that is not there.
-5. **Show a dry run.**
-   - New repo: `init <repo> --dry-run --tool ... --models ...`
-   - Existing repo: `apply <repo> --steps <ids> --tool ... --hooks ... --autosave ...` (dry run is the default)
+Assume the person does not know what hooks, dry runs or rule files are. Say what changes for them, with lines from their own repo (their branch, their last commit, their test command), never a made-up example.
 
-   Show the user every file and every diff.
-6. **Apply only after the yes.** Same command with `--apply` (for `init`, without `--dry-run`). Every apply writes a backup and a receipt.
-7. **Verify, and say what you checked.** In the repo: `node scripts/playbook/check.mjs` and `node scripts/playbook/brief.mjs --text`. For Claude Code, `/context` should list `CLAUDE.md` and the files it imports. For Codex, the hooks do nothing until the user reviews and trusts them with `/hooks`: tell them. Say plainly what you did not check.
-8. **Report in a few lines:** what was set up, for which tools, what was verified, what needs the user, and how to undo.
+The person should see value on the first screen, answer one question, and approve exactly what they saw. Ask **3 questions at most**, and **never zero**: anything that writes needs their yes first. Asking for the setup is not that yes.
+
+1. **Look, silently.** `audit <repo>` (it starts with the recommended set and its dry-run command), `preview <repo>` (the briefing they would get), and that dry run: `apply <repo> --steps <ids> <flags>`. A repo set up with an older repo-fit (`playbook.json` exists): also `status <repo>` (what is new since their version, and skipped steps worth a second look) and `update <repo>` (a dry run). New or empty folder: `detect <repo>` and `init <repo> --dry-run --tool <tools> --no-hooks`.
+2. **Show, in about 10 lines.** Their briefing as a code block, with one sentence on why it matters here. What each recommended piece adds, tied to something in this repo. For an older setup, what the update fixes, and any second-look step with their old reason quoted. "Your own rules and files stay as they are; where they overlap, yours win." The files it writes, one line each. If nothing is recommended and nothing is behind, say so and stop.
+3. **Ask once:** set these up (recommended; the yes approves the dry runs shown), let me pick (one multi-select question, its dry run, and a yes to it), or just the report. Never ask which tools or models, what kind of repo it is, or about anything repo-fit does not change (CI, deploys, code quality, old notes, big files, remotes).
+4. **Apply what was approved,** with `--apply`: `update` first for an older setup, then `apply` (for a new repo, `init` without `--dry-run`). If anything changed after the yes, show the new dry run and ask again. Then verify: `node scripts/playbook/brief.mjs --text` and `node scripts/playbook/check.mjs`, plus the repo's own checks.
+5. **The briefing: one line the person runs.** Claude Code's auto mode blocks an assistant from changing how sessions start, so the person turns the briefing on: `node <playbook folder>/bin/repo-fit.mjs hooks <repo> --apply`, in its own `bash` block with full paths. Explain it with their real preview: each new session starts blank today; with this line it starts with the briefing, and the assistant is reminded once to write down what matters when a reply changed files but no note (it never saves on its own); Claude Code leaves it to them because it changes how every session runs; `undo` turns it off. Codex runs it only after they allow it once with `/hooks`.
+6. **Also noticed, then recap.** Up to 5 lines of other findings, as information, never offered as edits in this run. Write only what an approved dry run shows; if a file repo-fit wrote looks wrong, say so instead of fixing it by hand. Then: what was added or fixed, what was verified, what is theirs to do, how to undo, the repo-fit version, and "repo-fit does not update itself: `npx skills update -g -y`".
 
 ## Rules that never bend
 
 - **Never overwrite** a file. `init` skips what exists. Edits are backed up first.
-- **Never commit, never push.** Autosave commits only to a `wip/` branch, only allow-listed files, and only if the user chose it.
-- **Moves, deletes, secrets, big files and adding a remote are never automated.** Explain the options. `connect` creates an empty private remote only after the user approves the exact dry run, and never pushes.
-- **Respect the repo's own rules.** If it says "commit only when asked", use `--autosave off --hooks brief`. The core block that `apply` writes defers to the repo's own rules wherever the audit lists a conflict; if the user wants no block at all, record a skip. Paths the repo marks append-only or read-only are never offered for fixing, moving or archiving.
-- **Match the tools.** Put shared rules in `AGENTS.md`. If `CLAUDE.md` exists it must import `AGENTS.md` (`@AGENTS.md`). Do not create a second rulebook for one tool.
+- **Never commit, never push.** Autosave commits only to a `wip/` branch, only allow-listed files, and only if it was chosen.
+- **Moves, deletes, secrets, big files, tool updates and adding a remote are never part of setup.** `connect` and `tools --update` run only when the user asks.
+- **If a safety check blocks a step, do not work around it.** Say what was blocked and why, and give the person the exact command to run themselves.
+- **The repo's own rules win.** If it says "commit only when asked", the recommended flags already turn autosave off.
+- **One rulebook.** Shared rules go in `AGENTS.md`. `CLAUDE.md` imports it (`@AGENTS.md`).
 - **Say what you could not verify.** Do not claim a hook works until you have seen it fire.
 
 ## Undo

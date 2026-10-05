@@ -74,7 +74,7 @@ Ask a second question only for what the code cannot decide: an edit to an existi
 
 ## 4. Apply
 
-Run exactly what was approved, with `--apply`, in this order: `update <repo> --apply` for an older setup, then `apply <repo> --steps <ids> <flags> --apply`, then `organize <repo> --apply`. A new repo: `init` with the same flags, without `--dry-run`. If `organize --apply` refuses because something changed after the screen, show the new screen and ask again. If it says it put everything back, say so plainly: nothing was lost. Every write keeps a backup and a receipt; `undo <repo> --apply` puts things back, the organizing in one step. Say that once.
+Run exactly what was approved, with `--apply`, in this order: `update <repo> --apply` for an older setup, then **`organize <repo> --apply --plan <code>` first**, with the code from the command the screen printed (it ties the yes to the plan they saw), then `apply <repo> --steps <ids> <flags> --apply`. Organize goes first so the setup's new files cannot change the plan they approved. One step per command: do not chain them with `;` or `&&`. A new repo: `init` with the same flags, without `--dry-run`. If `organize --apply` refuses because the folder changed after the screen, show the new screen it prints and ask again. If it says it put everything back, say so plainly: nothing was lost. Every write keeps a backup and a receipt; `undo <repo> --apply` puts things back, the organizing in one step. Say that once.
 
 Verify, and say what you checked: `node scripts/playbook/brief.mjs --text` prints the briefing, `node scripts/playbook/check.mjs` passes, `MAP.md` lists the new folders, plus the repo's own checks.
 

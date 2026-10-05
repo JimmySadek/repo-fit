@@ -233,3 +233,10 @@ for (const name of ["spaghetti", "flat-notes", "code-sprawl"]) {
     assert.deepEqual(tree(dir).filter((p) => !p.startsWith(".playbook/")), [...before.keys()].sort());
   }));
 }
+
+test("a file named by config in another case (TODO.md for todo.md) stays", sandboxed((sb) => {
+  const d = folder(sb, "case", { "playbook.json": '{ "paths": { "board": "TODO.md" } }\n', "todo.md": "# Todo\n" });
+  const plan = planMoves(d, [{ from: "todo.md", to: "notes/todo.md" }]);
+  assert.deepEqual(plan.moves, []);
+  assert.match(plan.refused[0].why, /playbook\.json/);
+}));

@@ -49,6 +49,12 @@ const adapter = {
     const log = [];
     const a = JSON.parse(cli("audit", dir, "--json").out);
     const rec = a.plan?.recommended;
+    // Slice 3 on: the person says yes to the organize plan, which runs first (as the skill does), with the plan shown.
+    if (existsSync(join(rf, "lib/organize.mjs"))) {
+      const code = cli("organize", dir).out.match(/--apply --plan (\w+)/)?.[1];
+      const r = cli("organize", dir, "--apply", ...(code ? ["--plan", code] : []));
+      log.push(`organize --apply → exit ${r.status}`);
+    }
     if (rec?.steps?.length) {
       const r = cli("apply", dir, "--steps", rec.steps.join(","), ...rec.flags.split(/\s+/).filter(Boolean), "--apply");
       log.push(`apply ${rec.steps.join(",")} ${rec.flags} → exit ${r.status}`);
@@ -56,11 +62,6 @@ const adapter = {
     if (rec?.hooksCommand) {
       const r = cli("hooks", dir, "--hooks", rec.hooksMode, "--apply");
       log.push(`hooks --hooks ${rec.hooksMode} → exit ${r.status}`);
-    }
-    // Slice 3: the person says yes to the organize plan (versions before it have no organize command).
-    if (existsSync(join(rf, "lib/organize.mjs"))) {
-      const r = cli("organize", dir, "--apply");
-      log.push(`organize --apply → exit ${r.status}`);
     }
     return log;
   },

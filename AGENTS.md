@@ -17,6 +17,7 @@ A small, balanced foundation for any repository, technical or notes, for Claude 
 ## Rules for changing other repos
 
 - Read first: `detect`, then `audit`. Both are read-only.
+- Before the first change, a safety snapshot: Git is checked (and started in the folder, or its install command given to the person), and the folder is committed as it is. The snapshot is part of the one yes, also in repos that say "commit only when asked" (the yes is the asking). Never push. (Decided 5 Oct; being built in slice 4b.)
 - Changes go through `apply` (dry run, diff, backup, receipt, undo). Each change needs the user's yes to what they saw: one plan (before, after and why) or one batch. A standing rule the user approved ("screenshots go to `docs/screenshots/`") may file matching inbox items alone, with a receipt line and undo.
 - Moves and archives happen only inside an approved plan, batch or standing rule. Code, and files the code loads, never move. Merging the text of notes always asks. Nothing is ever deleted: archive instead. Secrets and big files are never automated. Adding a remote goes only through `connect`: an empty private repo, never a push.
 - Updating a tool goes only through `tools --update ... --apply`, runs only the tool's own updater, and happens without asking only if the user opted in with `prefs` and the need is real.

@@ -446,6 +446,11 @@ switch (process.argv[2]) {
     const p = organizePlan(root);
     if (opt.json) console.log(JSON.stringify({ batches: p.batches, stays: p.stays, suggestions: p.suggestions, mentions: p.mentions, links: p.links }, null, 2));
     else if (opt.apply) {
+      // The yes was for the plan on the screen: if the folder changed since, refuse and show the new plan instead.
+      if (typeof opt.plan === "string" && opt.plan !== p.code) {
+        console.log(`❌ The folder changed since you saw it, so nothing was moved. Here is the plan as it is now; say yes to this one instead.\n\n${screen(p, pos[0])}`);
+        process.exit(1);
+      }
       const r = organizeApply(root, p);
       console.log(r.text);
       if (!r.ok) process.exit(1);

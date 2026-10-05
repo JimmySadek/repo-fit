@@ -14,7 +14,7 @@ const REPO_FIT = /repo-fit(?:\.mjs)?["']?\s+(apply|update|skip|init|undo|connect
 // The before/after screen: the organize plan's two columns, or the same in the assistant's own words.
 const SCREEN = /(your folder today|before)[\s\S]*\bafter\b/i;
 // A dry run and its write are the same command without the flags that only switch writing or the view on.
-const same = (cmd) => cmd.replace(/\s--(apply|dry-run|list|json|show)\b/g, "").replace(/["']/g, "").replace(/\s+/g, " ").trim();
+const same = (cmd) => cmd.replace(/\s\d?>&?\s*\S+/g, "").replace(/\s--plan\s+\S+/g, "").replace(/\s--(apply|dry-run|list|json|show)\b/g, "").replace(/["']/g, "").replace(/\s+/g, " ").trim();
 
 export function checkTranscript(text) {
   const events = text.split("\n").filter(Boolean).flatMap((line) => {
@@ -67,7 +67,8 @@ export function checkTranscript(text) {
         // The options say what is really being asked ("Link the June note"), so they count for the topic too.
         for (const q of b.input?.questions ?? []) asked.push([q.question, ...(q.options ?? []).map((o) => `${o.label} ${o.description ?? ""}`)].join(" "));
       }
-      const cmd = b.name === "Bash" ? b.input?.command ?? "" : "";
+      // One Bash call can chain several commands ("a; b && c | tail"): each repo-fit command counts on its own.
+      for (const cmd of (b.name === "Bash" ? b.input?.command ?? "" : "").split(/\s*(?:;|&&|\|\|?|\n)\s*/)) {
       const m = cmd.match(REPO_FIT);
       if (!m) continue;
       const writes_ = m[1] === "init" ? !/--dry-run/.test(cmd) : /--apply\b/.test(cmd);
@@ -81,6 +82,7 @@ export function checkTranscript(text) {
       } else {
         writes.push({ command: cmd.slice(0, 160), approved: approved.has(key) });
         approved.delete(key);
+      }
       }
     }
   }

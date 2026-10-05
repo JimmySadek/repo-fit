@@ -106,6 +106,13 @@ test("transcript check: archive and old notes are part of organizing now, not of
   assert.ok(r.ok, r.problems.join("; "));
 });
 
+test("transcript check: commands chained in one line are read one by one", () => {
+  const S = 'SKILL_DIR=/x; R=/r; node "$SKILL_DIR/bin/repo-fit.mjs"';
+  const r = checkTranscript([start, bash(`${S} apply "$R" --steps A-01 --hooks none; echo ---; ${S} organize "$R"`), say(SCREEN), ask("q1", "Organize it all?"), answer("q1"), bash(`${S} organize "$R" --apply --plan abc123 2>&1 | tail -5; echo ---; ${S} apply "$R" --steps A-01 --hooks none --apply`)].join("\n"));
+  assert.ok(r.ok, r.problems.join("; "));
+  assert.equal(r.writes.length, 2);
+});
+
 test("transcript check: a quoted path, a hand edit and a housekeeping option are all caught", () => {
   const quoted = 'node "/x/bin/repo-fit.mjs" apply /r --steps A-01 --hooks none';
   const r = checkTranscript([start, bash(quoted), bash(`${quoted} --apply`)].join("\n"));

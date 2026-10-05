@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { makeFixture } from "../dev/fixtures.mjs";
-import { find, locator, loose, oneHome, safety, sameTree, snapshot } from "../dev/score.mjs";
+import { find, locator, loose, oneHome, orient, safety, sameTree, snapshot } from "../dev/score.mjs";
 import { organizePlan } from "../lib/organize.mjs";
 import { applyMoves, planMoves } from "../lib/move.mjs";
 import { cli, has, read, repo, sandboxed, script, write } from "./helpers.mjs";
@@ -116,4 +116,37 @@ test("after organizing, the map has a line for inbox/ even when nothing waits th
   const { dir } = makeFixture("flat-notes", sb.dir);
   assert.equal(cli(sb, ["organize", dir, "--apply"], { env: DAY }).status, 0);
   assert.match(read(dir, "MAP.md"), /\[inbox\/\]\(inbox\/\): new things waiting to be filed/);
+}));
+
+test("live-run order: the plan shown is applied first, then the setup; the folder ends as the screen said and the check passes", sandboxed((sb) => {
+  const { dir } = makeFixture("spaghetti", sb.dir);
+  const rec = JSON.parse(cli(sb, ["audit", dir, "--json"]).stdout).plan.recommended;
+  const shown = cli(sb, ["organize", dir], { env: DAY }).stdout;
+  const code = shown.match(/--apply --plan (\w+)/)?.[1];
+  assert.ok(code, "the screen's command carries the plan it showed");
+  const moves = organizePlan(dir, { today: "2026-10-05" }).batches.flatMap((b) => b.moves).length;
+  const o = cli(sb, ["organize", dir, "--apply", "--plan", code], { env: DAY });
+  assert.equal(o.status, 0, o.out);
+  assert.match(o.out, new RegExp(`Moved ${moves} file`));
+  assert.equal(cli(sb, ["apply", dir, "--steps", rec.steps.join(","), ...rec.flags.split(" "), "--apply"]).status, 0);
+  assert.ok(has(dir, "documents/invoice/Invoice-2026-03.pdf"), "the PDFs went where the screen said");
+  const o2 = orient(dir, snapshot(dir));
+  assert.equal(o2.covered, o2.entries, "the map also lists the folders the setup added");
+  const check = script(sb, dir, "check.mjs");
+  assert.equal(check.status, 0, check.out);
+  assert.doesNotMatch(script(sb, dir, "brief.mjs", ["--text"]).out, /missing/i);
+}));
+
+test("organize --apply refuses a plan other than the one shown, and moves nothing", sandboxed((sb) => {
+  const { dir } = makeFixture("spaghetti", sb.dir);
+  const r = cli(sb, ["organize", dir, "--apply", "--plan", "0000000000"], { env: DAY });
+  assert.equal(r.status, 1);
+  assert.match(r.out, /changed since you saw it/);
+  assert.ok(has(dir, "recipe-lasagna.md"));
+}));
+
+test("after the setup made docs/ for its own pages, documents still go to documents/ in a notes folder", sandboxed((sb) => {
+  const { dir } = makeFixture("spaghetti", sb.dir);
+  write(dir, "docs/00-home/current.md", "# Current\n");
+  assert.equal(dest(organizePlan(dir, { today: "2026-10-05" }), "Invoice-2026-03.pdf"), "documents/invoice/Invoice-2026-03.pdf");
 }));

@@ -30,16 +30,23 @@ The confirmed goal:
 - [x] Record the answers here and in `AGENTS.md` (scope guard approved in D1)
 
 ## Step 3. Research (primary sources, dated) → `claudedocs/`
-- [ ] Karpathy LLM wiki pattern and its implementations
-- [ ] `claude-obsidian`
-- [ ] `claude-memory-compiler`
-- [ ] `OpenSpec` (delta-first)
-- [ ] `Backlog.md`
-- [ ] `dox`
-- [ ] `claude-reflect`, `backpass`, `agent-playbook`
-- [ ] `fable5-methodology`
-- [ ] Organizing methods: PARA, Johnny.Decimal, Zettelkasten
-- [ ] Findings saved, borrow list written
+- [x] Karpathy LLM wiki pattern and its implementations
+- [x] `claude-obsidian`
+- [x] `claude-memory-compiler`
+- [x] `OpenSpec` (delta-first)
+- [x] `Backlog.md`
+- [x] `dox`
+- [x] `claude-reflect`, `backpass`, `agent-playbook`
+- [x] `fable5-methodology`
+- [x] Organizing methods: PARA, Johnny.Decimal, Zettelkasten
+- [x] Safe moves: link rewriting when files move, git rename behaviour, code references (added 5 Oct: the one-click plan depends on it)
+- [x] Findings saved, borrow list written: `2026-10-05-borrow-research.md`
+- ⏳ Cleanup for the maintainer: research copies (~900 MB) sit in the session scratch folder; deletes were blocked for the agents, so the maintainer runs `sh <scratchpad>/cleanup-research.sh`
+
+Code facts gathered for the design (5 Oct):
+- `lib/apply.mjs` `writeAll`/`undo`: backups and receipts work without Git, but only `create` and `edit` entries exist. A `move` entry is needed.
+- `lib/audit.mjs`: Markdown links only, orphans, stale (Git only, 180 days), protected paths, big files, secrets. `scripts/playbook/lib.mjs` `coverage()` also follows `[[wiki links]]`.
+- `dev/transcript-check.mjs`: `OFF_TOPIC` lists archive, stale, unlinked, old notes. These become on-topic for organizing; the checker must change with the flow.
 
 ## Step 4. Design
 - [ ] One design document: outcomes → capabilities → code changes → out of scope

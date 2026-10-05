@@ -10,7 +10,7 @@ import { basename, join } from "node:path";
 import { root, git, config, readBoard, analyseBoard, paths, coverage, preview, updateNotice } from "./lib.mjs";
 import { capture } from "./file.mjs";
 import { fitFacts, fitLines, rebuildMap } from "./fit.mjs";
-import { scan } from "./map.mjs";
+import { hasOwnMap, scan } from "./map.mjs";
 import { improveLines } from "./improve.mjs";
 
 const args = process.argv.slice(2);
@@ -48,7 +48,7 @@ out.push(...improve.lines);
 {
   const open = scan(root, { protect: cfg.protectedPaths ?? [] }).open;
   const notes = new Set(open.map((o) => o.path)).size;
-  if (open.length) out.push(`✅ Open work: ${open.length} ${open.length === 1 ? "item" : "items"} in ${notes} ${notes === 1 ? "note" : "notes"} (see MAP.md)`);
+  if (open.length && hasOwnMap(root)) out.push(`✅ Open work: ${open.length} ${open.length === 1 ? "item" : "items"} in ${notes} ${notes === 1 ? "note" : "notes"} (see MAP.md)`);
 }
 
 // 🆕 What is new since the last update, once.

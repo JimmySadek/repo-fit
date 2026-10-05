@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.1 (6 Oct 2026)
+
+**Fixes from the first upgrade of a real folder** (a 0.5.0 setup with worlds copied from a template, secret notes and a book). Nothing is written into a folder that never chose a map; the session start updates only a map you said yes to. A note named secret or private is listed by its name only, and its words never reach a page or the open-work list. Files with the same name in parallel folders stay where they are; only a file named like a copy goes to the archive. Links that work from a parent folder (a book's own folder) count as working, and a template's placeholders are not reported as broken. Open work is said only where the map is, and leaves out a template's placeholder tasks. Undo puts back an older `.playbook/.gitignore`. The safety snapshot never saves repo-fit's own records. Windows: repo-fit's own record paths use `/`.
+
 ## 0.7.0 (5 Oct 2026)
 
 **From chaos to progress.** repo-fit now organizes your folder: it designs the structure that fits it, shows you the folder today, after and why, and asks once. A Git snapshot comes first, nothing is deleted, and one command undoes it. Then it keeps the folder fit: new things are filed by your rules, the map follows by itself, the briefing names real problems, and a re-run starts with a checkup. Measured on five test folders against 0.6.0 (`claudedocs/2026-10-05-baseline-0.6.0.md`): loose files at the top 30 → 0, notes findable from the map 0% → 100%, new things filed right 1/5 → 5/5, open work in one list 4/10 → 10/10, safety unchanged.

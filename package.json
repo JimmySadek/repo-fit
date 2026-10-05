@@ -1,6 +1,6 @@
 {
   "name": "repo-fit",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Give your project a memory: a session briefing, one list of everything open, safe automatic saves and one rulebook for Claude Code and Codex. Works on new and existing projects.",
   "type": "module",
   "bin": {
@@ -46,6 +46,19 @@
   "license": "MIT",
   "repoFit": {
     "releases": [
+      {
+        "version": "0.7.1",
+        "important": false,
+        "why": "Fixes from the first upgrade of a real folder: nothing is written into a folder that never chose a map, secret notes stay private, template copies stay where their program needs them.",
+        "briefing": "New: repo-fit can organize your folder. Ask your assistant to run /repo-fit to see the plan. Nothing changes without your yes.",
+        "news": [
+          "A folder that never chose a map gets none: the session start only updates a map you said yes to.",
+          "A note whose name says secret or private is listed by its name only; its words never reach a page.",
+          "Files with the same name in parallel folders (copies of a template) stay where they are; only a file named like a copy goes to the archive.",
+          "Pictures linked from a book's own folder count as working links, and a template's placeholders are not reported as broken.",
+          "Undo now also puts back an older .playbook/.gitignore, and the safety snapshot never saves repo-fit's own records."
+        ]
+      },
       {
         "version": "0.7.0",
         "important": true,

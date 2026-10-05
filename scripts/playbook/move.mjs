@@ -196,14 +196,17 @@ export function linkReport(root, list = files(root)) {
   const names = nameMap(list);
   const edges = new Map();
   const broken = [];
+  const TEMPLATE = /(^|\/)(_?templates?|_template|examples?)\//i;
   for (const f of list.filter((p) => NOTE.test(p))) {
     const text = readText(root, f);
     if (text === null) continue;
     const to = new Set();
     for (const l of scanLinks(text)) {
-      const r = resolve(index, folders, names, f, l);
+      let r = resolve(index, folders, names, f, l);
+      // A build often reads links from a parent folder (a book's own folder): a link that works from there works.
+      for (let d = dirOf(dirOf(f)); !r && l.kind !== "wiki" && d !== "."; d = dirOf(d)) r = resolve(index, folders, names, `${d}/x.md`, l);
       if (r) to.add(r.path);
-      else if (!l.dest.startsWith("/")) broken.push({ file: f, dest: l.dest }); // "/..." may be a website address
+      else if (!l.dest.startsWith("/") && !TEMPLATE.test(f)) broken.push({ file: f, dest: l.dest }); // "/..." may be a website address; a template's links are placeholders
     }
     edges.set(f, to);
   }
@@ -368,10 +371,20 @@ const stamp = () => new Date().toISOString().replace(/[:.]/g, "-");
 const journalPath = (root) => join(root, ".playbook/journal.json");
 const saveJournal = (root, j) => writeFileSync(journalPath(root), `${JSON.stringify(j, null, 2)}\n`);
 
-function ensurePlaybook(root) {
+// repo-fit's own folder ignores itself. An older version's .gitignore (often saved in Git) is widened, and the change is
+// returned as an edit for the receipt, so undo puts it back.
+function ensurePlaybook(root, ts) {
   mkdirSync(join(root, ".playbook"), { recursive: true });
   const ignore = join(root, ".playbook/.gitignore");
-  if (!existsSync(ignore) || readFileSync(ignore, "utf8") === "backups/\nundone/\n") writeFileSync(ignore, "*\n");
+  if (!existsSync(ignore)) writeFileSync(ignore, "*\n");
+  else if (readFileSync(ignore, "utf8") === "backups/\nundone/\n") {
+    const backup = posix.join(".playbook/backups", ts, ".playbook/.gitignore");
+    mkdirSync(join(root, dirOf(backup)), { recursive: true });
+    copyFileSync(ignore, join(root, backup));
+    writeFileSync(ignore, "*\n");
+    return [{ type: "edit", path: ".playbook/.gitignore", before: shaText("backups/\nundone/\n"), after: shaText("*\n"), backup }];
+  }
+  return [];
 }
 
 // Puts back every step a journal says was done, newest first. Backups and the person's files are never deleted.
@@ -414,7 +427,7 @@ export function applyMoves(root, plan, { step = "organize", crashAfter, extra = 
   const linksBefore = workingLinks(root, before);
   const hashes = new Map(fresh.moves.map((m) => [m.from, shaFile(join(root, m.from))]));
   const ts = stamp();
-  ensurePlaybook(root);
+  const ignoreEdit = ensurePlaybook(root, ts);
 
   // The journal lists every step before the first one runs, with backups of every file whose links change.
   const steps = [];
@@ -510,6 +523,7 @@ export function applyMoves(root, plan, { step = "organize", crashAfter, extra = 
     ...fresh.moves.map((m) => ({ step, type: "move", from: m.from, to: m.to, hash: hashes.get(m.from), why: m.why })),
     ...fresh.edits.map((e) => ({ step, type: "edit", path: e.at, before: shaText(e.old), after: shaText(e.content), backup: steps.find((s) => s.t === "edit" && s.path === e.at).backup })),
     ...pageEntries,
+    ...ignoreEdit.map((e) => ({ step, ...e })),
   ];
   mkdirSync(join(root, ".playbook/receipts"), { recursive: true });
   const receipt = posix.join(".playbook/receipts", `${ts}.json`);

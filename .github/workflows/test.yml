@@ -30,4 +30,5 @@ jobs:
           node --version
           git --version
       - name: Tests
-        run: node --test
+        # A test that hangs fails by name after 5 minutes, instead of the whole job running out of time.
+        run: node --test --test-timeout=300000

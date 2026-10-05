@@ -431,7 +431,7 @@ export function applyMoves(root, plan, { step = "organize", crashAfter, extra = 
     steps.push({ t: "move", from: m.from, to: m.to });
   }
   for (const e of fresh.edits) {
-    const backup = join(".playbook/backups", ts, e.path);
+    const backup = posix.join(".playbook/backups", ts, e.path);
     mkdirSync(join(root, dirOf(backup)), { recursive: true });
     copyFileSync(join(root, e.path), join(root, backup));
     steps.push({ t: "edit", path: e.at, backup, content: e.content });
@@ -484,7 +484,7 @@ export function applyMoves(root, plan, { step = "organize", crashAfter, extra = 
       if (existsSync(join(root, p))) {
         const old = readFileSync(join(root, p), "utf8");
         if (old === content) continue;
-        const backup = join(".playbook/backups", ts, "pages", p);
+        const backup = posix.join(".playbook/backups", ts, "pages", p);
         mkdirSync(join(root, dirOf(backup)), { recursive: true });
         copyFileSync(join(root, p), join(root, backup));
         runAdded({ t: "edit", path: p, backup, content });
@@ -512,7 +512,7 @@ export function applyMoves(root, plan, { step = "organize", crashAfter, extra = 
     ...pageEntries,
   ];
   mkdirSync(join(root, ".playbook/receipts"), { recursive: true });
-  const receipt = join(".playbook/receipts", `${ts}.json`);
+  const receipt = posix.join(".playbook/receipts", `${ts}.json`);
   const dirs = j.steps.filter((s) => s.t === "mkdir").map((s) => s.dir).sort((a, b) => b.length - a.length);
   writeFileSync(join(root, receipt), `${JSON.stringify({ playbook: "move", date: j.date, steps: [step], entries, dirs, removedDirs: j.steps.filter((s) => s.t === "rmdir").map((s) => s.dir), ...extra }, null, 2)}\n`);
   unlinkSync(journalPath(root));

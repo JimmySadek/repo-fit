@@ -11,7 +11,7 @@ import { existsSync, readFileSync, realpathSync, statSync, writeFileSync } from 
 import { basename, dirname, join, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { applyMoves, files, planMoves } from "./move.mjs";
-import { kindOf, nameWords, pages, scan } from "./map.mjs";
+import { kindOf, nameWords, ownPages as pages, scan } from "./map.mjs";
 
 const RULES = "inbox/rules.json";
 export const RULES_ABOUT = "How new things in inbox/ are filed when a session starts. Each rule: a kind of file (and optionally the words its name starts with) and the folder it goes to. repo-fit adds a rule when you approve one; delete a rule's lines to stop it.";

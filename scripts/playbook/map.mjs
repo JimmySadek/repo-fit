@@ -18,6 +18,8 @@ const EXT = {
   media: [".mp4", ".mov", ".webm", ".avi", ".mkv", ".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg"],
   code: [".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".py", ".rs", ".go", ".java", ".kt", ".rb", ".php", ".swift", ".c", ".cc", ".cpp", ".h", ".cs", ".sh", ".sql", ".vue", ".svelte", ".astro", ".html", ".css", ".scss"],
 };
+// A note whose name says it is secret or private is listed by its file name only: no title, no summary, no tasks.
+export const SECRET_NAME = /secret|private|confidential|password|credential/i;
 export const kindOf = (name) => {
   const ext = name.includes(".") ? name.slice(name.lastIndexOf(".")).toLowerCase() : "";
   return Object.keys(EXT).find((k) => EXT[k].includes(ext)) ?? "data";
@@ -97,10 +99,11 @@ function listFiles(root, virtual) {
 // Open work where it already is: unchecked boxes ("- [ ]"; only "x" counts as done) and "TODO:" lines, in notes
 // outside the archive and repo-fit's own pages. Code blocks are examples, not tasks. Nothing moves out of the notes.
 // Rule files hold rules, not tasks (their TODO lines are the setup's placeholders, named by the briefing instead).
-const OPEN_SKIP = /^(archive|archives|_archive|scripts\/playbook)\/|(^|\/)(MAP|INDEX|AGENTS|CLAUDE|GEMINI)\.md$|(^|\/)\./;
+// A template's tasks are placeholders for each copy, not open work.
+const OPEN_SKIP = /^(archive|archives|_archive|scripts\/playbook)\/|(^|\/)(_?templates?|_template|examples?)\/|(^|\/)(MAP|INDEX|AGENTS|CLAUDE|GEMINI)\.md$|(^|\/)\./i;
 export function openItems(files, read) {
   const out = [];
-  for (const p of files.filter((x) => kindOf(x) === "note" && !OPEN_SKIP.test(x))) {
+  for (const p of files.filter((x) => kindOf(x) === "note" && !OPEN_SKIP.test(x) && !SECRET_NAME.test(posix.basename(x)))) {
     const text = read(p);
     let fenced = false;
     for (const line of text.split(/\r?\n/)) {
@@ -170,14 +173,14 @@ export function scan(root, { virtual = new Map(), protect = [] } = {}) {
     }
     out.push({
       name: a.name, counts: c, code, ownScripts, manifest: manifest ? manifest.slice(a.name.length + 1) : null, special, index, generate,
-      readme, notes: notes.map((p) => ({ path: p, title: title(read(p), p), summary: summary(read(p)) })),
+      readme, notes: notes.map((p) => (SECRET_NAME.test(posix.basename(p)) ? { path: p, title: posix.basename(p).replace(/\.mdx?$/i, ""), summary: "" } : { path: p, title: title(read(p), p), summary: summary(read(p)) })),
       about: readme ? summary(read(readme)) : "",
     });
   }
   const order = (a) => (a.special ? 3 : a.code ? 2 : a.notes.length ? 0 : 1);
   out.sort((x, y) => order(x) - order(y) || byPath(x.name, y.name));
   const rootManifest = files.find((p) => !p.includes("/") && MANIFEST.test(p)) ?? null;
-  return { areas: out, open: openItems(files, read), rootManifest, readme: files.includes("README.md"), loose: loose.map((p) => ({ path: p, kind: kindOf(p), title: kindOf(p) === "note" ? title(read(p), p) : p, summary: kindOf(p) === "note" ? summary(read(p)) : "" })) };
+  return { areas: out, open: openItems(files, read), rootManifest, readme: files.includes("README.md"), loose: loose.map((p) => ({ path: p, kind: kindOf(p), title: kindOf(p) === "note" && !SECRET_NAME.test(p) ? title(read(p), p) : p, summary: kindOf(p) === "note" && !SECRET_NAME.test(p) ? summary(read(p)) : "" })) };
 }
 
 function mapBlock(s) {
@@ -230,6 +233,10 @@ function withBlock(cur, heading, kind, block) {
   if (!MARK(kind).test(cur)) return null;
   return cur.replace(MARK(kind), () => block);
 }
+
+// Has this folder chosen repo-fit's map (MAP.md with its markers)? Only then do its pages update by themselves.
+export const hasOwnMap = (root) => existsSync(join(root, "MAP.md")) && MARK("map").test(readFileSync(join(root, "MAP.md"), "utf8"));
+export const ownPages = (root, opts = {}) => (hasOwnMap(root) ? pages(root, opts) : new Map());
 
 // The pages to write: path → full new content, only for pages that are new or change.
 export function pages(root, opts = {}) {

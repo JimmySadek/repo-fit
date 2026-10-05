@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFile
 import { dirname, join, posix } from "node:path";
 import { root, config, coverage, today } from "./lib.mjs";
 import { files, linkReport, planMoves } from "./move.mjs";
-import { nameWords, pages, scan, title } from "./map.mjs";
+import { nameWords, ownPages, scan, title } from "./map.mjs";
 import { capture, readRules } from "./file.mjs";
 
 const REVIEW_DAYS = 14;
@@ -16,7 +16,7 @@ const protect = (cfg) => cfg.protectedPaths ?? [];
 
 // repo-fit's own map and index pages, rebuilt from the folder. Returns the pages it rewrote.
 export function rebuildMap(cfg = config()) {
-  const out = pages(root, { protect: protect(cfg) });
+  const out = ownPages(root, { protect: protect(cfg) }); // only a map the person chose
   for (const [p, content] of out) {
     mkdirSync(dirname(join(root, p)), { recursive: true });
     writeFileSync(join(root, `${p}.tmp`), content); // written whole, then swapped in
@@ -69,7 +69,7 @@ export function fitFacts(cfg = config()) {
   const last = lastReview();
   const reviewDue = Boolean(last) && (Date.parse(today()) - Date.parse(last)) / 864e5 >= REVIEW_DAYS;
   return {
-    mapStale: [...pages(root, { protect: protect(cfg) }).keys()],
+    mapStale: [...ownPages(root, { protect: protect(cfg) }).keys()],
     broken: broken.filter((b) => live(b.file)),
     offIndex,
     orphans,

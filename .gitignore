@@ -1,2 +1,4 @@
 .DS_Store
 node_modules/
+# Reports from the weekly guidance run name the maintainer's private repos: they stay on this machine.
+reports/

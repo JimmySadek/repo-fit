@@ -4,7 +4,7 @@ A small, balanced foundation for any repository, technical or notes, for Claude 
 
 ## Scope guard (the maintainer's decisions, 29 Sep 2026, revised 5 Oct 2026)
 
-> **Status:** the organizing parts below (map, plan, standing rules, fit check) are decided, not built yet. Progress: `claudedocs/2026-10-05-redesign-checklist.md`. Until they ship, never describe them to users as existing.
+> **Status:** the organizing parts below (map, plan, standing rules, fit check) shipped in 0.7.0. The record of how: `claudedocs/2026-10-05-redesign-checklist.md`.
 
 - **An organizer in plain files.** repo-fit maps a repo, organizes it, connects it and keeps it fit. It borrows a second brain's organizing mechanics (a map, index pages, an inbox, an archive, a fit check) in plain Markdown, folders and Git. No search engine, embeddings, database or service. Never claim more than the scripts really do.
 - **Progressive disclosure.** The always-loaded lines stay few and point to `MAP.md`. The map has one line per area. Each area has one index page, one line per note. Any note is at most two steps from the map. People see one screen first and details on request. Scripts build and check the map and index pages; search is the fallback, never the map.
@@ -17,7 +17,7 @@ A small, balanced foundation for any repository, technical or notes, for Claude 
 ## Rules for changing other repos
 
 - Read first: `detect`, then `audit`. Both are read-only.
-- Before the first change, a safety snapshot: Git is checked (and started in the folder, or its install command given to the person), and the folder is committed as it is. The snapshot is part of the one yes, also in repos that say "commit only when asked" (the yes is the asking). Never push. (Decided 5 Oct; being built in slice 4b.)
+- Before the first change, a safety snapshot: Git is checked (and started in the folder, or its install command given to the person), and the folder is committed as it is. The snapshot is part of the one yes, also in repos that say "commit only when asked" (the yes is the asking). Never push. (Decided 5 Oct; built in slice 4b.)
 - Changes go through `apply` (dry run, diff, backup, receipt, undo). Each change needs the user's yes to what they saw: one plan (before, after and why) or one batch. A standing rule the user approved ("screenshots go to `docs/screenshots/`") may file matching inbox items alone, with a receipt line and undo.
 - Moves and archives happen only inside an approved plan, batch or standing rule. Code, and files the code loads, never move. Merging the text of notes always asks. Nothing is ever deleted: archive instead. Secrets and big files are never automated. Adding a remote goes only through `connect`: an empty private repo, never a push.
 - Updating a tool goes only through `tools --update ... --apply`, runs only the tool's own updater, and happens without asking only if the user opted in with `prefs` and the need is real.

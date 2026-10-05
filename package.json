@@ -1,6 +1,6 @@
 {
   "name": "repo-fit",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Give your project a memory: a session briefing, one list of everything open, safe automatic saves and one rulebook for Claude Code and Codex. Works on new and existing projects.",
   "type": "module",
   "bin": {

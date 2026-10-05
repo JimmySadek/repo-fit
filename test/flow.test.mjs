@@ -1,7 +1,9 @@
 // The setup flow: one recommended set per kind of repo, a preview of the briefing, one dry run.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { test } from "node:test";
-import { cli, git, has, read, repo, sandboxed, script, tree, write } from "./helpers.mjs";
+import { ROOT, cli, git, has, read, repo, sandboxed, script, tree, write } from "./helpers.mjs";
 
 const audit = (sb, d) => JSON.parse(cli(sb, ["audit", d, "--json"]).stdout);
 const pkg = JSON.stringify({ name: "app", scripts: { test: "node --test" } });
@@ -177,7 +179,7 @@ test("an older setup is told what is new, and a skipped step that changed gets a
   assert.match(out, /774 to 293 words/);
   assert.match(out, /👀 Worth a second look: .*D-01.*"the block wants a table board".*no longer needs a table board/);
   assert.match(out, /skip <repo> D-01 --remove --apply, then apply <repo> --steps D-01/);
-  const current = notesRepo(sb, { "playbook.json": JSON.stringify({ ...pj, playbook: "0.6.0" }), "AGENTS.md": "# Rules\n" });
+  const current = notesRepo(sb, { "playbook.json": JSON.stringify({ ...pj, playbook: readFileSync(join(ROOT, "VERSION"), "utf8").trim() }), "AGENTS.md": "# Rules\n" });
   assert.doesNotMatch(cli(sb, ["status", current]).out, /New since|second look/);
 }));
 

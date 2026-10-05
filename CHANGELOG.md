@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.7.0 (5 Oct 2026)
+
+**From chaos to progress.** repo-fit now organizes your folder: it designs the structure that fits it, shows you the folder today, after and why, and asks once. A Git snapshot comes first, nothing is deleted, and one command undoes it. Then it keeps the folder fit: new things are filed by your rules, the map follows by itself, the briefing names real problems, and a re-run starts with a checkup. Measured on five test folders against 0.6.0 (`claudedocs/2026-10-05-baseline-0.6.0.md`): loose files at the top 30 → 0, notes findable from the map 0% → 100%, new things filed right 1/5 → 5/5, open work in one list 4/10 → 10/10, safety unchanged.
 
 - **Plain words everywhere you look, a message after updates, and a clean way out (redesign slice 9).** The briefing speaks plainly ("changes not saved in Git yet", "task list") and uses only five signs: ✅ ⚠️ 📥 🛟 🆕. After an update, it says once what is new and what to do. `repo-fit remove <repo>` shows before → after, then sets repo-fit's own files and rules aside (your files stay, organized folders included), and `undo` brings it all back. The redesign's release is marked important, so people on 0.6.0 hear about it.
 - **repo-fit can learn from what repeats, if you turn it on (redesign slice 8).** With `repo-fit prefs set improve on`, a correction the assistant notices is remembered (in `.playbook/`, outside Git) and proposed once it comes back: one short line, checked for secrets, added to "Your preferences" in the rulebook only after your yes. Filing the same kind of item to the same folder by hand twice proposes a standing rule. A correction that repeats a preference you already approved means the written rule is not working, and the assistant suggests a check instead. A no is remembered. repo-fit never reads chat transcripts. Off by default.

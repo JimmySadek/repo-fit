@@ -13,9 +13,9 @@ test("after an update, the briefing says once what is new; then it is quiet", sa
   const pj = json(d, "playbook.json");
   write(d, "playbook.json", `${JSON.stringify({ ...pj, playbook: "0.5.0" }, null, 2)}\n`);
   assert.equal(cli(sb, ["update", d, "--apply"]).status, 0);
-  assert.match(script(sb, d, "brief.mjs", ["--text"]).out, /🆕 repo-fit was updated/, "a person's look does not use it up");
-  assert.match(script(sb, d, "brief.mjs", ["--text", "--file"]).out, /🆕 repo-fit was updated/);
-  assert.doesNotMatch(script(sb, d, "brief.mjs", ["--text", "--file"]).out, /🆕 repo-fit was updated/, "once");
+  assert.match(script(sb, d, "brief.mjs", ["--text"]).out, /🆕 New: repo-fit can organize your folder\. Ask your assistant to run \/repo-fit to see the plan\./, "a person's look does not use it up");
+  assert.match(script(sb, d, "brief.mjs", ["--text", "--file"]).out, /🆕 New: repo-fit can organize/);
+  assert.doesNotMatch(script(sb, d, "brief.mjs", ["--text", "--file"]).out, /🆕 New:/, "once");
 }));
 
 test("a fresh setup says nothing about updates", sandboxed((sb) => {

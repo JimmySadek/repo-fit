@@ -81,6 +81,67 @@ test("transcript check: only the last /repo-fit run counts", () => {
   assert.equal(r.questions.length, 1);
 });
 
+const say = (text) => line({ type: "assistant", message: { content: [{ type: "text", text }] } });
+const ORG = 'node "/x/bin/repo-fit.mjs" organize /r';
+const SCREEN = "```\nYour folder today          After one yes (undo any time)\n32 things loose at the top  notes/: your 12 notes\n```\n**Why this is better for you**";
+
+test("transcript check: the before/after screen, one yes, then setup and organize both run", () => {
+  const r = checkTranscript([start, bash(DRY), bash(ORG), say(SCREEN), ask("q1", "Organize it all?"), answer("q1"), bash(`${DRY} --apply`), bash(`${ORG} --apply`)].join("\n"));
+  assert.ok(r.ok, r.problems.join("; "));
+  assert.equal(r.writes.length, 2);
+});
+
+test("transcript check: asking before the before/after screen was shown fails", () => {
+  const r = checkTranscript([start, bash(DRY), bash(ORG), say("I looked at your folder."), ask("q1", "Organize it all?"), answer("q1"), bash(`${ORG} --apply`)].join("\n"));
+  assert.match(r.problems.join(), /before showing the before and after/);
+});
+
+test("transcript check: organize --apply needs a yes given after its plan was shown", () => {
+  const r = checkTranscript([start, bash(DRY), say(SCREEN), ask("q1", "Set up?"), answer("q1"), bash(ORG), bash(`${ORG} --apply`)].join("\n"));
+  assert.match(r.problems.join(), /wrote without an answer.*organize/);
+});
+
+test("transcript check: archive and old notes are part of organizing now, not off-topic", () => {
+  const r = checkTranscript([start, bash(ORG), say(SCREEN), ask("q1", "Organize it all? Old folders go to the archive; old notes stay findable.")].join("\n"));
+  assert.ok(r.ok, r.problems.join("; "));
+});
+
+test("transcript check: commands chained in one line are read one by one", () => {
+  const S = 'SKILL_DIR=/x; R=/r; node "$SKILL_DIR/bin/repo-fit.mjs"';
+  const r = checkTranscript([start, bash(`${S} apply "$R" --steps A-01 --hooks none; echo ---; ${S} organize "$R"`), say(SCREEN), ask("q1", "Organize it all?"), answer("q1"), bash(`${S} organize "$R" --apply --plan abc123 2>&1 | tail -5; echo ---; ${S} apply "$R" --steps A-01 --hooks none --apply`)].join("\n"));
+  assert.ok(r.ok, r.problems.join("; "));
+  assert.equal(r.writes.length, 2);
+});
+
+test("transcript check: a folder written as a shell variable in the dry run and as a path in the write is the same", () => {
+  const dry = 'S=/x; R=/tmp/f; node "$S/bin/repo-fit.mjs" organize "$R"';
+  const r = checkTranscript([start, bash(dry), say(SCREEN), ask("q1", "Organize it all?"), answer("q1"), bash("node /x/bin/repo-fit.mjs organize /tmp/f --apply --plan abc")].join("\n"));
+  assert.ok(r.ok, r.problems.join("; "));
+});
+
+test("transcript check: on a re-run, the checkup's plan must be shown before the question too", () => {
+  const STATUS = 'node /x/bin/repo-fit.mjs status /r';
+  assert.match(checkTranscript([start, bash(STATUS), say("Mostly tidy."), ask("q1", "Organize it?")].join("\n")).problems.join(), /before showing the before and after/);
+  assert.ok(checkTranscript([start, bash(STATUS), say(SCREEN), ask("q1", "Organize it?")].join("\n")).ok);
+});
+
+test("transcript check: the organize plan shown inside the checkup counts as its dry run", () => {
+  const r = checkTranscript([start, bash("node /x/bin/repo-fit.mjs status ."), say(SCREEN), ask("q1", "Organize it?"), answer("q1"), bash("node /x/bin/repo-fit.mjs organize . --apply --plan abc")].join("\n"));
+  assert.ok(r.ok, r.problems.join("; "));
+});
+
+test("transcript check: remove needs a yes after its dry run", () => {
+  const RM = "node /x/bin/repo-fit.mjs remove /r";
+  assert.match(checkTranscript([start, bash(`${RM} --apply`)].join("\n")).problems.join(), /wrote without an answer/);
+  assert.ok(checkTranscript([start, bash(RM), say("**Before → after**: playbook.json → set aside"), ask("q1", "Remove repo-fit's parts?"), answer("q1"), bash(`${RM} --apply`)].join("\n")).ok);
+});
+
+test("transcript check: the remove screen must be in the reply before the question, not only in the tool output", () => {
+  const RM = "node /x/bin/repo-fit.mjs remove /r";
+  assert.match(checkTranscript([start, bash(RM), ask("q1", "Remove repo-fit?")].join("\n")).problems.join(), /before showing the before and after/);
+  assert.ok(checkTranscript([start, bash(RM), say("**Before → after** (repo-fit's own parts only):\n- playbook.json → set aside"), ask("q1", "Remove repo-fit?")].join("\n")).ok);
+});
+
 test("transcript check: a quoted path, a hand edit and a housekeeping option are all caught", () => {
   const quoted = 'node "/x/bin/repo-fit.mjs" apply /r --steps A-01 --hooks none';
   const r = checkTranscript([start, bash(quoted), bash(`${quoted} --apply`)].join("\n"));

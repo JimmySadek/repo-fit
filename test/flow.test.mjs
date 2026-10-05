@@ -1,7 +1,9 @@
 // The setup flow: one recommended set per kind of repo, a preview of the briefing, one dry run.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { test } from "node:test";
-import { cli, git, has, read, repo, sandboxed, script, tree, write } from "./helpers.mjs";
+import { ROOT, cli, git, has, read, repo, sandboxed, script, tree, write } from "./helpers.mjs";
 
 const audit = (sb, d) => JSON.parse(cli(sb, ["audit", d, "--json"]).stdout);
 const pkg = JSON.stringify({ name: "app", scripts: { test: "node --test" } });
@@ -69,8 +71,8 @@ test("preview shows the briefing and writes nothing", sandboxed((sb) => {
   const r = cli(sb, ["preview", d]);
   assert.equal(r.status, 0, r.out);
   assert.match(r.stdout, /Nothing was written/);
-  assert.match(r.stdout, /📍 app/);
-  assert.match(r.stdout, /🕘 Recent: .*initial/);
+  assert.match(r.stdout, /^app · branch main/m);
+  assert.match(r.stdout, /Recent saves: .*initial/);
   assert.doesNotMatch(r.stdout, /board .* is missing/);
   assert.deepEqual(tree(d), before);
   assert.equal(git(sb, d, ["status", "--porcelain"]).stdout, "");
@@ -79,7 +81,7 @@ test("preview shows the briefing and writes nothing", sandboxed((sb) => {
 test("preview of a notes repo shows the board it would get, empty", sandboxed((sb) => {
   const r = cli(sb, ["preview", notesRepo(sb)]);
   assert.equal(r.status, 0, r.out);
-  assert.match(r.stdout, /The board starts empty/);
+  assert.match(r.stdout, /The task list starts empty/);
 }));
 
 test("after the recommended set, a repo without a board gets recent commits in the brief, not an error", sandboxed((sb) => {
@@ -90,7 +92,7 @@ test("after the recommended set, a repo without a board gets recent commits in t
   const b = script(sb, d, "brief.mjs", ["--text"]);
   assert.equal(b.status, 0, b.out);
   assert.doesNotMatch(b.stdout, /is missing/);
-  assert.match(b.stdout, /🕘 Recent/);
+  assert.match(b.stdout, /Recent saves/);
   assert.equal(script(sb, d, "check.mjs").status, 0, "check passes with only the adopted parts");
 }));
 
@@ -177,7 +179,7 @@ test("an older setup is told what is new, and a skipped step that changed gets a
   assert.match(out, /774 to 293 words/);
   assert.match(out, /👀 Worth a second look: .*D-01.*"the block wants a table board".*no longer needs a table board/);
   assert.match(out, /skip <repo> D-01 --remove --apply, then apply <repo> --steps D-01/);
-  const current = notesRepo(sb, { "playbook.json": JSON.stringify({ ...pj, playbook: "0.6.0" }), "AGENTS.md": "# Rules\n" });
+  const current = notesRepo(sb, { "playbook.json": JSON.stringify({ ...pj, playbook: readFileSync(join(ROOT, "VERSION"), "utf8").trim() }), "AGENTS.md": "# Rules\n" });
   assert.doesNotMatch(cli(sb, ["status", current]).out, /New since|second look/);
 }));
 

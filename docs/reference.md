@@ -79,7 +79,11 @@ node bin/repo-fit.mjs prefs set owner "Your Name"     # who new repos name as ow
 node bin/repo-fit.mjs guidance check                 # which guidance is due for a refresh
 node bin/repo-fit.mjs help                           # every command
 node bin/repo-fit.mjs init <repo> --dry-run --name "Name" --owner "Owner" --tool both --models claude-opus-5-5
-node bin/repo-fit.mjs status <repo>                  # is the repo behind the playbook?
+node bin/repo-fit.mjs status <repo>                  # the checkup: ✅ what is fine, ⚠️ only real problems, with the plan for what can be fixed
+node bin/repo-fit.mjs map <repo>                     # read-only: the folder's map (MAP.md) as repo-fit would write it
+node bin/repo-fit.mjs organize <repo>                # the plan: today → after → why; --list every move; --apply --plan <code> does it
+node bin/repo-fit.mjs file <repo> <item> --to <dir>  # file one inbox item (--always adds a rule, --not-now); dry run, then --apply
+node bin/repo-fit.mjs remove <repo>                  # a clean way out: repo-fit's own parts set aside, your files stay; undo brings it back
 node bin/repo-fit.mjs update <repo>                  # dry run: prints the diff
 node bin/repo-fit.mjs update <repo> --apply          # writes it, commits nothing
 ```
@@ -90,12 +94,19 @@ node bin/repo-fit.mjs update <repo> --apply          # writes it, commits nothin
 
 The setup is meant to be run through the [repo-fit skill](../SKILL.md), which asks which tools and models the repo is for, reads the matching guidance, applies the kit, and verifies it.
 
-## The four scripts
+## The scripts
+
+Copied into every repo (`scripts/playbook/`), so they work without repo-fit installed.
 
 | Script | Job | Runs |
 |---|---|---|
-| `brief.mjs` | Prints where things stand: branch, board (active, blocked, inbox, stale), open questions, the review queue, gaps. Read-only | SessionStart hook, or by hand |
-| `check.mjs` | Required files, board rules, stale rows, broken links, folder indexes, current-view word cap (the body only: frontmatter does not count), the review queue (as warnings) | By hand or in CI |
+| `brief.mjs` | Prints where things stand: branch, inbox, problems (one line each), open work, the task list. At session start it also files inbox items by the approved rules and rebuilds repo-fit's own map | SessionStart hook, or by hand (`--text` only looks) |
+| `map.mjs` | Builds `MAP.md` and the index pages; `--open` lists every open item | By hand, or the briefing |
+| `move.mjs` | The safe move engine: refuses what must stay, rewrites links, journal, check after, undo | Used by organize and filing |
+| `file.mjs` | Files inbox items by `inbox/rules.json`; takes the person's answer for one item | The briefing, or by hand |
+| `fit.mjs` | The fit check shared by the briefing and the checkup | Imported |
+| `improve.mjs` | Opt-in learning from what repeats (`repo-fit prefs set improve on`) | Through `check.mjs` |
+| `check.mjs` | Required files, board rules, stale rows, broken links, folder indexes, current-view word cap (the body only: frontmatter does not count), the review queue (as warnings); `--review` for the two-weekly review; `--remember`, `--accept`, `--reject` for Improve | By hand or in CI |
 | `autosave.mjs` | Level 2 autosave of allow-listed files to a `wip/` branch, then a once-per-session reminder for anything left | Stop and PreCompact hooks, or `--report` by hand |
 | `lib.mjs` | Shared helpers | Imported |
 
@@ -114,7 +125,7 @@ On an existing repo, `audit` assesses first and then sorts what it found:
 
 - **The briefing** shows one line when a newer release is marked important, with why it matters, once a day at most (see Security and privacy). Release notes live in `package.json` under `repoFit.releases` (`version`, `important`, `why`, `news`, `steps`), so npm carries them; `status` and `update` read the same list.
 - **The Claude Code plugin** (`.claude-plugin/plugin.json` and `marketplace.json` in this repo): users add the marketplace with `/plugin marketplace add JimmySadek/repo-fit`, install `repo-fit@repo-fit`, and can switch on auto-update in `/plugin`. It is off by default, per Claude Code's design.
-- **A release** bumps `VERSION`, `package.json` and `.claude-plugin/plugin.json` together, and adds a `repoFit.releases` entry. A test fails if any of these is missing.
+- **A release** bumps `VERSION`, `package.json` and `.claude-plugin/plugin.json` together, and adds a `repoFit.releases` entry. A test fails if any of these is missing. Merging it into `main` publishes it: `.github/workflows/publish.yml` runs the tests, publishes with npm trusted publishing (no stored token; set up once in the package settings on npmjs.com, workflow `publish.yml`), and tags `v<version>`. A version already on npm is skipped.
 
 ## Turning on the briefing, and upgrading an older setup
 
@@ -156,7 +167,7 @@ Adopted from the maintainer's own knowledge repos, where it is the part that kee
 node --test
 ```
 
-120 automated tests, no dependencies. They run in a throwaway sandbox (a fake home folder, so nothing depends on your machine) and cover: every command on new and existing repos, dry runs writing nothing, undo, the safety rules (never overwrite, a token in a remote URL never printed), the session brief, autosave and the Stop and PreCompact hooks, and the stale-guidance warning. Each past bug has a test that fails without its fix.
+143 automated tests, no dependencies. They run in a throwaway sandbox (a fake home folder, so nothing depends on your machine) and cover: every command on new and existing repos, dry runs writing nothing, undo, the safety rules (never overwrite, a token in a remote URL never printed), the session brief, autosave and the Stop and PreCompact hooks, and the stale-guidance warning. Each past bug has a test that fails without its fix.
 
 **The setup contract** (`test/onboarding.test.mjs`): on a code, a notes, a mixed and a mature repo, the recommended set has no move, delete or outward step, applies in one go, leaves `check` passing and the brief without errors, and is not offered again afterwards.
 
@@ -168,13 +179,22 @@ node dev/transcript-check.mjs ~/.claude/projects/<folder>/<session-id>.jsonl
 
 It counts the questions after the last `/repo-fit`, flags any over 3 and any about things repo-fit does not change (CI, deploys, big files, models), and flags any write (`--apply`, or `init` without `--dry-run`) with no answer from the user after the last dry run. Read-only; `dev/` is not shipped to npm.
 
+**Outcome scores** measure whether a folder is really better organized afterwards, not only that nothing broke. `dev/fixtures.mjs` builds synthetic test folders (an everything-folder with and without Git, a program with documents spread around, a flat second brain, an already tidy folder), each with a record of what was planted in it. `dev/measure.mjs` sets each one up with a repo-fit version, in a temporary folder with a fake home, and scores it with `dev/score.mjs`, which reads files and links on its own, without repo-fit's code:
+
+```bash
+node dev/measure.mjs                  # this checkout
+node dev/measure.mjs --ref 3fed971    # 0.6.0, the starting score of the redesign
+```
+
+`node dev/score.mjs <folder>` scores any folder read-only: the map, notes reachable from it, and loose files at the top.
+
 A GitHub Actions workflow (`.github/workflows/test.yml`) runs them on macOS, Linux and Windows with Node 18, 20 and 22. First run, 30 Sep 2026: **macOS and Linux green** on all three Node versions. **Windows failed 2 of 43** for one reason, Windows line endings in the guidance dates. That is fixed, but the Windows job is still allowed to fail until a run confirms it.
 
 ## Scope, in one line
 
-A balanced foundation for **any** repo, technical or notes. **Not a second brain:** no semantic search, no wiki, no memory database. It should look at what a repo and a machine already have, adapt, and ask before using anything.
+**An organizer in plain files** for **any** repo, technical or notes: a map, index pages, an inbox, an archive and a checkup, in Markdown, folders and Git. No search engine, embeddings, database or service. It looks at what a repo and a machine already have, adapts, and asks before changing anything.
 
-## Status (beta, 0.6.0)
+## Status (beta)
 
 **Built and tested** (each writing command is a dry run first, backs up before editing, writes a receipt, and can be undone):
 

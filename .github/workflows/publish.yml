@@ -1,0 +1,48 @@
+name: publish
+
+# Publishes repo-fit to npm when a new version lands on main. No token and no login: npm trusts this workflow
+# (trusted publishing, set up once in the package settings on npmjs.com, workflow filename publish.yml).
+# A version that is already on npm is skipped, so an ordinary merge publishes nothing.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write # npm trusted publishing
+  contents: write # the release tag
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+      - name: Is this version new on npm?
+        id: check
+        run: |
+          v="$(cat VERSION)"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if npm view "repo-fit@$v" version > /dev/null 2>&1; then
+            echo "new=false" >> "$GITHUB_OUTPUT"
+            echo "repo-fit $v is already on npm: nothing to publish."
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Tests
+        if: steps.check.outputs.new == 'true'
+        run: node --test
+      - name: npm 11.5.1 or later (trusted publishing needs it)
+        if: steps.check.outputs.new == 'true'
+        run: npm install -g npm@^11.5.1
+      - name: Publish
+        if: steps.check.outputs.new == 'true'
+        run: npm publish
+      - name: Tag the release
+        if: steps.check.outputs.new == 'true'
+        run: |
+          git tag "v${{ steps.check.outputs.version }}"
+          git push origin "v${{ steps.check.outputs.version }}"

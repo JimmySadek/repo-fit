@@ -24,7 +24,7 @@ test("a fresh starter kit has an empty review queue", sandboxed((sb) => {
   const c = check(sb, d);
   assert.equal(c.status, 0, c.out);
   assert.doesNotMatch(c.out, /nothing links to|untouched|due for review/);
-  assert.doesNotMatch(brief(sb, d).out, /Review queue/);
+  assert.doesNotMatch(brief(sb, d).out, /nothing links to/);
 }));
 
 test("a note nothing links to is a warning in check and a line in the session brief", sandboxed((sb) => {
@@ -34,7 +34,7 @@ test("a note nothing links to is a warning in check and a line in the session br
   const c = check(sb, d);
   assert.equal(c.status, 0, c.out); // a warning, never a failure
   assert.match(c.out, /WARNING 1 note\(s\) nothing links to: docs\/notes\/lonely\.md/);
-  assert.match(brief(sb, d).out, /🧹 Review queue: 1 nobody links to \(docs\/notes\/lonely\.md\)/);
+  assert.match(brief(sb, d).out, /⚠️ 1 note nothing links to: docs\/notes\/lonely\.md/);
   // Link it from the current view and it leaves the queue.
   write(d, "docs/00-home/current.md", `${read(d, "docs/00-home/current.md")}\nSee [lonely](../notes/lonely.md).\n`);
   assert.doesNotMatch(check(sb, d).out, /nothing links to/);
@@ -52,7 +52,7 @@ test("a note untouched for longer than staleNoteDays is listed; an uncommitted e
   assert.equal(c.status, 0, c.out);
   assert.match(c.out, /WARNING 1 note\(s\) untouched for 180\+ days: docs\/notes\/old\.md \(2024-01-01\)/);
   assert.doesNotMatch(c.out, /fresh\.md/);
-  assert.match(brief(sb, d).out, /1 untouched 180\+ days \(docs\/notes\/old\.md 2024-01-01\)/);
+  assert.match(brief(sb, d).out, /⚠️ 1 old note \(not changed for 180\+ days\): docs\/notes\/old\.md/);
 }));
 
 test("a review_after date keeps a note off the stale list until it passes; then the note is due", sandboxed((sb) => {
@@ -67,7 +67,7 @@ test("a review_after date keeps a note off the stale list until it passes; then 
   c = check(sb, d);
   assert.match(c.out, /WARNING 1 note\(s\) due for review: docs\/notes\/plan\.md \(2020-01-01\)/);
   assert.doesNotMatch(c.out, /untouched/);
-  assert.match(brief(sb, d).out, /1 due for review \(docs\/notes\/plan\.md 2020-01-01\)/);
+  assert.match(brief(sb, d).out, /⚠️ 1 note is past its review date: docs\/notes\/plan\.md/);
 }));
 
 test("archives, outputs, templates and folder READMEs are never on the queue", sandboxed((sb) => {
@@ -123,7 +123,6 @@ test("a long review queue is a count in the brief, and check lists the notes", s
   for (const n of ["a", "b", "c", "d", "e"]) write(d, `docs/notes/${n}.md`, `# ${n}\n`);
   commit(sb, d, "add notes");
   const b = brief(sb, d).out;
-  assert.match(b, /🧹 Review queue: 5 nobody links to\. `node scripts\/playbook\/check\.mjs` lists them\./);
-  assert.doesNotMatch(b, /docs\/notes\/a\.md/);
+  assert.match(b, /⚠️ 5 notes nothing links to: [^\n]*, and 2 more/, "a long list is three names and a count");
   assert.match(check(sb, d).out, /5 note\(s\) nothing links to: .*docs\/notes\/a\.md/);
 }));

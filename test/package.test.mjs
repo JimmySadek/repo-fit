@@ -27,3 +27,12 @@ test("package.json matches VERSION and ships what the CLI reads at run time", ()
     assert.ok(existsSync(join(ROOT, need)), `${need} exists`);
   }
 });
+
+test("a new version on main publishes itself to npm, and only a new one", () => {
+  const w = readFileSync(join(ROOT, ".github/workflows/publish.yml"), "utf8");
+  assert.match(w, /branches: \[main\]/);
+  assert.match(w, /id-token: write/, "npm trusted publishing needs an OIDC token");
+  assert.match(w, /npm view "repo-fit@\$v" version/, "a version already on npm is skipped");
+  assert.match(w, /run: node --test[\s\S]*run: npm publish/, "tests run before publishing");
+  assert.doesNotMatch(w, /NPM_TOKEN|NODE_AUTH_TOKEN/, "no stored token");
+});

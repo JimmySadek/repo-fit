@@ -30,4 +30,8 @@ jobs:
           node --version
           git --version
       - name: Tests
-        run: node --test
+        # A test that hangs fails by name after 5 minutes, instead of the whole job running out of time.
+        # Node 18 has no --test-timeout, so it runs without it.
+        shell: bash
+        run: |
+          if node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 20 ? 0 : 1)'; then node --test --test-timeout=300000; else node --test; fi

@@ -1,11 +1,42 @@
 // Repo checks: required files, board, links, folder indexes. Read-only. Exit 1 on errors.
 //   node scripts/playbook/check.mjs
+//   node scripts/playbook/check.mjs --review                    a short review of the notes (about every 2 weeks)
+//   node scripts/playbook/check.mjs --remember "<one line>"     Improve (opt-in): remember a correction; --accept/--reject <id>
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { markReviewed, reviewText } from "./fit.mjs";
+import { decide, proposals, remember } from "./improve.mjs";
 import { dirname, join, relative, resolve } from "node:path";
 import { root, config, readBoard, analyseBoard, paths, coverage, bodyWords } from "./lib.mjs";
 
 const cfg = config();
 const P = paths();
+// --review: what a script can find for a deeper review (near copies, old notes). The assistant proposes; nothing
+// changes without a yes. Remembers the date, so the briefing suggests the next one in about two weeks.
+// Improve (opt-in): --remember "<one line>", --proposals, --accept <id>, --reject <id>. Nothing is written without a yes.
+{
+  const a = process.argv.slice(2);
+  const val = (k) => (a.includes(k) ? a[a.indexOf(k) + 1] : undefined);
+  if (a.includes("--remember")) {
+    console.log(remember(val("--remember") ?? ""));
+    process.exit(0);
+  }
+  if (a.includes("--proposals")) {
+    const ps = proposals();
+    console.log(ps.length ? ps.map((p) => `- ${p.text}. Yes: --accept ${p.id}. No: --reject ${p.id}.`).join("\n") : "Nothing to propose.");
+    process.exit(0);
+  }
+  if (a.includes("--accept") || a.includes("--reject")) {
+    const r = decide(val("--accept") ?? val("--reject"), a.includes("--accept"));
+    console.log(r.text);
+    process.exit(r.ok ? 0 : 1);
+  }
+}
+if (process.argv.includes("--review")) {
+  console.log(reviewText());
+  markReviewed();
+  process.exit(0);
+}
+
 const errors = [];
 const warnings = [];
 
@@ -85,7 +116,7 @@ for (const dir of new Set(walk(join(root, "docs"), (n) => n.endsWith(".md")).map
   if (!existsSync(readme)) continue;
   const text = readFileSync(readme, "utf8");
   for (const f of readdirSync(dir)) {
-    if (f.endsWith(".md") && f !== "README.md" && !text.includes(f)) errors.push(`${relative(root, readme)} does not list ${f}`);
+    if (f.endsWith(".md") && f !== "README.md" && f !== "INDEX.md" && !text.includes(f)) errors.push(`${relative(root, readme)} does not list ${f}`);
   }
 }
 

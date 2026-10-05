@@ -4,6 +4,10 @@
 //   repo-fit audit <repo> [--area <folder>] [--json] [--out <file>]
 //                                                             read-only report and plan for an existing repo
 //   repo-fit preview <repo>                                   read-only: the session brief the recommended set would give
+//   repo-fit map <repo> [--json]                              read-only: the folder's map (MAP.md) as repo-fit would write it
+//   repo-fit organize <repo> [--list] [--apply] [--json]      the plan to organize the folder (before → after → why); --apply does it
+//   repo-fit remove <repo> [--apply]                           a clean way out: repo-fit's own parts set aside, undo brings them back
+//   repo-fit file <repo> [<item> --to <folder> [--always] | <item> --not-now] [--apply]   file inbox items
 //   repo-fit apply <repo> [--steps A-01,...] [--tool ..] [--hooks all|brief|none] [--autosave on|off] [--apply]
 //                                                             dry run by default; --apply writes, backs up, and writes a receipt
 //   repo-fit undo <repo> [--receipt <file>] [--apply]         put back what the last apply changed (dry run by default)
@@ -23,7 +27,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSyn
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { defaultOwner, hookFile, mergeHooks, recordersFor, writeAll } from "../lib/apply.mjs";
 import { since } from "../lib/versions.mjs";
 import { coreBlock, repoCoreVars } from "../lib/core.mjs";
@@ -96,7 +100,7 @@ function guidanceCheck() {
 const fill = (text, v) =>
   text.replaceAll("{{version}}", version).replaceAll("{{name}}", v.name ?? "").replaceAll("{{owner}}", v.owner ?? "").replaceAll("{{current}}", "docs/00-home/current.md").replaceAll("{{date}}", today());
 const BLOCK_RE = /<!-- playbook:core v\S+ begin[^>]*-->[\s\S]*?<!-- playbook:core end -->/;
-const VENDORED = ["lib.mjs", "brief.mjs", "check.mjs", "autosave.mjs"];
+const VENDORED = ["lib.mjs", "brief.mjs", "check.mjs", "autosave.mjs", "map.mjs", "move.mjs", "file.mjs", "fit.mjs", "improve.mjs"];
 const vendoredSource = (f) => readFileSync(join(here, "scripts/playbook", f), "utf8");
 function* files(dir, base = dir) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -264,20 +268,53 @@ function hooks(target, opt) {
   console.log(`✅ The briefing is on${mode === "all" ? ", with autosave" : ""}. Every new session in this folder starts with it.${tools.includes("codex") ? " Codex: run /hooks once and allow it." : ""}\nTo turn it off: repo-fit undo ${target} --apply   Receipt: ${w.receipt}`);
 }
 
-function status(target) {
+// The checkup a re-run starts with: one screen, ✅ for what is fine and ⚠️ only for real problems. "Nothing to
+// change" is a good result. It uses the folder's own fit check, so it judges exactly what its briefing judges.
+async function status(target) {
   if (!target || !existsSync(join(target, "playbook.json"))) fail(`${target}: no playbook.json. Run "repo-fit init" first.`, 2);
-  const g = guidanceState();
   const { changes, notAdopted, pj } = plan(target);
-  console.log(`Repo:     playbook ${pj.playbook}, guidance reviewed ${pj.guidance?.reviewed ?? "never"}, tools ${(pj.tools ?? []).join(", ")}, models ${(pj.models ?? []).join(", ") || "none named"}`);
-  console.log(`Playbook: ${version}, guidance reviewed ${g.reviewed}${g.overdue.length ? ` (⚠️ overdue: ${g.overdue.join(", ")})` : ""}`);
   const notes = hookNotes(target, pj);
   const managed = changes.filter((c) => !c.stamp);
-  if (managed.length) console.log(`⏳ Behind. Files that would change: ${changes.map((c) => c.rel).join(", ")}`);
-  else if (changes.length) console.log(`✅ The adopted parts are current. Only the version stamp in playbook.json would move to ${version} (update --apply).`);
-  else console.log("✅ Up to date.");
+  const items = [];
+  const own = join(resolve(target), "scripts/playbook/fit.mjs");
+  if (existsSync(own)) {
+    const { fitFacts } = await import(pathToFileURL(own).href);
+    const f = fitFacts();
+    const few = (list) => list.slice(0, 3).join(", ") + (list.length > 3 ? ", …" : "");
+    items.push(f.mapStale.length ? [false, "The map is out of date. It updates by itself when the next session starts."] : [true, "Map up to date"]);
+    items.push(f.inbox.length ? [false, `${f.inbox.length} ${f.inbox.length === 1 ? "item" : "items"} waiting in inbox/: ${few(f.inbox.map((i) => i.path.replace(/^inbox\//, "")))}`] : [true, "Inbox empty"]);
+    items.push(f.loose.length ? [false, `${f.loose.length} ${f.loose.length === 1 ? "file" : "files"} loose at the top: ${few(f.loose)}`] : [true, "0 loose files at the top"]);
+    items.push(f.broken.length ? [false, `${f.broken.length} broken ${f.broken.length === 1 ? "link" : "links"}: ${few(f.broken.map((x) => `${x.file} → ${x.dest}`))}`] : [true, "Links work"]);
+    if (f.offIndex.length) items.push([false, `${f.offIndex.length} ${f.offIndex.length === 1 ? "note is" : "notes are"} not on any index page: ${few(f.offIndex)}`]);
+    var old = f.old;
+    var fix = f;
+  }
+  items.push(managed.length ? [false, `Behind: this folder has repo-fit ${pj.playbook}, and ${version} is ready`] : [true, `repo-fit ${version}: Up to date`]);
+  const off = items.filter(([ok]) => !ok).length;
+  console.log([off ? `⚠️ Your folder needs a look: ${off} ${off === 1 ? "thing" : "things"}` : "✅ Your folder is fit", ...items.map(([ok, s]) => `   ${ok ? "✅" : "⚠️"} ${s}`)].join("\n"));
+  // Not fit: the before → after → why for what repo-fit can fix, on the same screen, so it is shown before any question.
+  if (fix?.loose.length) {
+    const { organizePlan, screen } = await import("../lib/organize.mjs");
+    const p = organizePlan(resolve(target));
+    if (p.batches.length) console.log(`\n${screen(p, target).replace(/\n\n/, `\n\n${await safeLine(target)}\n\n`)}`);
+  }
+  if (fix?.inbox.length) {
+    const HOME = { note: "notes", image: "media", media: "media", document: "documents", data: "data" };
+    let rules = [];
+    try {
+      rules = JSON.parse(readFileSync(join(target, "inbox/rules.json"), "utf8")).rules ?? [];
+    } catch {
+      /* no rules yet */
+    }
+    const to = (i) => `${rules.find((r) => r.kind === i.kind && !r.starts)?.to ?? HOME[i.kind] ?? "notes"}/${basename(i.path)}`;
+    console.log(["", "**Waiting in inbox/** (one question per kind: Yes, Yes and always, Not now). Suggested:", ...fix.inbox.map((i) => `- ${i.path} → ${to(i)}`)].join("\n"));
+  }
+  console.log(off ? "\nWhat can fix it: files at the top go in the organize plan (`organize`); for items waiting in inbox/, one question per kind; an update shows what it changes (`update`). Broken links are yours to fix; the list says where." : "\nNothing to change.");
+  if (old?.length) console.log(`\n🆕 ${old.length} old ${old.length === 1 ? "note" : "notes"} (not changed for 180+ days): worth a look in the next review.`);
   for (const l of notAdoptedLines(notAdopted)) console.log(l);
   for (const l of newsLines(pj, notAdopted)) console.log(l);
   for (const n of notes) console.log(`⚠️ ${n}`);
+  if (managed.length) console.log(`Files an update would change: ${changes.map((c) => c.rel).join(", ")}`);
   if (managed.length || notes.length) process.exitCode = 1;
 }
 
@@ -290,7 +327,17 @@ function showDiff(rel, oldText, newText) {
   return r.stdout;
 }
 
-function update(target, apply) {
+// Safe start: save the folder in Git as it is before the first change (lib/safe.mjs). Stops the run if Git will not.
+async function safeStart(target) {
+  if (process.argv.includes("--no-snapshot")) return console.log("⚠️ No snapshot (--no-snapshot): repo-fit's own undo still takes back what it changes.\n");
+  const { snapshot } = await import("../lib/safe.mjs");
+  const s = snapshot(resolve(target));
+  console.log(`${s.text}\n`);
+  if (!s.ok) process.exit(1);
+}
+const safeLine = async (target) => (await import("../lib/safe.mjs")).snapshotPlan(resolve(target)).line;
+
+async function update(target, apply) {
   if (!target || !existsSync(join(target, "playbook.json"))) fail(`${target}: no playbook.json. Run "repo-fit init" first (it never overwrites files).`, 2);
   const { changes, notAdopted, pj } = plan(target);
   for (const n of hookNotes(target, pj)) console.log(`⚠️ ${n}`);
@@ -298,8 +345,16 @@ function update(target, apply) {
   for (const l of newsLines(pj, notAdopted)) console.log(l);
   if (!changes.length) return console.log("✅ Up to date. Nothing to change.");
   for (const c of changes) console.log(showDiff(c.rel, c.old, c.next));
-  if (!apply) return console.log(`Dry run: ${changes.length} file(s) would change. Run again with --apply after review.`);
+  if (!apply) return console.log(`Dry run: ${changes.length} file(s) would change. Run again with --apply after review.\n\n${await safeLine(target)}`);
+  await safeStart(target);
   const w = writeAll(resolve(target), changes.map((c) => ({ step: "update", type: existsSync(join(target, c.rel)) ? "edit" : "create", path: c.rel, old: c.old, content: c.next })));
+  // The briefing says once, in plain words, what is new since the version this folder had (.playbook/news.json).
+  const { newest } = await import("../lib/versions.mjs");
+  const rel = newest(pj.playbook ?? "0.0.0");
+  if (rel) {
+    mkdirSync(join(target, ".playbook"), { recursive: true });
+    writeFileSync(join(target, ".playbook/news.json"), `${JSON.stringify({ to: version, text: rel.briefing ?? `repo-fit was updated to ${rel.version}: ${rel.why}` }, null, 2)}\n`);
+  }
   console.log(`Applied ${changes.length} file(s). Nothing was committed. Receipt: ${w.receipt}. Backups: .playbook/backups/${w.ts}/. Undo with: node bin/repo-fit.mjs undo ${target} --apply`);
 }
 
@@ -328,6 +383,8 @@ Look (read-only):
   audit <repo> [--area <folder>] [--json] [--out <file>]
                                              report and plan for an existing repo, with the recommended set
   preview <repo>                             the session brief the recommended set would give
+  map <repo> [--json]                        the map of the folder (MAP.md) as repo-fit would write it
+  organize <repo> [--list]                   the plan to organize the folder: before, after and why; --list shows every move
   tools <repo> [--json] [--offline]          tool versions vs the limits in guidance/gates.json
   status <repo>                              is the repo behind this playbook?
   guidance check                             which guidance is due for a refresh
@@ -337,10 +394,14 @@ Change (dry run first):
   apply <repo> [--steps A-01,...] [--tool ..] [--hooks all|brief|none] [--autosave on|off] [--claude-link merge] [--word-cap N] [--show] [--apply]
   update <repo> [--apply]                    bring the adopted parts up to this playbook version
   hooks <repo> [--hooks brief|all] [--apply] turn on the start-of-session briefing (the person runs this)
+  organize <repo> --apply                    organize the folder as the plan shows: moves, link updates, map; one undo
+  file <repo> [<inbox item> --to <folder> [--always] | <inbox item> --not-now] [--apply]
+                                             file inbox items: by the standing rules, or one item by your answer
   skip <repo> <ID> --reason "..." [--remove] [--apply]
                                              record a step you leave out on purpose (audit, status, update respect it)
   undo <repo> [--receipt <file>] [--force] [--apply]
-                                             put back what the last apply, init or update changed
+                                             put back what the last apply, init, update or organize changed
+  remove <repo> [--apply]                    stop using repo-fit: its own parts set aside, your files stay; undo brings it back
   connect <repo> [--host github|gitlab] [--owner O] [--name N] [--apply]
                                              no remote yet: create an EMPTY PRIVATE remote. Never pushes
   tools <repo> --update claude [--apply]     run Claude Code's own updater
@@ -376,6 +437,7 @@ switch (process.argv[2]) {
     const res = connect(pos[0], { host: typeof opt.host === "string" ? opt.host : undefined, owner: typeof opt.owner === "string" ? opt.owner : undefined, name: typeof opt.name === "string" ? opt.name : undefined, apply: Boolean(opt.apply) });
     console.log(res.text);
     if (!res.ok) process.exitCode = 1;
+    else if (!opt.apply && /would be written/.test(res.text)) console.log(`\n${await safeLine(pos[0])}`);
     break;
   }
   case "apply": {
@@ -383,6 +445,7 @@ switch (process.argv[2]) {
     const wordCap = opt["word-cap"] === undefined ? undefined : Number(opt["word-cap"]);
     if (wordCap !== undefined && !(Number.isInteger(wordCap) && wordCap > 0)) fail("--word-cap must be a whole number of words, for example --word-cap 1500");
     const { apply } = await import("../lib/apply.mjs");
+    if (opt.apply) await safeStart(pos[0]);
     const list = (v) => (typeof v === "string" ? v.split(",").map((s) => s.trim()).filter(Boolean) : null);
     const res = apply(pos[0], {
       steps: list(opt.steps), tool: typeof opt.tool === "string" ? opt.tool : "both", hooks: typeof opt.hooks === "string" ? opt.hooks : "all",
@@ -433,6 +496,77 @@ switch (process.argv[2]) {
     console.log(`${existsSync(join(a.root, "scripts/playbook/brief.mjs")) ? "The briefing this repo's sessions start with today" : "The briefing this repo's sessions would start with after the recommended set"}. Nothing was written.\n\n${r.stdout.trimEnd()}`);
     break;
   }
+  case "organize": {
+    if (!pos[0]) fail("Usage: repo-fit organize <repo> [--list] [--apply] [--json]");
+    const { organizePlan, organizeApply, screen, list } = await import("../lib/organize.mjs");
+    const root = resolve(pos[0]);
+    if (!existsSync(root)) fail(`Not a folder: ${root}`);
+    const p = organizePlan(root);
+    if (opt.json) console.log(JSON.stringify({ batches: p.batches, stays: p.stays, suggestions: p.suggestions, mentions: p.mentions, links: p.links }, null, 2));
+    else if (opt.apply) {
+      // The yes was for the plan on the screen: if the folder changed since, refuse and show the new plan instead.
+      if (typeof opt.plan === "string" && opt.plan !== p.code) {
+        console.log(`❌ The folder changed since you saw it, so nothing was moved. Here is the plan as it is now; say yes to this one instead.\n\n${screen(p, pos[0])}`);
+        process.exit(1);
+      }
+      if (p.batches.length) await safeStart(root);
+      const r = organizeApply(root, p);
+      console.log(r.text);
+      if (!r.ok) process.exit(1);
+      if (p.batches.length) console.log(`\nThe map (MAP.md) and the index pages were rebuilt. Undo everything with one command: repo-fit undo ${pos[0]} --apply`);
+    } else {
+      const text = opt.list ? list(p) : screen(p, pos[0]);
+      // The snapshot line goes right under the title, before the plan: the one yes covers it.
+      console.log(p.batches.length ? text.replace(/\n\n/, `\n\n${await safeLine(root)}\n\n`) : text);
+    }
+    break;
+  }
+  case "file": {
+    // The inbox: file by the standing rules, or one item by the person's answer (Yes / Yes, and always / Not now).
+    if (!pos[0]) fail("Usage: repo-fit file <repo> [--apply] | file <repo> <inbox item> --to <folder> [--always] [--apply] | file <repo> <inbox item> --not-now [--apply]");
+    const root = resolve(pos[0]);
+    const { answer, capture } = await import("../scripts/playbook/file.mjs");
+    const item = pos[1]?.replace(/^\.\//, "");
+    if (!item) {
+      const r = capture(root, { apply: Boolean(opt.apply) });
+      console.log(r.lines.length ? r.lines.join("\n") : "📥 The inbox is empty, or nothing in it matches a rule.");
+      break;
+    }
+    const r = answer(root, item, { to: typeof opt.to === "string" ? opt.to : undefined, always: Boolean(opt.always), notNow: Boolean(opt["not-now"]), apply: Boolean(opt.apply) });
+    console.log(r.text);
+    if (!r.ok) process.exit(1);
+    break;
+  }
+  case "remove": {
+    // A clean way out: repo-fit's own parts set aside, the person's files untouched, one undo brings it back.
+    if (!pos[0]) fail("Usage: repo-fit remove <repo> [--apply]");
+    const root = resolve(pos[0]);
+    const { removePlan, removeScreen, removeApply } = await import("../lib/remove.mjs");
+    const p = removePlan(root);
+    if (!opt.apply || (!p.aside.length && !p.edits.length)) {
+      console.log(removeScreen(p, basename(root), pos[0], await safeLine(root)));
+      break;
+    }
+    await safeStart(root);
+    console.log(removeApply(root, p).text);
+    break;
+  }
+  case "map": {
+    if (!pos[0]) fail("Usage: repo-fit map <repo> [--json]");
+    const { pages, scan } = await import("../scripts/playbook/map.mjs");
+    const root = resolve(pos[0]);
+    if (!existsSync(root)) fail(`Not a folder: ${root}`);
+    if (opt.json) {
+      console.log(JSON.stringify(scan(root), null, 2));
+      break;
+    }
+    const p = pages(root);
+    const map = p.get("MAP.md") ?? (existsSync(join(root, "MAP.md")) ? readFileSync(join(root, "MAP.md"), "utf8") : "");
+    console.log(`The map of ${basename(root)}${p.has("MAP.md") ? " as repo-fit would write it" : ""}. Nothing was written.\n\n${map.trimEnd()}`);
+    const idx = [...p.keys()].filter((k) => k !== "MAP.md");
+    if (idx.length) console.log(`\nIndex pages it would write: ${idx.join(", ")}`);
+    break;
+  }
   case "detect": {
     if (!pos[0]) fail("Usage: repo-fit detect <repo> [--json]");
     const { detect, format } = await import("../lib/detect.mjs");
@@ -445,8 +579,8 @@ switch (process.argv[2]) {
     else fail("Usage: repo-fit guidance check");
     break;
   case "init": init(pos[0], opt); break;
-  case "status": status(pos[0]); break;
-  case "update": update(pos[0], Boolean(opt.apply)); break;
+  case "status": await status(pos[0]); break;
+  case "update": await update(pos[0], Boolean(opt.apply)); break;
   case "skip": skip(pos[0], pos[1], opt); break;
   case "hooks": hooks(pos[0], opt); break;
   case "help":

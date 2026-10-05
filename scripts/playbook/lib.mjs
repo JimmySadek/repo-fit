@@ -1,6 +1,7 @@
 // Shared helpers for the playbook scripts. No dependencies.
 // Managed by repo-fit: change it there and run `repo-fit update`, not here.
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -185,7 +186,7 @@ export function analyseBoard(rows, cfg) {
 // Same rules as `repo-fit audit` (F14 and F15). Archives, raw inputs, outputs, templates, folder READMEs and the
 // root files are expected to be unlinked, so they are never reported. Read-only.
 const EXPECTED_UNLINKED = /(^|\/)(source-archive|archive|archives|_archive|\.handoffs|raw|vendor|third_party|outputs|_?templates?|kits?|starters?|scaffolds?|boilerplates?|skeletons?)\//;
-const ROOT_NAMES = new Set(["README.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md", "CHANGELOG.md", "LICENSE.md", "CONTRIBUTING.md", "SECURITY.md"]);
+const ROOT_NAMES = new Set(["README.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md", "CHANGELOG.md", "LICENSE.md", "CONTRIBUTING.md", "SECURITY.md", "MAP.md"]);
 const MD_CAP = 4000;
 
 export function markdownFiles() {
@@ -203,6 +204,37 @@ export function markdownFiles() {
   return out.sort();
 }
 
+// Paths repo-fit itself changed and that are still exactly as it left them (from its receipts not undone): moves,
+// link fixes, its own pages. The end-of-reply reminder leaves these out: they are not the person's unsaved work.
+export function ownChanges() {
+  const dir = join(root, ".playbook/receipts");
+  const out = new Set();
+  if (!existsSync(dir)) return out;
+  const sum = (p, text) => {
+    try {
+      const b = readFileSync(join(root, p));
+      return createHash("sha256").update(text ? b.toString("utf8") : b).digest("hex");
+    } catch {
+      return null;
+    }
+  };
+  for (const n of readdirSync(dir).filter((x) => x.endsWith(".json") && !existsSync(join(dir, `${x}.undone`)))) {
+    try {
+      const rc = JSON.parse(readFileSync(join(dir, n), "utf8"));
+      const edited = new Map((rc.entries ?? []).filter((e) => e.type === "edit").map((e) => [e.path, e.after]));
+      for (const e of rc.entries ?? []) {
+        // Still exactly as repo-fit left it? Then it is repo-fit's change; once the person edits it, it is theirs.
+        const at = e.type === "move" ? e.to : e.path;
+        const same = e.type === "move" ? sum(at) === e.hash || sum(at, true) === edited.get(at) : sum(at, true) === e.after || e.type === "create" && sum(at, true) === null;
+        if (same) for (const p of [e.path, e.from, e.to]) if (p) out.add(p);
+      }
+    } catch {
+      /* not a receipt repo-fit can read */
+    }
+  }
+  return out;
+}
+
 export function coverage(cfg = config()) {
   const files = markdownFiles();
   const set = new Set(files);
@@ -213,7 +245,11 @@ export function coverage(cfg = config()) {
   }
   const inbound = new Map(files.map((f) => [f, 0]));
   const reviewAfter = new Map();
-  const hit = (f) => inbound.set(f, inbound.get(f) + 1);
+  // Links inside repo-fit's generated lists (MAP.md, index pages) reach every note, so they do not count: a note
+  // only the map links to is still one nothing else links to. Generated index pages are never orphans themselves.
+  const generated = new Set();
+  let inList = false;
+  const hit = (f) => !inList && inbound.set(f, inbound.get(f) + 1);
   for (const f of files) {
     let text;
     try {
@@ -225,7 +261,12 @@ export function coverage(cfg = config()) {
     const date = text.replace(/\r\n?/g, "\n").match(/^---\n([\s\S]*?)\n---/)?.[1].match(/^review_after:\s*"?(\d{4}-\d{2}-\d{2})/m)?.[1];
     if (date) reviewAfter.set(f, date);
     let fenced = false;
+    inList = false;
     for (const line of text.split(/\r?\n/)) {
+      if (/<!-- repo-fit:(map|index) begin/.test(line)) {
+        inList = true;
+        if (line.includes("repo-fit:index")) generated.add(f);
+      } else if (/<!-- repo-fit:(map|index) end/.test(line)) inList = false;
       if (line.trim().startsWith("```")) {
         fenced = !fenced;
         continue;
@@ -254,16 +295,53 @@ export function coverage(cfg = config()) {
   }
   const roles = new Set(Object.values(paths()));
   const skip = (f) => ROOT_NAMES.has(f) || /(^|\/)(AGENTS|CLAUDE|GEMINI)\.md$/.test(f) || EXPECTED_UNLINKED.test(f) || /(^|\/)README\.md$/i.test(f) || matchesAny(f, cfg.reviewIgnore ?? []) || matchesAny(f, (cfg.protectedPaths ?? []).map((p) => (p.endsWith("/") ? `${p}**` : p)));
-  const orphans = files.filter((f) => inbound.get(f) === 0 && !skip(f) && !roles.has(f));
+  const orphans = files.filter((f) => inbound.get(f) === 0 && !skip(f) && !roles.has(f) && !generated.has(f));
 
-  // Last commit date per file, one git call. An uncommitted edit counts as today.
+  // Last commit date per file, one git call. An uncommitted edit counts as today. A repo-fit snapshot ("saved as it
+  // was before repo-fit changed anything") is not a change to a note, so its date does not count: without another
+  // commit, the file's own date does (also for a folder with no Git at all).
   const changed = new Map();
   let when = "";
-  for (const line of (git(["log", "--format=@%cs", "--name-only", "-n", "3000"]) ?? "").split("\n")) {
-    if (line.startsWith("@")) when = line.slice(1);
-    else if (line && !changed.has(line)) changed.set(line, when);
+  for (const line of (git(["log", "--format=@%cs%x09%s", "--name-only", "--diff-filter=AMR", "-n", "3000"]) ?? "").split("\n")) {
+    if (line.startsWith("@")) when = line.includes("\trepo-fit: snapshot") ? null : line.slice(1, 11);
+    else if (line && when && !changed.has(line)) changed.set(line, when);
   }
+  const fileDate = (f) => {
+    try {
+      return statSync(join(root, f)).mtime.toLocaleDateString("sv-SE");
+    } catch {
+      return null;
+    }
+  };
   const dirty = new Set(changedFiles() ?? []);
+  // A note repo-fit moved (and whose only change since is its links) keeps the date of where it came from: a move is
+  // not a change to the note. The receipts of moves not undone say where each file came from.
+  const movedFrom = new Map();
+  const receipts = join(root, ".playbook/receipts");
+  for (const r of existsSync(receipts) ? readdirSync(receipts).filter((n) => n.endsWith(".json") && !existsSync(join(receipts, `${n}.undone`))).sort() : []) {
+    let rc;
+    try {
+      rc = JSON.parse(readFileSync(join(receipts, r), "utf8"));
+    } catch {
+      continue;
+    }
+    const sums = new Set((rc.entries ?? []).filter((e) => e.type === "edit").map((e) => `${e.path}\0${e.after}`));
+    for (const e of (rc.entries ?? []).filter((x) => x.type === "move")) {
+      let now;
+      try {
+        now = readFileSync(join(root, e.to));
+      } catch {
+        continue;
+      }
+      const same = createHash("sha256").update(now).digest("hex") === e.hash || sums.has(`${e.to}\0${createHash("sha256").update(now.toString("utf8")).digest("hex")}`);
+      if (same) movedFrom.set(e.to, movedFrom.get(e.from) ?? e.from);
+    }
+  }
+  // Also once the move is committed: a move is not an edit, so the note keeps the date of the place it came from.
+  for (const [to, from] of movedFrom) {
+    changed.set(to, changed.get(from) ?? fileDate(to)); // a move keeps the file's own date too
+    dirty.delete(to);
+  }
   const t = today();
   const cutoff = new Date(Date.now() - cfg.staleNoteDays * 864e5).toLocaleDateString("sv-SE");
   const stale = [];
@@ -275,8 +353,8 @@ export function coverage(cfg = config()) {
       if (review < t) due.push({ path: f, date: review }); // a planned review date replaces the age rule
       continue;
     }
-    if (dirty.has(f)) continue;
-    const last = changed.get(f);
+    if (dirty.has(f) && changed.has(f)) continue; // edited since its last commit: not old
+    const last = changed.get(f) ?? fileDate(f);
     if (last && last < cutoff) stale.push({ path: f, date: last });
   }
   stale.sort((a, b) => a.date.localeCompare(b.date) || a.path.localeCompare(b.path));

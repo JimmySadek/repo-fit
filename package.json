@@ -1,6 +1,6 @@
 {
   "name": "repo-fit",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Give your project a memory: a session briefing, one list of everything open, safe automatic saves and one rulebook for Claude Code and Codex. Works on new and existing projects.",
   "type": "module",
   "bin": {
@@ -46,6 +46,20 @@
   "license": "MIT",
   "repoFit": {
     "releases": [
+      {
+        "version": "0.7.0",
+        "important": true,
+        "why": "repo-fit can now organize your folder: it shows the folder before and after, asks once, and keeps it organized. Nothing is deleted, and one command undoes it.",
+        "briefing": "New: repo-fit can organize your folder. Ask your assistant to run /repo-fit to see the plan. Nothing changes without your yes.",
+        "news": [
+          "A map of your folder (MAP.md) and an index page per folder, so you and your assistant find any note in two steps.",
+          "Organize with one yes: loose files go into folders, old folders and exact copies go to an archive, and the screen shows before, after and why first. Nothing is deleted; one command undoes it.",
+          "Before any change, Git saves a snapshot of your folder, so you can always go back. A folder without Git gets Git started first.",
+          "New things go in inbox/ and are filed by the rules you approved, when a session starts.",
+          "The briefing names real problems in one short line each and stays quiet otherwise. Running /repo-fit again starts with a checkup.",
+          "Open tasks from all your notes are listed in one place, in MAP.md."
+        ]
+      },
       {
         "version": "0.6.0",
         "important": true,

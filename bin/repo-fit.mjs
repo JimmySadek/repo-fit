@@ -99,7 +99,7 @@ function guidanceCheck() {
 const fill = (text, v) =>
   text.replaceAll("{{version}}", version).replaceAll("{{name}}", v.name ?? "").replaceAll("{{owner}}", v.owner ?? "").replaceAll("{{current}}", "docs/00-home/current.md").replaceAll("{{date}}", today());
 const BLOCK_RE = /<!-- playbook:core v\S+ begin[^>]*-->[\s\S]*?<!-- playbook:core end -->/;
-const VENDORED = ["lib.mjs", "brief.mjs", "check.mjs", "autosave.mjs", "map.mjs", "move.mjs", "file.mjs", "fit.mjs"];
+const VENDORED = ["lib.mjs", "brief.mjs", "check.mjs", "autosave.mjs", "map.mjs", "move.mjs", "file.mjs", "fit.mjs", "improve.mjs"];
 const vendoredSource = (f) => readFileSync(join(here, "scripts/playbook", f), "utf8");
 function* files(dir, base = dir) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {

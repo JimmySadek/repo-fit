@@ -11,6 +11,7 @@ import { root, git, config, readBoard, analyseBoard, paths, coverage, preview, u
 import { capture } from "./file.mjs";
 import { fitFacts, fitLines, rebuildMap } from "./fit.mjs";
 import { scan } from "./map.mjs";
+import { improveLines } from "./improve.mjs";
 
 const args = process.argv.slice(2);
 const hook = args.includes("--hook");
@@ -40,6 +41,9 @@ out.push(...inbox.lines);
 if ((hook || args.includes("--file")) && !preview && rebuildMap(cfg).length) out.push("✅ Map updated: notes were added, renamed or removed.");
 // What is off, one short line each. Quiet when all is well.
 out.push(...fitLines(fitFacts(cfg)));
+// 🆕 Improve (opt-in): proposals the person says yes or no to.
+const improve = improveLines();
+out.push(...improve.lines);
 // ✅ open work, collected where it already is (MAP.md lists it).
 {
   const open = scan(root, { protect: cfg.protectedPaths ?? [] }).open;
@@ -116,7 +120,7 @@ const text = out.join("\n");
 if (!hook) {
   console.log(text);
 } else {
-  const forModel = `${text}\n\nSession brief, read from files. Show the top of it to the user in 3 to 5 lines before starting, and refresh Git facts before relying on it.${inbox.waiting?.length ? " For the 📥 items waiting, follow the inbox lines in AGENTS.md: ask once per kind with exactly Yes, Yes and always, Not now; never delete, merge or commit them." : ""}${/🆕 Two weeks/.test(text) ? " For a review, run node scripts/playbook/check.mjs --review and propose; nothing changes without a yes." : ""}`;
+  const forModel = `${text}\n\nSession brief, read from files. Show the top of it to the user in 3 to 5 lines before starting, and refresh Git facts before relying on it.${inbox.waiting?.length ? " For the 📥 items waiting, follow the inbox lines in AGENTS.md: ask once per kind with exactly Yes, Yes and always, Not now; never delete, merge or commit them." : ""}${/🆕 Two weeks/.test(text) ? " For a review, run node scripts/playbook/check.mjs --review and propose; nothing changes without a yes." : ""}${improve.context}${improve.on ? " Improve is on: when the person corrects how you work in this folder, run node scripts/playbook/check.mjs --remember \"<the correction in one short line>\" and follow what it says." : ""}`;
   // Both tools read hookSpecificOutput.additionalContext. Codex shows systemMessage as a warning, so it gets none.
   const context = { hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: forModel } };
   const payload = format === "codex" ? context : { systemMessage: text, ...context };

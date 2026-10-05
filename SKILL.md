@@ -102,7 +102,7 @@ If they would rather not, the rest still works: the shared rules tell the assist
 
 Up to 5 lines of other findings (notes named in plain text by others, from `--list`; old or unlinked notes; big files; no remote), each with the command to look further. Information, not questions: do not offer to fix them in this run.
 
-Recap in a few lines: what was added or fixed, what was verified, what is theirs to do (the briefing line, Codex `/hooks`), and how to undo. End with the repo-fit version and one line on updates: "When a newer repo-fit matters for this repo, the briefing will say so." (Plugin installs in Claude Code can also switch on auto-update in `/plugin`.)
+Recap in a few lines: what was added or fixed, what was verified, what is theirs to do (the briefing line, Codex `/hooks`), and how to undo. On a first run only, one line: repo-fit can also learn from corrections they repeat, if they turn it on (`repo-fit prefs set improve on`); it never writes a rule without their yes. End with the repo-fit version and one line on updates: "When a newer repo-fit matters for this repo, the briefing will say so." (Plugin installs in Claude Code can also switch on auto-update in `/plugin`.)
 
 ## Later sessions: the inbox
 

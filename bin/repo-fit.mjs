@@ -6,6 +6,7 @@
 //   repo-fit preview <repo>                                   read-only: the session brief the recommended set would give
 //   repo-fit map <repo> [--json]                              read-only: the folder's map (MAP.md) as repo-fit would write it
 //   repo-fit organize <repo> [--list] [--apply] [--json]      the plan to organize the folder (before → after → why); --apply does it
+//   repo-fit remove <repo> [--apply]                           a clean way out: repo-fit's own parts set aside, undo brings them back
 //   repo-fit file <repo> [<item> --to <folder> [--always] | <item> --not-now] [--apply]   file inbox items
 //   repo-fit apply <repo> [--steps A-01,...] [--tool ..] [--hooks all|brief|none] [--autosave on|off] [--apply]
 //                                                             dry run by default; --apply writes, backs up, and writes a receipt
@@ -347,6 +348,13 @@ async function update(target, apply) {
   if (!apply) return console.log(`Dry run: ${changes.length} file(s) would change. Run again with --apply after review.\n\n${await safeLine(target)}`);
   await safeStart(target);
   const w = writeAll(resolve(target), changes.map((c) => ({ step: "update", type: existsSync(join(target, c.rel)) ? "edit" : "create", path: c.rel, old: c.old, content: c.next })));
+  // The briefing says once, in plain words, what is new since the version this folder had (.playbook/news.json).
+  const { newest } = await import("../lib/versions.mjs");
+  const rel = newest(pj.playbook ?? "0.0.0");
+  if (rel) {
+    mkdirSync(join(target, ".playbook"), { recursive: true });
+    writeFileSync(join(target, ".playbook/news.json"), `${JSON.stringify({ to: version, text: rel.briefing ?? `repo-fit was updated to ${rel.version}: ${rel.why}` }, null, 2)}\n`);
+  }
   console.log(`Applied ${changes.length} file(s). Nothing was committed. Receipt: ${w.receipt}. Backups: .playbook/backups/${w.ts}/. Undo with: node bin/repo-fit.mjs undo ${target} --apply`);
 }
 
@@ -393,6 +401,7 @@ Change (dry run first):
                                              record a step you leave out on purpose (audit, status, update respect it)
   undo <repo> [--receipt <file>] [--force] [--apply]
                                              put back what the last apply, init, update or organize changed
+  remove <repo> [--apply]                    stop using repo-fit: its own parts set aside, your files stay; undo brings it back
   connect <repo> [--host github|gitlab] [--owner O] [--name N] [--apply]
                                              no remote yet: create an EMPTY PRIVATE remote. Never pushes
   tools <repo> --update claude [--apply]     run Claude Code's own updater
@@ -526,6 +535,20 @@ switch (process.argv[2]) {
     const r = answer(root, item, { to: typeof opt.to === "string" ? opt.to : undefined, always: Boolean(opt.always), notNow: Boolean(opt["not-now"]), apply: Boolean(opt.apply) });
     console.log(r.text);
     if (!r.ok) process.exit(1);
+    break;
+  }
+  case "remove": {
+    // A clean way out: repo-fit's own parts set aside, the person's files untouched, one undo brings it back.
+    if (!pos[0]) fail("Usage: repo-fit remove <repo> [--apply]");
+    const root = resolve(pos[0]);
+    const { removePlan, removeScreen, removeApply } = await import("../lib/remove.mjs");
+    const p = removePlan(root);
+    if (!opt.apply || (!p.aside.length && !p.edits.length)) {
+      console.log(removeScreen(p, basename(root), pos[0], await safeLine(root)));
+      break;
+    }
+    await safeStart(root);
+    console.log(removeApply(root, p).text);
     break;
   }
   case "map": {

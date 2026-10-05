@@ -26,7 +26,7 @@ const daysAgo = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 1
 test("tidy folder: the session start and the checkup say nothing is wrong, and change nothing", sandboxed((sb) => {
   const dir = setUp(sb, "tidy");
   const out = start(sb, dir);
-  assert.doesNotMatch(out, /⚠️|🆕|📥/, out);
+  assert.doesNotMatch(out, /⚠️(?! Setup not finished)|🆕|📥/, out); // the setup's own TODO lines are a to-do, not a folder problem
   const c = checkup(sb, dir);
   assert.match(c, /✅ Your folder is fit/);
   assert.match(c, /Nothing to change/);

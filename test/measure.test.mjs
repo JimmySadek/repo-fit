@@ -38,13 +38,15 @@ test("find counts notes within two links of MAP.md, and leaves out front doors a
   write(d, "notes/one.md", "# One\n");
   write(d, "notes/two.md", "# Two\n");
   write(d, "README.md", "# Front door\n");
+  write(d, "loose.md", "# Loose\n");
+  write(d, "photo.jpg", "x");
   const r = find(snapshot(d));
-  assert.equal(r.total, 2);
+  assert.equal(r.total, 3);
   assert.equal(r.found, 1);
-  assert.deepEqual(r.unreachable, ["notes/two.md"]);
+  assert.deepEqual(r.unreachable, ["loose.md", "notes/two.md"]);
   const o = orient(d, snapshot(d));
   assert.equal(o.map, true);
-  assert.equal(o.covered, 1); // notes/ yes, README.md no
+  assert.equal(o.covered, 1); // notes/ yes; loose.md no; README.md and photo.jpg need no line
   assert.equal(o.entries, 2);
 }));
 

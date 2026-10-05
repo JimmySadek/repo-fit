@@ -85,7 +85,7 @@ for (const dir of new Set(walk(join(root, "docs"), (n) => n.endsWith(".md")).map
   if (!existsSync(readme)) continue;
   const text = readFileSync(readme, "utf8");
   for (const f of readdirSync(dir)) {
-    if (f.endsWith(".md") && f !== "README.md" && !text.includes(f)) errors.push(`${relative(root, readme)} does not list ${f}`);
+    if (f.endsWith(".md") && f !== "README.md" && f !== "INDEX.md" && !text.includes(f)) errors.push(`${relative(root, readme)} does not list ${f}`);
   }
 }
 

@@ -122,9 +122,11 @@ function notesNow(after, before, locate) {
   return [...before].filter(([p, f]) => isNote(p, f)).map(([p]) => locate(p)).filter((p) => p && !inArchive(p) && isNote(p, after.get(p)));
 }
 
+// The map must cover every area (top-level folder) and every loose note at the top. Front doors, manifests and config
+// need no line; loose images or PDFs are counted by `loose`, not here.
 export function orient(dir, after) {
   const map = after.get("MAP.md");
-  const entries = new Set([...after.keys()].map(top).filter((e) => !e.startsWith(".") && e !== "MAP.md"));
+  const entries = new Set([...after.keys()].filter((p) => (p.includes("/") ? !top(p).startsWith(".") : isNote(p, after.get(p)))).map(top));
   const covered = new Set();
   if (map) for (const l of parseLinks(map.text)) {
     const to = resolveLink(after, "MAP.md", l);

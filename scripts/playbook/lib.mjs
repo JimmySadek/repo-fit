@@ -185,7 +185,7 @@ export function analyseBoard(rows, cfg) {
 // Same rules as `repo-fit audit` (F14 and F15). Archives, raw inputs, outputs, templates, folder READMEs and the
 // root files are expected to be unlinked, so they are never reported. Read-only.
 const EXPECTED_UNLINKED = /(^|\/)(source-archive|archive|archives|_archive|\.handoffs|raw|vendor|third_party|outputs|_?templates?|kits?|starters?|scaffolds?|boilerplates?|skeletons?)\//;
-const ROOT_NAMES = new Set(["README.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md", "CHANGELOG.md", "LICENSE.md", "CONTRIBUTING.md", "SECURITY.md"]);
+const ROOT_NAMES = new Set(["README.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md", "CHANGELOG.md", "LICENSE.md", "CONTRIBUTING.md", "SECURITY.md", "MAP.md"]);
 const MD_CAP = 4000;
 
 export function markdownFiles() {
@@ -213,7 +213,11 @@ export function coverage(cfg = config()) {
   }
   const inbound = new Map(files.map((f) => [f, 0]));
   const reviewAfter = new Map();
-  const hit = (f) => inbound.set(f, inbound.get(f) + 1);
+  // Links inside repo-fit's generated lists (MAP.md, index pages) reach every note, so they do not count: a note
+  // only the map links to is still one nothing else links to. Generated index pages are never orphans themselves.
+  const generated = new Set();
+  let inList = false;
+  const hit = (f) => !inList && inbound.set(f, inbound.get(f) + 1);
   for (const f of files) {
     let text;
     try {
@@ -225,7 +229,12 @@ export function coverage(cfg = config()) {
     const date = text.replace(/\r\n?/g, "\n").match(/^---\n([\s\S]*?)\n---/)?.[1].match(/^review_after:\s*"?(\d{4}-\d{2}-\d{2})/m)?.[1];
     if (date) reviewAfter.set(f, date);
     let fenced = false;
+    inList = false;
     for (const line of text.split(/\r?\n/)) {
+      if (/<!-- repo-fit:(map|index) begin/.test(line)) {
+        inList = true;
+        if (line.includes("repo-fit:index")) generated.add(f);
+      } else if (/<!-- repo-fit:(map|index) end/.test(line)) inList = false;
       if (line.trim().startsWith("```")) {
         fenced = !fenced;
         continue;
@@ -254,7 +263,7 @@ export function coverage(cfg = config()) {
   }
   const roles = new Set(Object.values(paths()));
   const skip = (f) => ROOT_NAMES.has(f) || /(^|\/)(AGENTS|CLAUDE|GEMINI)\.md$/.test(f) || EXPECTED_UNLINKED.test(f) || /(^|\/)README\.md$/i.test(f) || matchesAny(f, cfg.reviewIgnore ?? []) || matchesAny(f, (cfg.protectedPaths ?? []).map((p) => (p.endsWith("/") ? `${p}**` : p)));
-  const orphans = files.filter((f) => inbound.get(f) === 0 && !skip(f) && !roles.has(f));
+  const orphans = files.filter((f) => inbound.get(f) === 0 && !skip(f) && !roles.has(f) && !generated.has(f));
 
   // Last commit date per file, one git call. An uncommitted edit counts as today.
   const changed = new Map();

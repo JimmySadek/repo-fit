@@ -58,7 +58,7 @@ Code facts gathered for the design (5 Oct):
 - [x] 0.6.0 baseline scores recorded: `2026-10-05-baseline-0.6.0.md` (pinned to commit `3fed971`; no `v0.6.0` tag exists)
 
 ## Step 6. Slices (each: failing test first, `node --test` green, scores improve, live run checked)
-- [ ] 1. Map + generated `MAP.md` and index pages + pointer (add-only). Moves: Orient, Find
+- [x] 1. Map + generated `MAP.md` and index pages + pointer (add-only). Moves: Orient, Find. Done 5 Oct: 153 tests pass; Orient ✅ and Find 100% on all five folders; safety unchanged ✅. The first build hid orphan notes (links from the map counted), dropping "Nothing rots" below 0.6.0; fixed with a test, back to 3/1/3/4. Live run of `repo-fit map` on a copy of the everything-folder: plain words, nothing written. The measure adapter needed no change (A-13 and D-11 are in the recommended set)
 - [ ] 2. Safe move engine: move receipts, plan fingerprint, journal, link rewrite, code-reference check, verify, undo. Moves: Safety
 - [ ] 3. Organize plan and the before/after/why screen; one-click apply. Moves: Loose, Find, One home
 - [ ] 4. `SKILL.md` flow and transcript checker; first live run on a test folder. Moves: Ceremony

@@ -4,6 +4,7 @@
 //   repo-fit audit <repo> [--area <folder>] [--json] [--out <file>]
 //                                                             read-only report and plan for an existing repo
 //   repo-fit preview <repo>                                   read-only: the session brief the recommended set would give
+//   repo-fit map <repo> [--json]                              read-only: the folder's map (MAP.md) as repo-fit would write it
 //   repo-fit apply <repo> [--steps A-01,...] [--tool ..] [--hooks all|brief|none] [--autosave on|off] [--apply]
 //                                                             dry run by default; --apply writes, backs up, and writes a receipt
 //   repo-fit undo <repo> [--receipt <file>] [--apply]         put back what the last apply changed (dry run by default)
@@ -96,7 +97,7 @@ function guidanceCheck() {
 const fill = (text, v) =>
   text.replaceAll("{{version}}", version).replaceAll("{{name}}", v.name ?? "").replaceAll("{{owner}}", v.owner ?? "").replaceAll("{{current}}", "docs/00-home/current.md").replaceAll("{{date}}", today());
 const BLOCK_RE = /<!-- playbook:core v\S+ begin[^>]*-->[\s\S]*?<!-- playbook:core end -->/;
-const VENDORED = ["lib.mjs", "brief.mjs", "check.mjs", "autosave.mjs"];
+const VENDORED = ["lib.mjs", "brief.mjs", "check.mjs", "autosave.mjs", "map.mjs"];
 const vendoredSource = (f) => readFileSync(join(here, "scripts/playbook", f), "utf8");
 function* files(dir, base = dir) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -328,6 +329,7 @@ Look (read-only):
   audit <repo> [--area <folder>] [--json] [--out <file>]
                                              report and plan for an existing repo, with the recommended set
   preview <repo>                             the session brief the recommended set would give
+  map <repo> [--json]                        the map of the folder (MAP.md) as repo-fit would write it
   tools <repo> [--json] [--offline]          tool versions vs the limits in guidance/gates.json
   status <repo>                              is the repo behind this playbook?
   guidance check                             which guidance is due for a refresh
@@ -431,6 +433,22 @@ switch (process.argv[2]) {
     const r = spawnSync(process.execPath, [join(here, "scripts/playbook/brief.mjs"), "--text"], { encoding: "utf8", env: { ...process.env, REPO_FIT_PREVIEW_ROOT: a.root, REPO_FIT_PREVIEW_CONFIG: JSON.stringify(cfg) } });
     if (r.status !== 0) fail(r.stderr || "The brief did not run.");
     console.log(`${existsSync(join(a.root, "scripts/playbook/brief.mjs")) ? "The briefing this repo's sessions start with today" : "The briefing this repo's sessions would start with after the recommended set"}. Nothing was written.\n\n${r.stdout.trimEnd()}`);
+    break;
+  }
+  case "map": {
+    if (!pos[0]) fail("Usage: repo-fit map <repo> [--json]");
+    const { pages, scan } = await import("../scripts/playbook/map.mjs");
+    const root = resolve(pos[0]);
+    if (!existsSync(root)) fail(`Not a folder: ${root}`);
+    if (opt.json) {
+      console.log(JSON.stringify(scan(root), null, 2));
+      break;
+    }
+    const p = pages(root);
+    const map = p.get("MAP.md") ?? (existsSync(join(root, "MAP.md")) ? readFileSync(join(root, "MAP.md"), "utf8") : "");
+    console.log(`The map of ${basename(root)}${p.has("MAP.md") ? " as repo-fit would write it" : ""}. Nothing was written.\n\n${map.trimEnd()}`);
+    const idx = [...p.keys()].filter((k) => k !== "MAP.md");
+    if (idx.length) console.log(`\nIndex pages it would write: ${idx.join(", ")}`);
     break;
   }
   case "detect": {

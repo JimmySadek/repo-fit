@@ -11,7 +11,7 @@ import { capture, readRules } from "./file.mjs";
 
 const REVIEW_DAYS = 14;
 const FRONT = /(^|\/)(README|AGENTS|CLAUDE|GEMINI|CHANGELOG|LICEN[CS]E|CONTRIBUTING|SECURITY|MAP|INDEX)\.md$/i;
-const SKIPPED = /^(archive|archives|_archive|inbox|scripts\/playbook)\/|(^|\/)\./;
+const SKIPPED = /^(archive|archives|_archive|outputs?|raw|vendor|third_party|source-archive|inbox|scripts\/playbook)\/|(^|\/)\./;
 const protect = (cfg) => cfg.protectedPaths ?? [];
 
 // repo-fit's own map and index pages, rebuilt from the folder. Returns the pages it rewrote.
@@ -44,7 +44,7 @@ export function fitFacts(cfg = config()) {
   const list = files(root);
   const { edges, broken } = linkReport(root, list);
   const s = scan(root, { protect: protect(cfg) });
-  const codeAreas = new Set(s.areas.filter((a) => a.code).map((a) => a.name));
+  const codeAreas = new Set(s.areas.filter((a) => a.code || a.site).map((a) => a.name));
   const live = (p) => !SKIPPED.test(p) && !codeAreas.has(p.split("/")[0]);
 
   // Notes no one can reach within two links of the map (map → index page → note).

@@ -97,7 +97,7 @@ node "<full path to the playbook folder>/bin/repo-fit.mjs" hooks "<full path to 
 
 After they run it: check that `.claude/settings.json` names `scripts/playbook/brief.mjs`, and tell them a new session will show the briefing. **Codex:** it runs this only after they allow it once with `/hooks` in Codex. Until a Codex session shows the briefing, call it untested.
 
-If they would rather not, the rest still works: the shared rules tell the assistant to run the briefing itself when none appeared.
+If they want the briefing without the end-of-reply reminder, use `--hooks briefing` instead; it is remembered. If they would rather not, the rest still works: the shared rules tell the assistant to run the briefing itself when none appeared.
 
 ## 6. Also noticed, then the recap
 

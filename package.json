@@ -1,6 +1,6 @@
 {
   "name": "repo-fit",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Give your project a memory: a session briefing, one list of everything open, safe automatic saves and one rulebook for Claude Code and Codex. Works on new and existing projects.",
   "type": "module",
   "bin": {
@@ -46,6 +46,18 @@
   "license": "MIT",
   "repoFit": {
     "releases": [
+      {
+        "version": "0.7.2",
+        "important": false,
+        "why": "Fixes from the first real sessions: a website's own folders get no index page, archived copies no longer show as broken links or open work, and the briefing can come without the end-of-reply reminder.",
+        "briefing": "New: repo-fit can organize your folder. Ask your assistant to run /repo-fit to see the plan. Nothing changes without your yes.",
+        "news": [
+          "In a folder that is a website or an app, its own folders (content, src, public and similar) get no index page; the map links the folder itself.",
+          "Archived copies of other projects in outputs/ or archive/ are no longer checked for broken links or counted as open work.",
+          "`hooks --hooks briefing` turns on the briefing without the end-of-reply reminder, and repo-fit remembers that choice.",
+          "The safety snapshot leaves tool clutter out (.serena/, caches)."
+        ]
+      },
       {
         "version": "0.7.1",
         "important": false,

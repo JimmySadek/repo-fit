@@ -1,6 +1,6 @@
 {
   "name": "repo-fit",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Every AI session starts with a short briefing of where you left off, and Claude Code and Codex share one rulebook. Looks at your repo first, shows what you would gain, then asks once.",
   "author": {
     "name": "Jimmy Sadek",

@@ -34,6 +34,7 @@ export function checkTranscript(text) {
   const writes = [];
   const askIds = new Set();
   const early = [];
+  const planIds = new Map(); // tool_use id of an organize, status or remove run → waiting for its output
   let answered = false; // invoking the skill is not a yes: every hand edit needs an answer first
   const shown = new Set(); // dry runs shown since the last answer
   const approved = new Set(); // dry runs an answer approved (it came after them)
@@ -44,6 +45,12 @@ export function checkTranscript(text) {
     if (e.type === "user") {
       const blocks = typeof content === "string" ? [{ type: "text", text: content }] : content ?? [];
       // A typed message, or the answer to a question, counts as the user's word.
+      // A plan run shows a plan only when its output has one ("already organized" has nothing to show).
+      for (const b of blocks) if (b.type === "tool_result" && planIds.has(b.tool_use_id)) {
+        const t = typeof b.content === "string" ? b.content : JSON.stringify(b.content ?? "");
+        if (SCREEN.test(t) || /Before → after/.test(t)) planMade = true;
+        planIds.delete(b.tool_use_id);
+      }
       if (blocks.some((b) => (b.type === "text" && b.text.trim() && !b.text.startsWith("<")) || (b.type === "tool_result" && askIds.has(b.tool_use_id)))) {
         answered = true;
         for (const s of shown) approved.add(s);
@@ -78,7 +85,7 @@ export function checkTranscript(text) {
       if (m[1] === "status") {
         // The checkup can carry the organize plan: its screen must be shown before any question, and it counts as
         // the organize dry run for the same folder.
-        planMade = true;
+        planIds.set(b.id, true);
         const k = same(cmd.slice(cmd.search(REPO_FIT)).replace(/\bstatus\b/, "organize"));
         shown.add(k);
         approved.delete(k);
@@ -90,7 +97,7 @@ export function checkTranscript(text) {
         if (["apply", "update", "skip", "init", "organize", "hooks", "file", "remove"].includes(m[1])) {
           shown.add(key); // a dry run the user must answer
           approved.delete(key);
-          if (m[1] === "organize" || m[1] === "remove") planMade = true; // its screen must be in the reply before a question
+          if (m[1] === "organize" || m[1] === "remove") planIds.set(b.id, true); // if it shows a plan, it must be in the reply before a question
         }
       } else {
         writes.push({ command: cmd.slice(0, 160), approved: approved.has(key) });

@@ -22,7 +22,7 @@
 //                                                             add the Starter kit. Never overwrites a file.
 //   repo-fit status <repo>                                    is the repo behind this playbook?
 //   repo-fit update <repo> [--apply]                          show what would change (default), or apply it
-//   repo-fit hooks <repo> [--hooks brief|all] [--apply]       turn on the start-of-session briefing; the person runs it
+//   repo-fit hooks <repo> [--hooks briefing|brief|all] [--apply]       turn on the start-of-session briefing; the person runs it
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
@@ -237,7 +237,7 @@ function newsLines(pj, notAdopted) {
 // Turn on the start-of-session briefing (and autosave, with --hooks all): the hook files for the repo's tools, merged
 // with the hooks already there. Claude Code's auto mode blocks an assistant from writing these, so the person runs it.
 function hooks(target, opt) {
-  if (!target || !existsSync(target)) fail("Usage: repo-fit hooks <repo> [--hooks brief|all] [--apply]");
+  if (!target || !existsSync(target)) fail("Usage: repo-fit hooks <repo> [--hooks briefing|brief|all] [--apply]");
   const root = resolve(target);
   if (!existsSync(join(root, "scripts/playbook/brief.mjs"))) fail(`${target}: the briefing script is not there yet. Add it first: repo-fit apply ${target} --steps A-10 --hooks none`, 2);
   const pjPath = join(root, "playbook.json");
@@ -247,7 +247,9 @@ function hooks(target, opt) {
   } catch {
     /* no playbook.json: both tools, briefing only */
   }
-  const mode = opt.hooks === "all" || opt.hooks === "brief" ? opt.hooks : pj.autosave ? "all" : "brief";
+  // The person's earlier choice (playbook.json "hooks") wins over the default, so a re-run never adds back what they left out.
+  const MODES = ["all", "brief", "briefing"];
+  const mode = MODES.includes(opt.hooks) ? opt.hooks : MODES.includes(pj.hooks) ? pj.hooks : pj.autosave ? "all" : "brief";
   const tools = pj.tools ?? ["claude-code", "codex"];
   const items = [];
   const add = (rel, kitRel) => {
@@ -393,7 +395,7 @@ Change (dry run first):
   init <repo> [--dry-run] [--tool claude|codex|both] [--models a,b] [--autosave on|off] [--no-hooks] [--name N] [--owner O]
   apply <repo> [--steps A-01,...] [--tool ..] [--hooks all|brief|none] [--autosave on|off] [--claude-link merge] [--word-cap N] [--show] [--apply]
   update <repo> [--apply]                    bring the adopted parts up to this playbook version
-  hooks <repo> [--hooks brief|all] [--apply] turn on the start-of-session briefing (the person runs this)
+  hooks <repo> [--hooks briefing|brief|all] [--apply] turn on the start-of-session briefing (the person runs this)
   organize <repo> --apply                    organize the folder as the plan shows: moves, link updates, map; one undo
   file <repo> [<inbox item> --to <folder> [--always] | <inbox item> --not-now] [--apply]
                                              file inbox items: by the standing rules, or one item by your answer

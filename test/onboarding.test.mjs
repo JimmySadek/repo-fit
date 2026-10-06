@@ -83,6 +83,8 @@ test("transcript check: only the last /repo-fit run counts", () => {
 
 const say = (text) => line({ type: "assistant", message: { content: [{ type: "text", text }] } });
 const ORG = 'node "/x/bin/repo-fit.mjs" organize /r';
+const planOut = line({ type: "user", message: { content: [{ type: "tool_result", tool_use_id: "b", content: "Your folder today   After one yes\n32 things loose" }] } });
+const removeOut = line({ type: "user", message: { content: [{ type: "tool_result", tool_use_id: "b", content: "**Before → after** (repo-fit's own parts only)" }] } });
 const SCREEN = "```\nYour folder today          After one yes (undo any time)\n32 things loose at the top  notes/: your 12 notes\n```\n**Why this is better for you**";
 
 test("transcript check: the before/after screen, one yes, then setup and organize both run", () => {
@@ -92,7 +94,7 @@ test("transcript check: the before/after screen, one yes, then setup and organiz
 });
 
 test("transcript check: asking before the before/after screen was shown fails", () => {
-  const r = checkTranscript([start, bash(DRY), bash(ORG), say("I looked at your folder."), ask("q1", "Organize it all?"), answer("q1"), bash(`${ORG} --apply`)].join("\n"));
+  const r = checkTranscript([start, bash(DRY), bash(ORG), planOut, say("I looked at your folder."), ask("q1", "Organize it all?"), answer("q1"), bash(`${ORG} --apply`)].join("\n"));
   assert.match(r.problems.join(), /before showing the before and after/);
 });
 
@@ -121,7 +123,7 @@ test("transcript check: a folder written as a shell variable in the dry run and 
 
 test("transcript check: on a re-run, the checkup's plan must be shown before the question too", () => {
   const STATUS = 'node /x/bin/repo-fit.mjs status /r';
-  assert.match(checkTranscript([start, bash(STATUS), say("Mostly tidy."), ask("q1", "Organize it?")].join("\n")).problems.join(), /before showing the before and after/);
+  assert.match(checkTranscript([start, bash(STATUS), planOut, say("Mostly tidy."), ask("q1", "Organize it?")].join("\n")).problems.join(), /before showing the before and after/);
   assert.ok(checkTranscript([start, bash(STATUS), say(SCREEN), ask("q1", "Organize it?")].join("\n")).ok);
 });
 
@@ -138,7 +140,7 @@ test("transcript check: remove needs a yes after its dry run", () => {
 
 test("transcript check: the remove screen must be in the reply before the question, not only in the tool output", () => {
   const RM = "node /x/bin/repo-fit.mjs remove /r";
-  assert.match(checkTranscript([start, bash(RM), ask("q1", "Remove repo-fit?")].join("\n")).problems.join(), /before showing the before and after/);
+  assert.match(checkTranscript([start, bash(RM), removeOut, ask("q1", "Remove repo-fit?")].join("\n")).problems.join(), /before showing the before and after/);
   assert.ok(checkTranscript([start, bash(RM), say("**Before → after** (repo-fit's own parts only):\n- playbook.json → set aside"), ask("q1", "Remove repo-fit?")].join("\n")).ok);
 });
 

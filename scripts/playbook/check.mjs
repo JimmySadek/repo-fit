@@ -88,7 +88,6 @@ const docs = [
   ...new Set([
     ...["README.md", "AGENTS.md", "CLAUDE.md", P.lessons, P.current, P.log, P.questions, P.people, P.decisions].map((f) => join(root, f)).filter((f) => existsSync(f) && f.endsWith(".md")),
     ...walk(join(root, "docs"), (n) => n.endsWith(".md")),
-    ...walk(join(root, P.outputs), (n) => n === "README.md"),
   ]),
 ];
 

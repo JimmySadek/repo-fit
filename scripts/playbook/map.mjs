@@ -100,7 +100,7 @@ function listFiles(root, virtual) {
 // outside the archive and repo-fit's own pages. Code blocks are examples, not tasks. Nothing moves out of the notes.
 // Rule files hold rules, not tasks (their TODO lines are the setup's placeholders, named by the briefing instead).
 // A template's tasks are placeholders for each copy, not open work.
-const OPEN_SKIP = /^(archive|archives|_archive|scripts\/playbook)\/|(^|\/)(_?templates?|_template|examples?)\/|(^|\/)(MAP|INDEX|AGENTS|CLAUDE|GEMINI)\.md$|(^|\/)\./i;
+const OPEN_SKIP = /^(archive|archives|_archive|outputs?|raw|vendor|third_party|source-archive|scripts\/playbook)\/|(^|\/)(_?templates?|_template|examples?)\/|(^|\/)(MAP|INDEX|AGENTS|CLAUDE|GEMINI)\.md$|(^|\/)\./i;
 export function openItems(files, read) {
   const out = [];
   for (const p of files.filter((x) => kindOf(x) === "note" && !OPEN_SKIP.test(x) && !SECRET_NAME.test(posix.basename(x)))) {
@@ -145,6 +145,10 @@ export function scan(root, { virtual = new Map(), protect = [] } = {}) {
     if (!areas.has(name) && there) areas.set(name, { name, files: [] });
   }
   const isProtected = (name) => protect.some((x) => x.replace(/\/+$/, "") === name);
+  // When the folder itself is a program (a website, an app), these folders belong to its build: repo-fit adds no
+  // index page there (the build may read every file in them), and the map links the folder itself.
+  const programRoot = files.some((p) => !p.includes("/") && MANIFEST.test(p));
+  const SITE = /^(content|src|app|pages|posts|_posts|public|static|layouts|components|assets|i18n|locales|dist|build|out|coverage)$/i;
   const out = [];
   for (const a of areas.values()) {
     const c = {};
@@ -160,7 +164,8 @@ export function scan(root, { virtual = new Map(), protect = [] } = {}) {
     // The area's index page: the person's own README or index when it links every note, else their own INDEX.md, else ours.
     let index = null;
     let generate = false;
-    if (!code && !special && notes.length) {
+    const site = programRoot && SITE.test(a.name);
+    if (!code && !special && !site && notes.length) {
       const own = `${a.name}/INDEX.md`;
       const ownText = a.files.includes(own) ? read(own) : null;
       const listsAll = (f) => {
@@ -172,7 +177,7 @@ export function scan(root, { virtual = new Map(), protect = [] } = {}) {
       else if (!isProtected(a.name)) [index, generate] = [own, true];
     }
     out.push({
-      name: a.name, counts: c, code, ownScripts, manifest: manifest ? manifest.slice(a.name.length + 1) : null, special, index, generate,
+      name: a.name, counts: c, code, site, ownScripts, manifest: manifest ? manifest.slice(a.name.length + 1) : null, special, index, generate,
       readme, notes: notes.map((p) => (SECRET_NAME.test(posix.basename(p)) ? { path: p, title: posix.basename(p).replace(/\.mdx?$/i, ""), summary: "" } : { path: p, title: title(read(p), p), summary: summary(read(p)) })),
       about: readme ? summary(read(readme)) : "",
     });
@@ -193,6 +198,7 @@ function mapBlock(s) {
       : a.special === "inbox" ? `new things waiting to be filed (${counts(a.counts) || "empty"})`
       : a.ownScripts ? "repo-fit's own scripts: the session briefing and the checks"
       : a.code ? `a program (${a.manifest ?? counts(a.counts, ["code"])}). It stays where it is`
+      : a.site ? `${counts(a.counts) || "empty"}; the website uses these files, so repo-fit adds no index page there`
       : counts(a.counts) || "empty";
     lines.push(`- ${link(`${a.name}/`, target)}: ${what}.${a.about && !a.special && !a.ownScripts ? ` ${a.about}` : ""}`);
     // What waits in the inbox is listed here (it has no index page), so it can be found until it is filed.

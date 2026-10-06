@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.2 (6 Oct 2026)
+
+**Fixes from the first real sessions with 0.7.x** (seven folders: notes, a website, apps, a trading bot). In a folder that is itself a program (a website, an app), its build folders (`content/`, `src/`, `public/` and similar) get no index page, so a site's own checks never see a file it did not expect; the map links the folder itself and says why. Archived copies of other projects (`outputs/`, `archive/`, `raw/`, `vendor/`) are no longer checked for broken links or counted as open work. `hooks --hooks briefing` turns on the briefing without the end-of-reply reminder, and a later run keeps that choice. The safety snapshot leaves tool clutter out (`.serena/`, caches). The transcript checker asks for a before/after screen only when the plan really had one.
+
 ## 0.7.1 (6 Oct 2026)
 
 **Fixes from the first upgrade of a real folder** (a 0.5.0 setup with worlds copied from a template, secret notes and a book). Nothing is written into a folder that never chose a map; the session start updates only a map you said yes to. A note named secret or private is listed by its name only, and its words never reach a page or the open-work list. Files with the same name in parallel folders stay where they are; only a file named like a copy goes to the archive. Links that work from a parent folder (a book's own folder) count as working, and a template's placeholders are not reported as broken. Open work is said only where the map is, and leaves out a template's placeholder tasks. Undo puts back an older `.playbook/.gitignore`. The safety snapshot never saves repo-fit's own records. Windows: repo-fit's own record paths use `/`.

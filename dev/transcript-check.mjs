@@ -40,12 +40,14 @@ export function checkTranscript(text) {
   const approved = new Set(); // dry runs an answer approved (it came after them)
   let planMade = false; // an organize plan was made...
   let screenShown = false; // ...and its before and after shown in the reply
+  let noGitTree = false; // a folder without Git: starting Git is one more question, its own
   for (const e of events.slice(start + 1)) {
     const content = e.message?.content;
     if (e.type === "user") {
       const blocks = typeof content === "string" ? [{ type: "text", text: content }] : content ?? [];
       // A typed message, or the answer to a question, counts as the user's word.
       // A plan run shows a plan only when its output has one ("already organized" has nothing to show).
+      if (blocks.some((b) => b.type === "tool_result" && /🚨 No git tree/.test(typeof b.content === "string" ? b.content : JSON.stringify(b.content ?? "")))) noGitTree = true;
       for (const b of blocks) if (b.type === "tool_result" && planIds.has(b.tool_use_id)) {
         const t = typeof b.content === "string" ? b.content : JSON.stringify(b.content ?? "");
         if (SCREEN.test(t) || /Before → after/.test(t)) planMade = true;
@@ -109,7 +111,7 @@ export function checkTranscript(text) {
   const offTopic = asked.filter((q) => OFF_TOPIC.test(q));
   const unapproved = writes.filter((w) => !w.approved);
   const problems = [
-    ...(questions.length > MAX_QUESTIONS ? [`${questions.length} questions, more than ${MAX_QUESTIONS}`] : []),
+    ...(questions.length > MAX_QUESTIONS + (noGitTree ? 1 : 0) ? [`${questions.length} questions, more than ${MAX_QUESTIONS + (noGitTree ? 1 : 0)}`] : []),
     ...offTopic.map((q) => `off-topic question: ${q.slice(0, 120)}`),
     ...unapproved.map((w) => `wrote without an answer after the dry run: ${w.command}`),
     ...early.map((q) => `asked before showing the before and after of the plan: ${q.slice(0, 120)}`),

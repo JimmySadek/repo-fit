@@ -15,8 +15,9 @@ function setUp(sb, name) {
   const { dir } = makeFixture(name, sb.dir);
   const rec = JSON.parse(cli(sb, ["audit", dir, "--json"], { env: ME }).stdout).plan.recommended;
   const code = cli(sb, ["organize", dir], { env: ME }).stdout.match(/--apply --plan (\w+)/)?.[1];
-  if (code) assert.equal(cli(sb, ["organize", dir, "--apply", "--plan", code], { env: ME }).status, 0);
-  assert.equal(cli(sb, ["apply", dir, "--steps", rec.steps.join(","), ...rec.flags.split(" "), "--apply"], { env: ME }).status, 0);
+  // A folder without Git: the person chose to start Git (its own yes, --git-init); a no-op where Git is already there.
+  if (code) assert.equal(cli(sb, ["organize", dir, "--apply", "--plan", code, "--git-init"], { env: ME }).status, 0);
+  assert.equal(cli(sb, ["apply", dir, "--steps", rec.steps.join(","), ...rec.flags.split(" "), "--apply", "--git-init"], { env: ME }).status, 0);
   return dir;
 }
 const start = (sb, dir) => script(sb, dir, "brief.mjs", ["--text", "--file"]).out; // what a session start does

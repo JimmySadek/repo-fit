@@ -25,6 +25,8 @@ test("an important newer release is one line in the briefing, with why it matter
   const b = brief(sb, adopted(sb), { REPO_FIT_UPDATE_JSON: npm("9.0.0", [IMPORTANT]) });
   assert.equal(b.status, 0, b.out);
   assert.match(b.stdout, /🆕 repo-fit 9\.0\.0 is out \(this repo has 0\.6\.0\): Setup now fixes the thing your repo has\. To get it, update repo-fit/);
+  // Not every install is an npx skills one: a skillshare copy or a Git clone needs its own way to update.
+  for (const way of [/npx skills update -g -y/, /skillshare update --all/, /git pull/]) assert.match(b.stdout, way);
 }));
 
 test("a release that is not important, or not newer, stays silent", sandboxed((sb) => {

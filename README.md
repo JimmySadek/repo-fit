@@ -29,7 +29,7 @@ You do not need to be a developer. You need an AI assistant and about 10 minutes
 |---|---|
 | **An organized folder, with one yes** | Loose files go into folders that fit your folder's own names. Old folders and exact copies go to an archive. Nothing is deleted, and one command undoes it all. |
 | **A map of everything** | `MAP.md` lists every area in one line, and each area has an index page. You and your assistant find any note in two steps. |
-| **A safe start** | Before any change, Git saves a snapshot of your folder, so you can always go back. No Git yet? It starts Git for you. |
+| **A safe start** | Before any change, Git saves a snapshot of your folder, so you can always go back. No Git yet? It asks you first, as its own question, and changes nothing until you choose. |
 | **New things land in one place** | Drop things in `inbox/`. The rules you approved file them when a session starts. Anything new asks you once. |
 | **A briefing at the start of every session** | Before your assistant says a word, it reads a short summary: where you are, what is open, what to look at. |
 | **One list of everything open** | Open tasks from all your notes, collected in `MAP.md` with links. Nothing moves out of your notes. |
@@ -70,7 +70,7 @@ That's it. Your assistant installs repo-fit, looks at your folder, shows you you
 
 **One step is yours:** your assistant gives you one line to run that turns on the briefing, and a short reminder at the end of each reply when something changed but was not written down. Claude Code does not let an assistant change how your sessions start, so it asks you. **Next session,** open the project again and the briefing appears by itself.
 
-**Updates:** repo-fit does not update itself. When a release matters for your project, the briefing tells you in one line, with why. Then paste: `Update repo-fit with npx skills update -g -y, then run /repo-fit here`.
+**Updates:** repo-fit does not update itself. When a release matters for your project, the briefing tells you in one line, with why. Then update repo-fit the way you installed it (`npx skills update -g -y`, `skillshare update --all`, or `git pull` in its folder) and run `/repo-fit` here.
 
 **Using Claude Code? Install it as a plugin instead,** and it can update itself. In Claude Code, run `/plugin marketplace add JimmySadek/repo-fit`, then `/plugin install repo-fit@repo-fit`. To get new versions automatically: `/plugin` → **Marketplaces** → **repo-fit** → **Enable auto-update** (it is off until you turn it on). The skill is then `/repo-fit:repo-fit`.
 

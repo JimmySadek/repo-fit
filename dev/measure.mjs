@@ -53,11 +53,12 @@ const adapter = {
     // Slice 3 on: the person says yes to the organize plan, which runs first (as the skill does), with the plan shown.
     if (existsSync(join(rf, "lib/organize.mjs"))) {
       const code = cli("organize", dir).out.match(/--apply --plan (\w+)/)?.[1];
-      const r = cli("organize", dir, "--apply", ...(code ? ["--plan", code] : []));
+      // A folder without Git: the person says yes to starting Git, the recommended answer (older versions ignore the flag).
+      const r = cli("organize", dir, "--apply", ...(code ? ["--plan", code] : []), "--git-init");
       log.push(`organize --apply → exit ${r.status}`);
     }
     if (rec?.steps?.length) {
-      const r = cli("apply", dir, "--steps", rec.steps.join(","), ...rec.flags.split(/\s+/).filter(Boolean), "--apply");
+      const r = cli("apply", dir, "--steps", rec.steps.join(","), ...rec.flags.split(/\s+/).filter(Boolean), "--apply", "--git-init");
       log.push(`apply ${rec.steps.join(",")} ${rec.flags} → exit ${r.status}`);
     }
     if (rec?.hooksCommand) {

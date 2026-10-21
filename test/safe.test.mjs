@@ -1,6 +1,7 @@
 // Safe start: before repo-fit changes anything, the folder is saved in Git as it is (a snapshot commit), as part of
-// the one yes. No Git in the folder: Git is started there. Git not installed: the person is told how, and repo-fit's
-// own undo still works. Secrets are never put in the snapshot. If Git will not save, nothing changes.
+// the one yes. No Git in the folder: nothing changes until the person makes a separate choice, --git-init (start Git and
+// save a snapshot) or --no-snapshot (go on with repo-fit's own undo). Git not installed: the person is told how, and
+// repo-fit's own undo still works. Secrets are never put in the snapshot. If Git will not save, nothing changes.
 import assert from "node:assert/strict";
 import { chmodSync } from "node:fs";
 import { join } from "node:path";
@@ -36,11 +37,51 @@ test("a folder already saved needs no snapshot: the screen says the last save is
   assert.equal(log(sb, dir).length, before, "no empty commit");
 }));
 
-test("a folder without Git gets Git started and a snapshot of everything, within the same yes", sandboxed((sb) => {
+test("a folder without Git: the screen says so and nothing changes until the person chooses, separately", sandboxed((sb) => {
   const { dir } = makeFixture("spaghetti-nogit", sb.dir);
-  assert.match(cli(sb, ["organize", dir], { env: ME }).stdout, /not saved in Git yet\. repo-fit starts Git here and saves a snapshot/);
+  const screen = cli(sb, ["organize", dir], { env: ME }).stdout;
+  assert.match(screen, /🚨 No git tree/);
+  assert.match(screen, /--git-init/);
+  assert.match(screen, /--no-snapshot/);
+  assert.doesNotMatch(screen, /repo-fit starts Git here/);
   const r = organize(sb, dir);
+  assert.equal(r.status, 1, r.out);
+  assert.match(r.out, /Nothing was changed/);
+  assert.ok(!has(dir, ".git"), "Git is never started without its own yes");
+  assert.ok(has(dir, "recipe-lasagna.md"), "nothing moved");
+}));
+
+test("the setup's dry run also says so in a folder without Git, so the Git question comes before the yes", sandboxed((sb) => {
+  const d = join(sb.dir, "plain");
+  write(d, "a.md", "# A\n\nA note.\n");
+  const r = cli(sb, ["apply", d, "--steps", "A-11", "--tool", "codex", "--hooks", "none", "--autosave", "off"], { env: ME });
   assert.equal(r.status, 0, r.out);
+  assert.match(r.stdout, /🚨 No git tree/);
+  assert.ok(!has(d, ".git") && !has(d, "AGENTS.md"), "a dry run writes nothing");
+}));
+
+test("--no-snapshot on every command that writes: organize, then the setup, without Git", sandboxed((sb) => {
+  const { dir } = makeFixture("spaghetti-nogit", sb.dir);
+  const rec = JSON.parse(cli(sb, ["audit", dir, "--json"], { env: ME }).stdout).plan.recommended;
+  assert.equal(organize(sb, dir, ME, ["--no-snapshot"]).status, 0);
+  const r = cli(sb, ["apply", dir, "--steps", rec.steps.join(","), ...rec.flags.split(" "), "--apply", "--no-snapshot"], { env: ME });
+  assert.equal(r.status, 0, r.out);
+  assert.ok(!has(dir, ".git") && has(dir, "playbook.json"));
+}));
+
+test("--no-snapshot in a folder without Git goes on, and Git stays off", sandboxed((sb) => {
+  const { dir } = makeFixture("spaghetti-nogit", sb.dir);
+  const r = organize(sb, dir, ME, ["--no-snapshot"]);
+  assert.equal(r.status, 0, r.out);
+  assert.ok(!has(dir, ".git"));
+  assert.ok(has(dir, "notes/recipe-lasagna.md"));
+}));
+
+test("--git-init in a folder without Git starts Git and saves a snapshot of everything first", sandboxed((sb) => {
+  const { dir } = makeFixture("spaghetti-nogit", sb.dir);
+  const r = organize(sb, dir, ME, ["--git-init"]);
+  assert.equal(r.status, 0, r.out);
+  assert.match(r.out, /Git was started here first/);
   assert.ok(has(dir, ".git"));
   assert.ok(inCommit(sb, dir, "HEAD").includes("recipe-lasagna.md"), "the snapshot has the files where they were");
   assert.ok(has(dir, "notes/recipe-lasagna.md"));
@@ -108,7 +149,7 @@ test("the setup (apply --apply) also saves a snapshot first", sandboxed((sb) => 
 test("one snapshot per run: repo-fit's own changes since the snapshot are not saved as another snapshot", sandboxed((sb) => {
   const { dir } = makeFixture("spaghetti-nogit", sb.dir);
   const rec = JSON.parse(cli(sb, ["audit", dir, "--json"], { env: ME }).stdout).plan.recommended;
-  assert.equal(organize(sb, dir).status, 0);
+  assert.equal(organize(sb, dir, ME, ["--git-init"]).status, 0);
   const r = cli(sb, ["apply", dir, "--steps", rec.steps.join(","), ...rec.flags.split(" "), "--apply"], { env: ME });
   assert.equal(r.status, 0, r.out);
   assert.deepEqual(log(sb, dir), ["repo-fit: snapshot before changes"], "only the snapshot of the person's folder");

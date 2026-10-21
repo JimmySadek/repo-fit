@@ -16,7 +16,7 @@ Assume the person does not know what hooks, dry runs, rule files or Git branches
 
 ## What a good run looks like
 
-repo-fit designs the best-fitting structure for **this** folder by itself, then the person sees it and decides once. They see value on the first screen, answer **one** question, and the yes approves exactly what they saw. **3 questions at most**, and **never zero**: anything that writes needs their yes first. **Never ask before you have shown the folder before and after**: they cannot say yes to something they have not seen.
+repo-fit designs the best-fitting structure for **this** folder by itself, then the person sees it and decides once. They see value on the first screen, answer **one** question, and the yes approves exactly what they saw. **3 questions at most** (a folder without Git adds one: starting Git is its own question), and **never zero**: anything that writes needs their yes first. **Never ask before you have shown the folder before and after**: they cannot say yes to something they have not seen.
 
 ```
 1. LOOK      audit, preview, the recommended dry run and the organize plan, silently
@@ -45,7 +45,7 @@ Do not paste the reports. They are your working notes.
 
 ## 2. Show
 
-**First, safety.** The screen starts with a 🛟 line: Git saves a snapshot of the folder as it is before anything changes (or Git is started here first), so they can always go back. Say it in one plain sentence, and that it is highly recommended. If it says Git does not know their name and email, give the two lines as `bash` blocks and wait: nothing can change before they run them. If Git is not installed, give the install line and say repo-fit's own undo still covers everything; they can install Git first or go ahead.
+**First, safety.** The screen starts with a 🛟 line: Git saves a snapshot of the folder as it is before anything changes, so they can always go back. Say it in one plain sentence, and that it is highly recommended. If the line says **🚨 No git tree**, the folder has no Git: repo-fit never starts Git inside the one yes. Say so plainly; section 3 asks it as its own question. If it says Git does not know their name and email, give the two lines as `bash` blocks and wait: nothing can change before they run them. If Git is not installed, give the install line and say repo-fit's own undo still covers everything; they can install Git first or go ahead.
 
 **Then the organize plan**, exactly as `organize` printed it: the two columns (today, after) as a code block, and the "Why this is better for you" lines. Then one or two sentences in your own words about what this means for **them**, using their real folder names ("your 14 loose notes go to notes/, your trip notes together in notes/japan-trip/"). Say plainly: nothing is deleted, code and the files it uses stay, links are updated, one command undoes it all. If `organize` says the folder is already organized, say so in one line: that is a good result.
 
@@ -63,6 +63,8 @@ If nothing is recommended and nothing is behind, say the repo already has what m
 
 Only after the screen above. The question repeats the plan in one line ("Organize it all: 33 moves, nothing deleted, undo any time?").
 
+**No git tree first.** If the screen says 🚨 No git tree, ask this on its own, before the one yes: **Start Git here (Recommended)**: Git saves a snapshot of everything first, nothing is uploaded (add `--git-init` to the first command that writes) / **Go on without Git**: repo-fit's own backup and undo cover its changes (add `--no-snapshot`). Never pick for them, and never start Git as part of the one yes.
+
 1. **Organize it all (Recommended).** The yes approves every dry run shown: the snapshot, the recommended `apply`, the `organize` plan and, for an older setup, the `update`.
 2. **Show me the full list first.** Show the `--list` output (moves grouped by kind, each with its reason, and what stays and why), then ask once more: organize it all, or not now.
 3. **Not now, just the map.** Apply only the recommended set (it includes the map, `MAP.md`). Nothing moves.
@@ -73,13 +75,13 @@ If the folder is already organized, ask instead: **Set these up (Recommended)** 
 
 If they want other folder names, say this version cannot rename before it organizes; they can choose "Not now, just the map".
 
-Ask a second question only for what the code cannot decide: an edit to an existing file outside the recommended set (show its diff), a second-look step (re-adding something they once said no to), or a word cap the audit asks for.
+Ask a second question only for what the code cannot decide: starting Git in a folder without it (above), an edit to an existing file outside the recommended set (show its diff), a second-look step (re-adding something they once said no to), or a word cap the audit asks for.
 
 **Never ask about** which tools or models (found, or changes nothing), what kind of repo it is, or anything repo-fit does not change: CI and scheduled workflows, deploys, code quality, big files, branches, remotes. Those go in the recap, one line each. Old folders, copies and loose files are in the organize plan: never a separate question.
 
 ## 4. Apply
 
-Run exactly what was approved, with `--apply`, in this order: `update <repo> --apply` for an older setup, then **`organize <repo> --apply --plan <code>` first**, with the code from the command the screen printed (it ties the yes to the plan they saw), then `apply <repo> --steps <ids> <flags> --apply`. Organize goes first so the setup's new files cannot change the plan they approved. One step per command: do not chain them with `;` or `&&`. A new repo: `init` with the same flags, without `--dry-run`. The first command that writes saves the snapshot by itself; say it happened. If Git will not save it, nothing changes: show what Git said and stop. Never retry with `--no-snapshot` unless the person asks for it. If `organize --apply` refuses because the folder changed after the screen, show the new screen it prints and ask again. If it says it put everything back, say so plainly: nothing was lost. Every write keeps a backup and a receipt; `undo <repo> --apply` puts things back, the organizing in one step. Say that once.
+Run exactly what was approved, with `--apply`, in this order: `update <repo> --apply` for an older setup, then **`organize <repo> --apply --plan <code>` first**, with the code from the command the screen printed (it ties the yes to the plan they saw), then `apply <repo> --steps <ids> <flags> --apply`. Organize goes first so the setup's new files cannot change the plan they approved. One step per command: do not chain them with `;` or `&&`. A new repo: `init` with the same flags, without `--dry-run`. The first command that writes saves the snapshot by itself; say it happened. In a folder without Git, add their Git answer to **every** command that writes (`--git-init`, or `--no-snapshot` on each one, since Git stays off); without it a command stops and changes nothing. If Git will not save it, nothing changes: show what Git said and stop. Never retry with `--no-snapshot` unless the person asks for it. If `organize --apply` refuses because the folder changed after the screen, show the new screen it prints and ask again. If it says it put everything back, say so plainly: nothing was lost. Every write keeps a backup and a receipt; `undo <repo> --apply` puts things back, the organizing in one step. Say that once.
 
 Verify, and say what you checked: `node scripts/playbook/brief.mjs --text` prints the briefing, `node scripts/playbook/check.mjs` passes, `MAP.md` lists the new folders, plus the repo's own checks.
 

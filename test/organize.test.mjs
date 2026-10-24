@@ -56,7 +56,7 @@ for (const [name, maxLoose] of [["spaghetti", 3], ["spaghetti-nogit", 3], ["code
   test(`organize --apply (${name}): few loose files left, copies resolved, every note findable, nothing lost; one undo restores it`, sandboxed((sb) => {
     const { dir, truth } = makeFixture(name, sb.dir);
     const before = snapshot(dir);
-    const r = cli(sb, ["organize", dir, "--apply"], { env: DAY });
+    const r = cli(sb, ["organize", dir, "--apply", "--git-init"], { env: DAY }); // starting Git is its own yes
     assert.equal(r.status, 0, r.out);
     const after = snapshot(dir);
     const at = locator(before, after);

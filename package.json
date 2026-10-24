@@ -1,6 +1,6 @@
 {
   "name": "repo-fit",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "Give your project a memory: a session briefing, one list of everything open, safe automatic saves and one rulebook for Claude Code and Codex. Works on new and existing projects.",
   "type": "module",
   "bin": {
@@ -47,6 +47,17 @@
   "repoFit": {
     "releases": [
       {
+        "version": "0.7.3",
+        "important": false,
+        "why": "Small fixes: a new setup always gets a CLAUDE.md next to AGENTS.md, Git is never started without its own yes, and the update line names every way to update.",
+        "briefing": "New: repo-fit can organize your folder. Ask your assistant to run /repo-fit to see the plan. Nothing changes without your yes.",
+        "news": [
+          "A new setup now always gets a short CLAUDE.md next to AGENTS.md, so Claude Code reads the same rules, also when you set up for Codex only. A folder you set up before does not get one from update.",
+          "In a folder without Git, repo-fit changes nothing until you choose: start Git and save a snapshot first (recommended), or go on with repo-fit's own backup and undo.",
+          "The line about a newer repo-fit names every way to update: npx skills update, skillshare update --all, git pull in its folder, or /plugin in Claude Code."
+        ]
+      },
+      {
         "version": "0.7.2",
         "important": false,
         "why": "Fixes from the first real sessions: a website's own folders get no index page, archived copies no longer show as broken links or open work, and the briefing can come without the end-of-reply reminder.",
@@ -79,7 +90,7 @@
         "news": [
           "A map of your folder (MAP.md) and an index page per folder, so you and your assistant find any note in two steps.",
           "Organize with one yes: loose files go into folders, old folders and exact copies go to an archive, and the screen shows before, after and why first. Nothing is deleted; one command undoes it.",
-          "Before any change, Git saves a snapshot of your folder, so you can always go back. A folder without Git gets Git started first.",
+          "Before any change, Git saves a snapshot of your folder, so you can always go back. A folder without Git gets Git started first (since 0.7.3, only after its own yes).",
           "New things go in inbox/ and are filed by the rules you approved, when a session starts.",
           "The briefing names real problems in one short line each and stays quiet otherwise. Running /repo-fit again starts with a checkup.",
           "Open tasks from all your notes are listed in one place, in MAP.md."

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.3 (24 Oct 2026)
+
+**Fixes from the 21 Oct review.** A new setup always gets a `CLAUDE.md` next to `AGENTS.md`, so Claude Code reads the shared rules. On purpose, a folder without Git now stops until you choose how to go on, where before it started Git. The update line names every way to update. A folder set up before 0.7.3 does not get a `CLAUDE.md` from `update`.
+
+- **Every AGENTS.md comes with a CLAUDE.md.** `init` and `apply` step A-11 now add a thin `CLAUDE.md` that imports `AGENTS.md` whatever tools were chosen, and A-10 adds a missing one next to an existing `AGENTS.md` for Codex-only setups too. Before, `--tool codex`, or adding `AGENTS.md` without A-10, left Claude Code without the shared rules on versions that do not read `AGENTS.md` by themselves. Claude Code hooks still come only with `--tool claude` or `both`.
+- **Git is never started without its own yes.** In a folder without Git, `organize`, `apply`, `update` and `remove` used to start Git inside the one yes. Now the screen says "🚨 No git tree" and nothing changes until the person chooses, separately: `--git-init` starts Git and saves a snapshot first (recommended), `--no-snapshot` goes on with repo-fit's own backup and undo. The setup skill asks this as its own question before the one yes. Folders already in Git work as before.
+- **The update line names every way to update.** The briefing's "newer repo-fit" line, the README and INSTALL.md named only `npx skills update`. They now also name `skillshare update --all` and `git pull` in a clone.
+
 ## 0.7.2 (6 Oct 2026)
 
 **Fixes from the first real sessions with 0.7.x** (seven folders: notes, a website, apps, a trading bot). In a folder that is itself a program (a website, an app), its build folders (`content/`, `src/`, `public/` and similar) get no index page, so a site's own checks never see a file it did not expect; the map links the folder itself and says why. Archived copies of other projects (`outputs/`, `archive/`, `raw/`, `vendor/`) are no longer checked for broken links or counted as open work. `hooks --hooks briefing` turns on the briefing without the end-of-reply reminder, and a later run keeps that choice. The safety snapshot leaves tool clutter out (`.serena/`, caches). The transcript checker asks for a before/after screen only when the plan really had one.

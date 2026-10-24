@@ -58,6 +58,13 @@ test("transcript check: dry run, one question, then apply meets the contract", (
   assert.equal(r.questions.length, 1);
 });
 
+test("transcript check: a folder without Git may take one more question, for starting Git", () => {
+  const nogit = line({ type: "user", message: { content: [{ type: "tool_result", tool_use_id: "b", content: "🚨 No git tree: this folder is not saved in Git" }] } });
+  const four = ["q1", "q2", "q3", "q4"].flatMap((q) => [ask(q, `Question ${q}?`), answer(q)]);
+  assert.ok(checkTranscript([start, bash(DRY), nogit, ...four, bash(`${DRY} --apply`)].join("\n")).ok);
+  assert.ok(!checkTranscript([start, bash(DRY), ...four, bash(`${DRY} --apply`)].join("\n")).ok, "four questions without that reason are too many");
+});
+
 test("transcript check: a write with no answer after the dry run fails", () => {
   const r = checkTranscript([start, bash(DRY), bash(`${DRY} --apply`)].join("\n"));
   assert.ok(!r.ok);

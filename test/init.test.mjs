@@ -96,3 +96,30 @@ test("the repo's own check catches a broken link", sandboxed((sb) => {
   assert.equal(r.status, 1);
   assert.match(r.out, /broken link/);
 }));
+
+// Claude Code reads CLAUDE.md on every version; a thin one that imports AGENTS.md costs nothing, so no tool choice leaves it out.
+test("init with --tool codex still adds a CLAUDE.md that imports AGENTS.md, without Claude hooks", sandboxed((sb) => {
+  const d = repo(sb, "new");
+  const r = cli(sb, ["init", d, "--tool", "codex"]);
+  assert.equal(r.status, 0, r.out);
+  assert.match(read(d, "CLAUDE.md"), /@AGENTS\.md/);
+  assert.ok(!has(d, ".claude/settings.json"), "no Claude hooks for a Codex-only setup");
+}));
+
+test("adding AGENTS.md (A-11) adds CLAUDE.md with it, also without A-10 and for Codex only", sandboxed((sb) => {
+  for (const tool of ["codex", "claude"]) {
+    const d = repo(sb, `a11-${tool}`, { commit: true });
+    const r = cli(sb, ["apply", d, "--steps", "A-11", "--tool", tool, "--hooks", "none", "--autosave", "off", "--apply"]);
+    assert.equal(r.status, 0, r.out);
+    assert.ok(has(d, "AGENTS.md"));
+    assert.match(read(d, "CLAUDE.md"), /@AGENTS\.md/, `${tool}: CLAUDE.md imports the new AGENTS.md`);
+  }
+}));
+
+test("A-10 with --tool codex adds the missing CLAUDE.md next to an AGENTS.md that exists", sandboxed((sb) => {
+  const d = repo(sb, "codex-only", { commit: true, files: { "AGENTS.md": "# Rules\n\nBe kind.\n" } });
+  const r = cli(sb, ["apply", d, "--steps", "A-10", "--tool", "codex", "--hooks", "none", "--autosave", "off", "--apply"]);
+  assert.equal(r.status, 0, r.out);
+  assert.match(read(d, "CLAUDE.md"), /@AGENTS\.md/);
+  assert.equal(read(d, "AGENTS.md"), "# Rules\n\nBe kind.\n");
+}));

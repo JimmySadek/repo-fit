@@ -138,8 +138,11 @@ function init(target, opt) {
     if (rel === "AGENTS.md") text = text.replace("<!-- playbook:core -->", coreBlock());
     put(rel, text);
   }
+  // CLAUDE.md comes with AGENTS.md whatever the tools: a thin import works on every Claude Code version.
+  put("CLAUDE.md", fill(readFileSync(join(here, "kits/tools/claude-code/CLAUDE.md"), "utf8"), v));
   for (const t of tools) {
     for (const rel of files(join(here, "kits/tools", t))) {
+      if (rel === "CLAUDE.md") continue;
       if (opt["no-hooks"] && /settings\.json$|hooks\.json$/.test(rel)) continue;
       put(rel, fill(readFileSync(join(here, "kits/tools", t, rel), "utf8"), v));
     }
@@ -333,7 +336,8 @@ function showDiff(rel, oldText, newText) {
 async function safeStart(target) {
   if (process.argv.includes("--no-snapshot")) return console.log("⚠️ No snapshot (--no-snapshot): repo-fit's own undo still takes back what it changes.\n");
   const { snapshot } = await import("../lib/safe.mjs");
-  const s = snapshot(resolve(target));
+  // Starting Git is its own choice, never part of the one yes: --git-init.
+  const s = snapshot(resolve(target), { gitInit: process.argv.includes("--git-init") });
   console.log(`${s.text}\n`);
   if (!s.ok) process.exit(1);
 }
@@ -410,6 +414,9 @@ Change (dry run first):
   prefs [set <key> <value> | unset <key>]    your standing choices, kept outside repos
 
 Any command that writes accepts --pin <version>: it refuses to run unless this playbook copy is that version.
+Before apply, update, organize or remove changes anything, Git saves a snapshot of the folder. In a folder without Git
+they stop until you choose: --git-init (start Git and save a snapshot first) or --no-snapshot (go on without one;
+repo-fit's own undo covers its changes). --no-snapshot wins if both are given. Add the choice to every command that writes.
 Setup by an agent: see INSTALL.md.`;
 if (typeof opt0(process.argv) === "string" && ["init", "update", "apply"].includes(process.argv[2]) && opt0(process.argv).replace(/^v/, "") !== version) fail(`Pinned to ${opt0(process.argv)}, but this playbook copy is ${version}. Check out the matching tag (git checkout v${opt0(process.argv).replace(/^v/, "")}) or drop --pin.`);
 function opt0(argv) {
@@ -456,6 +463,12 @@ switch (process.argv[2]) {
     });
     console.log(res.text);
     if (!res.ok) process.exitCode = 1;
+    // A folder without Git: the dry run says so, so the Git question comes before the yes, not after it.
+    else if (!opt.apply) {
+      const { snapshotPlan } = await import("../lib/safe.mjs");
+      const s = snapshotPlan(resolve(pos[0]));
+      if (s.state === "no-repo") console.log(`\n${s.line}`);
+    }
     break;
   }
   case "undo": {

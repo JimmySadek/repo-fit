@@ -408,5 +408,5 @@ export async function updateNotice(have) {
   const important = latest.releases.filter((r) => r.important && newer(r.version, have) && !newer(r.version, latest.version));
   if (!important.length) return null;
   const top = important.sort((a, b) => (newer(a.version, b.version) ? -1 : 1))[0];
-  return `🆕 repo-fit ${latest.version} is out (this repo has ${have}): ${top.why} To get it, update repo-fit (\`npx skills update -g -y\`, or /plugin in Claude Code), then ask your assistant to run /repo-fit here.`;
+  return `🆕 repo-fit ${latest.version} is out (this repo has ${have}): ${top.why} To get it, update repo-fit the way you installed it (\`npx skills update -g -y\`, \`skillshare update --all\`, \`git pull\` in its folder, or /plugin in Claude Code), then ask your assistant to run /repo-fit here.`;
 }

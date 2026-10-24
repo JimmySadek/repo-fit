@@ -14,7 +14,7 @@ You need [Node.js](https://nodejs.org) 18 or later. Nothing else: no dependencie
 
 ```bash
 npx skills add JimmySadek/repo-fit -g -a claude-code codex -y   # install for both tools, for your user
-npx skills update -g -y                                          # later: update
+npx skills update -g -y                                          # later: update (skillshare: skillshare update --all; a clone: git pull)
 ```
 
 The skill runs the tool from its own folder (`$SKILL_DIR/bin/repo-fit.mjs`). If you keep the skill and the tool in different places, tell it where the tool is once: `node bin/repo-fit.mjs prefs set home /path/to/repo-fit`.
@@ -47,7 +47,7 @@ Three read-only commands to start with: `detect <repo>` (what the machine and th
 ```
 <repo>/
 ├─ README.md · AGENTS.md (short shared rules block) · LEARNINGS.md · playbook.json
-├─ CLAUDE.md                  only if Claude Code is a chosen tool: 3 lines, imports AGENTS.md
+├─ CLAUDE.md                  always with AGENTS.md, for every tool choice: 3 lines, imports AGENTS.md
 ├─ .claude/settings.json      Claude Code hooks: session brief, autosave, capture check
 ├─ .codex/hooks.json          Codex hooks (untested, needs /hooks trust)
 ├─ scripts/playbook/          brief · check · autosave · lib (vendored, version-stamped)

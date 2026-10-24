@@ -1,6 +1,6 @@
 {
   "name": "repo-fit",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "Give your project a memory: a session briefing, one list of everything open, safe automatic saves and one rulebook for Claude Code and Codex. Works on new and existing projects.",
   "type": "module",
   "bin": {
@@ -46,6 +46,17 @@
   "license": "MIT",
   "repoFit": {
     "releases": [
+      {
+        "version": "0.7.3",
+        "important": false,
+        "why": "Fixes from the 21 Oct review: every AGENTS.md comes with a CLAUDE.md, Git is never started without its own yes, and the update line names every way to update.",
+        "briefing": "New: repo-fit can organize your folder. Ask your assistant to run /repo-fit to see the plan. Nothing changes without your yes.",
+        "news": [
+          "Every AGENTS.md now comes with a short CLAUDE.md that points to it, so Claude Code reads the same rules, also when you set up for Codex only.",
+          "In a folder without Git, repo-fit changes nothing until you choose: start Git and save a snapshot first (recommended), or go on with repo-fit's own backup and undo.",
+          "The line about a newer repo-fit names every way to update: npx skills update, skillshare update --all, git pull in its folder, or /plugin in Claude Code."
+        ]
+      },
       {
         "version": "0.7.2",
         "important": false,

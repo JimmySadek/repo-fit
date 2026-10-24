@@ -2,7 +2,7 @@
 
 ## 0.7.3 (24 Oct 2026)
 
-**Fixes from the 21 Oct review.** Claude Code always gets the shared rules, Git is never started without its own yes, and the update line names every way to update.
+**Fixes from the 21 Oct review.** A new setup always gets a `CLAUDE.md` next to `AGENTS.md`, so Claude Code reads the shared rules. On purpose, a folder without Git now stops until you choose how to go on, where before it started Git. The update line names every way to update. A folder set up before 0.7.3 does not get a `CLAUDE.md` from `update`.
 
 - **Every AGENTS.md comes with a CLAUDE.md.** `init` and `apply` step A-11 now add a thin `CLAUDE.md` that imports `AGENTS.md` whatever tools were chosen, and A-10 adds a missing one next to an existing `AGENTS.md` for Codex-only setups too. Before, `--tool codex`, or adding `AGENTS.md` without A-10, left Claude Code without the shared rules on versions that do not read `AGENTS.md` by themselves. Claude Code hooks still come only with `--tool claude` or `both`.
 - **Git is never started without its own yes.** In a folder without Git, `organize`, `apply`, `update` and `remove` used to start Git inside the one yes. Now the screen says "🚨 No git tree" and nothing changes until the person chooses, separately: `--git-init` starts Git and saves a snapshot first (recommended), `--no-snapshot` goes on with repo-fit's own backup and undo. The setup skill asks this as its own question before the one yes. Folders already in Git work as before.

@@ -192,6 +192,8 @@ function plan(target) {
       const next = cur.replace(BLOCK_RE, () => coreBlock(repoCoreVars(target))); // with this repo's own paths and rules
       if (next !== cur) changes.push({ rel: "AGENTS.md", old: cur, next });
     } else notAdopted.push({ part: "the core block in AGENTS.md", step: "D-01", reason: skipped["D-01"] });
+    // Setups made before 0.7.3 for Codex only have no CLAUDE.md, so Claude Code missed the shared rules.
+    if (!existsSync(join(target, "CLAUDE.md"))) changes.push({ rel: "CLAUDE.md", old: "", next: readFileSync(join(here, "kits/tools/claude-code/CLAUDE.md"), "utf8") });
   }
   if (existsSync(join(target, "scripts/playbook"))) {
     for (const f of VENDORED) {

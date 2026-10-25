@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.0 (unreleased)
+
+- **`update` adds a missing `CLAUDE.md`.** A folder set up for Codex only before 0.7.3 has `AGENTS.md` and no `CLAUDE.md`, so Claude Code missed the shared rules there. `update` now adds the thin `CLAUDE.md` that imports `AGENTS.md` (dry run first, undo takes it back). A folder without `AGENTS.md` gets none.
+
 ## 0.8.0 (unreleased)
 
 **Safety and privacy, from the 25 Oct field report.** The safety snapshot no longer commits on your branch, private folders are flagged before anything is saved, and nothing Git ignores reaches a page repo-fit writes. MAP.md keeps open work as a count. The 5 Oct rule "the folder is committed as it is" is replaced by the maintainer's decision of 25 Oct 2026.

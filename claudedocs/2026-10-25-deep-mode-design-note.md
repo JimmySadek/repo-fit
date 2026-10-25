@@ -281,3 +281,23 @@ Undo one step: git revert <commit>      Drop it all: git branch -D repo-fit/deep
 - Left as is: the rule proof compares lines as a set. A split moves lines word for word, so no reachable case loses a
   line; a counted proof would need a test that cannot fail. A partly applied plan says where it is; trying the steps
   taken back again needs a changed plan.
+
+## Built in slice B (sweep 2, the first look)
+
+The screen's top half is as mocked (Screen 2, down to "What I found"). The plan, its steps and the yes come in slice C. Additions, each from a gap found while building:
+
+- **📏 spacing line.** The mock names colours only; the design tokens rule covers spacing too, so a line counts spacing values typed by hand and those a pixel off another.
+- **Test count.** "npm run test ✔ now (2 tests)" when the runner says how many passed (node --test, Jest, Vitest, Mocha, pytest). The command is named as `detect` finds it (`npm run test`).
+- **⚠️ Proof limited** when `package.json` lists packages and no `node_modules/` is installed; **✖ now (not used as proof)** for a command that fails before any change.
+- **Code in strings is text.** A small lexer blanks comments, strings and templates before exports are read, so files a test or a fixture writes from a string are not counted. Found on repo-fit's own `dev/fixtures.mjs`.
+- **Scripts are not unused.** A file with a `#!` line, named in the repo's documents or CI, or exporting nothing, is a starting point. Found on repo-fit's own `dev/measure.mjs`. Slice C deletes unused code, so the built-in analysis errs on the side of "used".
+- **Computed imports.** `` import(`./x/${y}.js`) `` counts every file under `./x/` as used; `import(name)` names its file on the screen, since a file that looks unused may still be loaded. Slice C must not delete unused files while that line shows, unless the plan names each file and the proof covers it.
+- **Clean environment for the repo's commands.** `NODE_TEST_CONTEXT` from a test runner that started repo-fit is removed, or an inner `node --test` reports to the outer one and prints nothing.
+- **From the slice B review** (a fresh reviewer read the code; each fix has a test that failed first):
+  - **More starting points.** Nested `package.json` files (monorepos), more routing frameworks, `middleware` and similar convention files, Nuxt's auto-imported folders, stories, mocks, `.storybook/`, `import.meta.glob`, `require.context`, `new URL(…, import.meta.url)`, `?worker` style suffixes, `baseUrl`, `./sub/` imports, MDX imports, inline module scripts, a `main` that points at `dist/`, and paths written as text in config, JSON and YAML files. `src/build/` is source; `build/` elsewhere is output. A bare import name that matches a repo file (`components/Button`) counts that file as used.
+  - **Offline.** The commands and tools run with npm, pnpm, Yarn, Corepack and pip set to offline. A command whose script chain installs (pre and post scripts, scripts it runs, Makefile prerequisites) is named "not run".
+  - **No hooks, no LFS, no prune.** The copy is made with `core.hooksPath` set to the null device and `GIT_LFS_SKIP_SMUDGE=1`. `git worktree prune` is gone: `worktree remove --force` already forgets repo-fit's own copy when its folder is missing (checked on Git 2.48), and prune would forget the person's other missing worktrees. Status reads use `GIT_OPTIONAL_LOCKS=0`.
+  - **Timeouts stop the whole command.** Each command runs in its own process group through a small Node runner; on a timeout, or when it ends, the group is killed. Before, a timed-out `sleep` behind a shell kept running (checked).
+  - **Research note.** A date in the future does not count, the same address written in bold, in code, with a trailing slash, a `#part` or a capital host counts once, and a folder named like a note is skipped.
+  - **Open, for the maintainer:** the linked `node_modules` is writable, so a build that writes caches (`node_modules/.cache`, `.vite`) or generates code (`prisma generate`) writes into the person's packages. A copy-on-write copy (`cp -c` on macOS, `--reflink` on Linux) would avoid it at the cost of time and disk. `CI=1` can make a Create React App build treat warnings as errors. The note's project type is not matched to the screen's.
+- **Slice C note.** A linked `node_modules` is a symlink, which Git's `node_modules/` pattern does not match (a symlink is not a folder to Git). The apply's "files outside the commit" check must leave the linked paths out.

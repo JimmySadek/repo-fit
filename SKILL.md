@@ -123,6 +123,11 @@ Run it only when the person asks to go further than the organizing ("clean up my
 4. **Ask once:** **Yes (Recommended)** / **Show me every change first** (`--list`, then ask once more) / **Not now**. Feedback means a new plan and a new screen.
 5. **Apply:** `deep <repo> --sweep docs --apply --plan <code>`, with the code from the screen. Show the result as printed. A ↩️ step was taken back by its proof: say why in one line. The branch waits for them: merging it (`git merge`, as printed) is theirs, or yours only after a separate yes. Never push it, and never delete it.
 
+**Sweep 2** is the code and its design. It starts the same way, read-only:
+
+1. **Look:** `deep <repo> --sweep code`. It names the project type, the repo's own code tools it will use (knip, jscpd, dependency-cruiser; otherwise repo-fit's built-in analysis), and how each step will be proven: the repo's own test, typecheck, lint and build commands, run once now in a throwaway copy of the last commit with the folder's installed packages linked in. Nothing is downloaded, and their folder does not change. A command that fails now is not used as proof; "⚠️ Proof limited" means their packages are not installed. Then what it found: code nothing uses, copied blocks, import loops, misleading names, colours and spacing typed by hand. `--json` gives the full list.
+2. **Research before you plan:** read the official guides for that project type and stack (the framework's own docs first), then write `docs/research/<today>-<type>-structure.md` in the repo: the date, a short "Rules for this repo" list (one rule per `- ` line, the most important first), and the web addresses you read under "Sources", 2 or more. Never from memory. The note counts for 30 days; the screen shows its first three rules. The code plan and its yes come with the next part of 0.9.0; until then, stop here and report what the first look found.
+
 ## Guardrails
 
 The CLI already guarantees dry runs, backups, receipts, undo, no overwrites, and no commits to `main`. These rules are what it cannot enforce:

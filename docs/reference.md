@@ -84,6 +84,7 @@ node bin/repo-fit.mjs map <repo>                     # read-only: the folder's m
 node bin/repo-fit.mjs organize <repo>                # the plan: today → after → why; --list every move; --apply --plan <code> does it
 node bin/repo-fit.mjs deep <repo> --sweep docs      # deep sweep 1, read-only: what is inside every folder; --json for the assistant; with .playbook/deep/docs.json: the plan screen
 node bin/repo-fit.mjs deep <repo> --sweep docs --apply --plan <code>   # applies that plan on branch repo-fit/deep-<date> in a separate working copy, one commit per step
+node bin/repo-fit.mjs deep <repo> --sweep code      # deep sweep 2, read-only: project type, best-practices note, tools, the repo's own checks run once in a throwaway copy, what the analysis found; --json for the assistant
 node bin/repo-fit.mjs file <repo> <item> --to <dir>  # file one inbox item (--always adds a rule, --not-now); dry run, then --apply
 node bin/repo-fit.mjs remove <repo>                  # a clean way out: repo-fit's own parts set aside, your files stay; undo brings it back
 node bin/repo-fit.mjs update <repo>                  # dry run: prints the diff

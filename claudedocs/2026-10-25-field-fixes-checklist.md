@@ -30,6 +30,7 @@ a report after each. Design: `claudedocs/2026-10-25-deep-mode-design-note.md`.
 - [x] Slice A, sweep 1 (documents): inventory, plan checks, screen, `--list`, `--json`, apply in a worktree on `repo-fit/deep-<date>`, one commit per step, proofs (files, links, rules, the folder's own check), take-back, yes tied to commit and plan, no second branch for the same yes
 - [x] Slice A live run on a throwaway synthetic fixture set up with repo-fit: 4 issues found and fixed, each with a test that failed first (playbook.json locked docs/, index pages counted as documents, the rebuilt map tripped the link proof, an empty last step, the same yes twice)
 - [x] Slice A: full `node --test`, measure, fresh review (9 findings fixed, each with a test that failed first; 2 left as is, see the design note), local commit
-- [ ] Slice A: report to hub
-- [ ] Slice B, sweep 2 read-only: project type, research-note check, built-in analysis (`lib/analyze.mjs`) plus the repo's own knip/jscpd/dependency-cruiser if installed, proof baseline (`lib/proof.mjs`), screen, `field-app` fixture
+- [x] Slice A: report to hub
+- [x] Slice B, sweep 2 read-only: project type, research-note check, built-in analysis (`lib/analyze.mjs`) plus the repo's own knip/jscpd/dependency-cruiser if installed, proof baseline (`lib/proof.mjs`), screen, `field-app` fixture
+- [x] Slice B: full `node --test` (300 pass; the 5 slice C tests wait), measure unchanged, fresh review (findings fixed with tests), local commit, report to hub
 - [ ] Slice C, sweep 2 apply: node_modules link into the worktree (or "proof limited"), relative import rewrites, plan edits, unused code deleted, proof per step, deliberate-break check, take-back

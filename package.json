@@ -47,6 +47,20 @@
   "repoFit": {
     "releases": [
       {
+        "version": "0.8.0",
+        "important": true,
+        "why": "Safety and privacy: the snapshot before a change stays off your branches, private folders stay out of Git and out of the map, and the map no longer copies your open tasks.",
+        "briefing": "repo-fit 0.8.0: the safety snapshot now stays off your branches, and MAP.md shows only how many open tasks there are, not their words.",
+        "news": [
+          "The safety snapshot before a change is now kept apart from your branches: your branch, what you staged and your files stay exactly as they are, and a normal git push does not send it.",
+          "Before it saves anything, the screen names the files it will save and warns about private folders (meeting notes, customers) that are not kept out of Git, with one command to keep them out.",
+          "Files Git ignores never reach the map, the index pages, the open-work count or the checkup.",
+          "MAP.md shows only how many open tasks there are. node scripts/playbook/map.mjs --open lists them on screen.",
+          "When MAP.md is kept out of Git, the rules point new sessions at README.md instead, and the checkup says so.",
+          "The checkup says what it does not check, and a change to the rules names your other working copies, which keep the old rules until they take it."
+        ]
+      },
+      {
         "version": "0.7.3",
         "important": false,
         "why": "Small fixes: a new setup always gets a CLAUDE.md next to AGENTS.md, Git is never started without its own yes, and the update line names every way to update.",

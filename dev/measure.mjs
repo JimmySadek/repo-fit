@@ -101,7 +101,8 @@ export function measureOne(rf, name, tmp) {
     find: find(after, { before, locate }),
     loose: { before: looseBefore, after: loose(after, truth).length },
     oneHome: oneHome(after, truth, locate),
-    openWork: openWork(after, truth),
+    // Since 0.8.0 MAP.md holds the count only; the one list is the folder's own `map.mjs --open` (the map names it).
+    openWork: openWork(after, truth, existsSync(join(dir, "scripts/playbook/map.mjs")) ? { "map.mjs --open": run(process.execPath, [join(dir, "scripts/playbook/map.mjs"), "--open"], dir, e).out } : {}),
     rot: surfaced(adapter.seen(dir, e), truth, locate),
     safety: safety(before, after, truth, locate),
   };

@@ -123,7 +123,7 @@ if (state.blocked?.[session] === key) {
   if (savedNote) emit({ systemMessage: savedNote });
   process.exit(0);
 }
-const blocked = { ...(state.blocked ?? {}), [session]: key };
+const blocked = { ...state.blocked, [session]: key };
 for (const k of Object.keys(blocked).slice(0, -30)) delete blocked[k]; // keep the last 30 sessions
 try {
   if (stateFile) writeFileSync(stateFile, JSON.stringify({ ...state, blocked }));

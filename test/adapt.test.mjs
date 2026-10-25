@@ -153,8 +153,9 @@ test("C4: status is not 'Behind' for parts that were never adopted", sandboxed((
   const s = cli(sb, ["status", d]);
   assert.equal(s.status, 0, s.out);
   assert.doesNotMatch(s.out, /Behind/);
-  assert.match(s.out, /Not adopted: the core block in AGENTS\.md \(D-01\)/);
-  assert.match(s.out, /Not adopted: the scripts and hooks \(A-10\)/);
+  // Offered but left out of the chosen set: recorded as not chosen (0.8.0), so they are not asked about as undecided.
+  assert.match(s.out, /Not chosen: the core block in AGENTS\.md \(D-01\), left out of the set chosen on \d{4}-\d\d-\d\d/);
+  assert.match(s.out, /Not chosen: the scripts and hooks \(A-10\), left out of the set chosen on/);
   const u = cli(sb, ["update", d, "--apply"]);
   assert.doesNotMatch(read(d, "AGENTS.md"), /playbook:core/, `update never adds a part: ${u.out}`);
   assert.ok(!has(d, "scripts/playbook"));
@@ -165,9 +166,11 @@ test("C4: a skip is recorded with its reason, and audit, status and apply respec
   assert.equal(apply(sb, d, "A-01", ["--apply"]).status, 0);
   const dry = cli(sb, ["skip", d, "D-01", "--reason", "conflicts with our rules"]);
   assert.match(dry.out, /Dry run/);
-  assert.equal(json(d, "playbook.json").skipped, undefined, "a dry run writes nothing");
+  const before = json(d, "playbook.json").skipped;
+  assert.match(before["D-01"], /^left out of the set chosen on /, "A-01 alone left D-01 out of the chosen set");
+  assert.deepEqual(json(d, "playbook.json").skipped, before, "a dry run writes nothing");
   assert.equal(cli(sb, ["skip", d, "D-01", "--reason", "conflicts with our rules", "--apply"]).status, 0);
-  assert.deepEqual(json(d, "playbook.json").skipped, { "D-01": "conflicts with our rules" });
+  assert.deepEqual(json(d, "playbook.json").skipped, { ...before, "D-01": "conflicts with our rules" }, "the person's own reason replaces it");
   assert.match(cli(sb, ["status", d]).out, /Skipped on purpose: the core block in AGENTS\.md \(D-01\): conflicts with our rules/);
   const a = audit(sb, d);
   assert.ok(!a.plan.decide.some((s) => s.id === "D-01"));

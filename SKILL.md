@@ -18,6 +18,8 @@ Assume the person does not know what hooks, dry runs, rule files or Git branches
 
 repo-fit designs the best-fitting structure for **this** folder by itself, then the person sees it and decides once. They see value on the first screen, answer **one** question, and the yes approves exactly what they saw. **3 questions at most** (a folder without Git adds one: starting Git is its own question), and **never zero**: anything that writes needs their yes first. **Never ask before you have shown the folder before and after**: they cannot say yes to something they have not seen.
 
+**Only installing?** When the person asked only to install or update repo-fit itself, not to set up a folder: confirm it is installed (the first line of `node "$SKILL_DIR/bin/repo-fit.mjs"` names the version), say in one line what it does and that they start it by asking for repo-fit in a folder, and stop. Do not look at, map or organize any folder.
+
 ```
 1. LOOK      audit, preview, the recommended dry run and the organize plan, silently
 2. SHOW      the folder today → after → why, then their briefing and what changes since their old version
@@ -45,7 +47,7 @@ Do not paste the reports. They are your working notes.
 
 ## 2. Show
 
-**First, safety.** The screen starts with a 🛟 line: Git saves a snapshot of the folder as it is before anything changes, so they can always go back. Say it in one plain sentence, and that it is highly recommended. If the line says **🚨 No git tree**, the folder has no Git: repo-fit never starts Git inside the one yes. Say so plainly; section 3 asks it as its own question. If it says Git does not know their name and email, give the two lines as `bash` blocks and wait: nothing can change before they run them. If Git is not installed, give the install line and say repo-fit's own undo still covers everything; they can install Git first or go ahead.
+**First, safety.** The screen starts with a 🛟 line: Git saves a snapshot of their unsaved files before anything changes, so they can always go back. It is kept apart from their branches, on this computer only: their branch, what they staged and their files stay as they are. Say it in one plain sentence, and that it is highly recommended. If the line flags private folders that are not in `.gitignore` (⚠️), say which, and offer the `--ignore` command it prints as part of the plan: those files are kept out of Git before anything else is saved. If the line says **🚨 No git tree**, the folder has no Git: repo-fit never starts Git inside the one yes. Say so plainly; section 3 asks it as its own question. If it says Git does not know their name and email, give the two lines as `bash` blocks and wait: nothing can change before they run them. If Git is not installed, give the install line and say repo-fit's own undo still covers everything; they can install Git first or go ahead.
 
 **Then the organize plan**, exactly as `organize` printed it: the two columns (today, after) as a code block, and the "Why this is better for you" lines. Then one or two sentences in your own words about what this means for **them**, using their real folder names ("your 14 loose notes go to notes/, your trip notes together in notes/japan-trip/"). Say plainly: nothing is deleted, code and the files it uses stay, links are updated, one command undoes it all. If `organize` says the folder is already organized, say so in one line: that is a good result.
 

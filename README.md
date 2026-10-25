@@ -29,7 +29,7 @@ You do not need to be a developer. You need an AI assistant and about 10 minutes
 |---|---|
 | **An organized folder, with one yes** | Loose files go into folders that fit your folder's own names. Old folders and exact copies go to an archive. Nothing is deleted, and one command undoes it all. |
 | **A map of everything** | `MAP.md` lists every area in one line, and each area has an index page. You and your assistant find any note in two steps. |
-| **A safe start** | Before any change, Git saves a snapshot of your folder, so you can always go back. No Git yet? It asks you first, as its own question, and changes nothing until you choose. |
+| **A safe start** | Before any change, Git saves a snapshot of your unsaved files, kept apart from your branches, so you can always go back. Your branch and what you staged stay as they are. No Git yet? It asks you first, as its own question, and changes nothing until you choose. |
 | **New things land in one place** | Drop things in `inbox/`. The rules you approved file them when a session starts. Anything new asks you once. |
 | **A briefing at the start of every session** | Before your assistant says a word, it reads a short summary: where you are, what is open, what to look at. |
 | **One list of everything open** | Open tasks from all your notes, collected in `MAP.md` with links. Nothing moves out of your notes. |
@@ -88,7 +88,7 @@ Everything else is in the [technical reference](docs/reference.md).
 
 - **It changes nothing without showing you first.** Every step is a preview, then your yes.
 - **It never deletes your files.** Old things go to an archive. Code, and every file your code or rules name, never moves.
-- **Git saves a snapshot first.** Before any change, your folder is saved as it was, so you can always go back.
+- **Git saves a snapshot first.** Before any change, your unsaved files are saved in Git, apart from your branches and on this computer only, so you can always go back. A normal `git push` does not send it.
 - **Everything it does can be undone.** It keeps a backup and a record of each change; `repo-fit undo` puts it back. To stop using repo-fit, `repo-fit remove` sets its own parts aside and leaves your files as they are.
 - **Your files never leave your computer.** It does not upload, publish, or send anything. Two small exceptions: once a day the briefing asks npm whether a newer repo-fit exists (only the name "repo-fit" is sent; turn it off with `repo-fit prefs set updateCheck off`), and, only if you ask, it creates an empty, private backup location for your project on GitHub or GitLab.
 - **It never reads the contents of files that look like secrets** (passwords, keys). It only warns you if such a file is in a risky place.

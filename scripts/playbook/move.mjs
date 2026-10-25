@@ -231,7 +231,7 @@ function rewrite(link, r, fromNow, target) {
     if (/%[0-9a-f]{2}/i.test(link.dest)) p = p.split("/").map((s) => encodeURIComponent(s).replace(/%2F/gi, "/")).join("/");
     p = p.replace(/ /g, "%20").replace(/\(/g, "%28").replace(/\)/g, "%29");
   }
-  if (r.folder && /\/$/.test(link.dest.split(/[#?]/)[0])) p = `${p.replace(/\/$/, "")}/`;
+  if (r.folder && link.dest.split(/[#?]/)[0].endsWith("/")) p = `${p.replace(/\/$/, "")}/`;
   return `${p}${r.frag}`;
 }
 
@@ -389,7 +389,7 @@ function ensurePlaybook(root, ts) {
 
 // Puts back every step a journal says was done, newest first. Backups and the person's files are never deleted.
 function rollback(root, j) {
-  for (const s of [...j.steps.slice(0, j.done)].reverse()) {
+  for (const s of j.steps.slice(0, j.done).reverse()) {
     try {
       if (s.t === "mkdir") rmdirSync(join(root, s.dir));
       else if (s.t === "rmdir") mkdirSync(join(root, s.dir), { recursive: true });

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.8.0 (unreleased)
+
+**Safety and privacy, from the 25 Oct field report.** The safety snapshot no longer commits on your branch, private folders are flagged before anything is saved, and nothing Git ignores reaches a page repo-fit writes. MAP.md keeps open work as a count. The 5 Oct rule "the folder is committed as it is" is replaced by the maintainer's decision of 25 Oct 2026.
+
+- **The snapshot is kept on a private reference, not on a branch.** Before a change, repo-fit saves the unsaved files in a Git commit built with a temporary index and stored at `refs/repo-fit/snapshots/<time>-<random>`. The branch, the staging area and the files stay exactly as they are, hooks do not run, and a normal `git push` does not send it. Receipts record the reference, and `undo` says how to get a file back from it (`git restore --source=<ref> -- <file>`). One snapshot per run still holds: a run whose unsaved files are already in the newest snapshot saves no second one. With `--git-init`, the branch stays empty and the snapshot is the only commit. Before, the snapshot was a commit on the current branch, which broke rules like "commit only when asked" and "stage explicit paths".
+- **The 🛟 line names the files it will save,** the first ten, with folders grouped (`drafts/` (3 files)). It flags untracked folders that look private (meetings, transcripts, customers, personal, and similar) or that the repo's rules say never to commit, when they are not in `.gitignore`, and prints the command to keep them out: `repo-fit apply <repo> --ignore "folder/"` (dry run first, undo takes it back).
+- **Files Git ignores stay out of everything repo-fit writes or reports:** the map, the index pages, the open-work count, loose files, notes off every index page, notes nothing links to, broken links and old notes.
+- **MAP.md shows open work as a count only.** The items' words stay in their notes; `node scripts/playbook/map.mjs --open` lists them on screen. Before, the first ten items were copied into MAP.md, a page meant to be committed.
+- **A pointer that leads nowhere is fixed.** When Git ignores MAP.md, a fresh copy of the folder has no map, so the rulebook pointer starts at README.md instead. `audit` offers D-11 again to change an older pointer, and `status` warns, also when MAP.md is missing.
+- **`status` says what it does not check:** files inside code folders, whether a document is still current, and copies with different names.
+- **A rulebook change names the other copies.** When a change touches AGENTS.md or CLAUDE.md, the screen lists other Git worktrees of the folder and unmerged branches that change the rulebook too, and says that open sessions keep the old rules until they restart.
+- **The copied scripts are lint-clean** (five warnings fixed), with a test that needs no linter.
+- **Fewer surprises after a chosen set.** The rulebook block (D-01) and the scripts (A-10), when offered but left out of the set the person chose, are recorded as skipped ("left out of the set chosen on <date>"), so `status` and `update` stop offering them as undecided; naming them later runs them. The apply screen counts files already in place apart ("2 already in place, so not written again"), so the dry run and the result add up. The setup skill stops after installing when only the install was asked.
+
 ## 0.7.3 (24 Oct 2026)
 
 **Fixes from the 21 Oct review.** A new setup always gets a `CLAUDE.md` next to `AGENTS.md`, so Claude Code reads the shared rules. On purpose, a folder without Git now stops until you choose how to go on, where before it started Git. The update line names every way to update. A folder set up before 0.7.3 does not get a `CLAUDE.md` from `update`.

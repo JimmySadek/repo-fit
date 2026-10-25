@@ -74,9 +74,10 @@ test("without a map, the briefing does not point at one; a template's tasks are 
   const d = repo(sb, "tasks", { commit: true, files: { "notes/plan.md": "# Plan\n\n- [ ] Real task\n", "worlds/_template/todo.md": "# Todo\n\n- [ ] Placeholder task\n" } });
   assert.equal(cli(sb, ["apply", d, "--steps", "A-01,A-10", "--tool", "claude", "--hooks", "none", "--autosave", "off", "--apply"], { env: ME }).status, 0);
   assert.doesNotMatch(script(sb, d, "brief.mjs", ["--text"]).out, /see MAP\.md/);
-  const map = pages(d).get("MAP.md");
-  assert.match(map, /Real task/);
-  assert.doesNotMatch(map, /Placeholder task/);
+  assert.match(pages(d).get("MAP.md"), /\*\*Open work:\*\* 1 item in 1 note\./);
+  const open = script(sb, d, "map.mjs", ["--open"]).out;
+  assert.match(open, /Real task/);
+  assert.doesNotMatch(open, /Placeholder task/);
 }));
 
 test("the safety snapshot never saves repo-fit's own records (.playbook/)", sandboxed((sb) => {
@@ -86,7 +87,9 @@ test("the safety snapshot never saves repo-fit's own records (.playbook/)", sand
   const code = cli(sb, ["organize", d], { env: ME }).stdout.match(/--apply --plan (\w+)/)?.[1];
   assert.ok(code);
   assert.equal(cli(sb, ["organize", d, "--apply", "--plan", code], { env: ME }).status, 0);
-  const saved = git(sb, d, ["show", "--name-only", "--format=", "HEAD"]).stdout;
+  const snap = git(sb, d, ["for-each-ref", "--sort=-refname", "--count=1", "--format=%(refname)", "refs/repo-fit/snapshots"]).stdout.trim();
+  assert.ok(snap, "a snapshot was saved");
+  const saved = git(sb, d, ["show", "--name-only", "--format=", snap]).stdout;
   assert.match(saved, /loose\.md/);
   assert.doesNotMatch(saved, /\.playbook/);
 }));

@@ -7,7 +7,7 @@
 //   node scripts/playbook/brief.mjs --hook --format codex   Codex SessionStart hook (JSON)
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { root, git, config, readBoard, analyseBoard, paths, coverage, preview, updateNotice } from "./lib.mjs";
+import { root, git, config, readBoard, analyseBoard, paths, preview, updateNotice } from "./lib.mjs";
 import { capture } from "./file.mjs";
 import { fitFacts, fitLines, rebuildMap } from "./fit.mjs";
 import { hasOwnMap, scan } from "./map.mjs";

@@ -28,9 +28,10 @@ import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { defaultOwner, hookFile, mergeHooks, recordersFor, writeAll } from "../lib/apply.mjs";
+import { LEFT_OUT, defaultOwner, hookFile, mergeHooks, recordersFor, writeAll } from "../lib/apply.mjs";
 import { since } from "../lib/versions.mjs";
 import { coreBlock, repoCoreVars } from "../lib/core.mjs";
+import { pointerProblem, pointerStart } from "../scripts/playbook/map.mjs";
 
 const here = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const version = readFileSync(join(here, "VERSION"), "utf8").trim();
@@ -227,13 +228,13 @@ function hookNotes(target, pj) {
   return notes;
 }
 
-const notAdoptedLines = (list) => list.map((n) => (n.reason !== undefined ? `➖ Skipped on purpose: ${n.part} (${n.step}): ${n.reason || "no reason given"}` : `➖ Not adopted: ${n.part} (${n.step}). Add it with "apply --steps ${n.step}", or record why not with "skip <repo> ${n.step} --reason ..."`));
+const notAdoptedLines = (list) => list.map((n) => (n.reason?.startsWith(LEFT_OUT) ? `➖ Not chosen: ${n.part} (${n.step}), ${n.reason}. Add it any time with "apply --steps ${n.step}".` : n.reason !== undefined ? `➖ Skipped on purpose: ${n.part} (${n.step}): ${n.reason || "no reason given"}` : `➖ Not adopted: ${n.part} (${n.step}). Add it with "apply --steps ${n.step}", or record why not with "skip <repo> ${n.step} --reason ..."`));
 
 // What changed since the version this repo has, and steps it skipped that changed since: worth a second look.
 function newsLines(pj, notAdopted) {
   const { news, steps } = since(pj.playbook ?? "0.0.0");
   const out = news.length ? [`🆕 New since ${pj.playbook ?? "your version"}:`, ...news.map((n) => `   • ${n.text}`)] : [];
-  for (const n of notAdopted) if (n.reason !== undefined && steps[n.step]) out.push(`👀 Worth a second look: ${n.part} (${n.step}), skipped because "${n.reason || "no reason given"}". ${steps[n.step]} To add it: skip <repo> ${n.step} --remove --apply, then apply <repo> --steps ${n.step}.`);
+  for (const n of notAdopted) if (n.reason !== undefined && !n.reason.startsWith(LEFT_OUT) && steps[n.step]) out.push(`👀 Worth a second look: ${n.part} (${n.step}), skipped because "${n.reason || "no reason given"}". ${steps[n.step]} To add it: skip <repo> ${n.step} --remove --apply, then apply <repo> --steps ${n.step}.`);
   return out;
 }
 
@@ -291,6 +292,11 @@ async function status(target) {
     items.push(f.loose.length ? [false, `${f.loose.length} ${f.loose.length === 1 ? "file" : "files"} loose at the top: ${few(f.loose)}`] : [true, "0 loose files at the top"]);
     items.push(f.broken.length ? [false, `${f.broken.length} broken ${f.broken.length === 1 ? "link" : "links"}: ${few(f.broken.map((x) => `${x.file} → ${x.dest}`))}`] : [true, "Links work"]);
     if (f.offIndex.length) items.push([false, `${f.offIndex.length} ${f.offIndex.length === 1 ? "note is" : "notes are"} not on any index page: ${few(f.offIndex)}`]);
+    // The rulebook sends every session to MAP.md: say so when a fresh copy of the folder will not have it.
+    const rule = ["AGENTS.md", "CLAUDE.md"].find((n) => existsSync(join(target, n)));
+    const problem = rule ? pointerProblem(resolve(target), readFileSync(join(target, rule), "utf8")) : null;
+    if (problem === "ignored") items.push([false, `${rule} sends every session to MAP.md, but Git keeps MAP.md out, so a fresh copy has no map. ${pointerStart(resolve(target)) === "README.md" ? `Point it at README.md instead: \`repo-fit apply ${target} --steps D-11\` (a dry run first).` : "Add a README.md, or take MAP.md out of .gitignore."}`]);
+    if (problem === "missing") items.push([false, `${rule} sends every session to MAP.md, but there is no MAP.md yet. Make it: \`node scripts/playbook/map.mjs --write\`.`]);
     var old = f.old;
     var fix = f;
   }
@@ -315,6 +321,8 @@ async function status(target) {
     console.log(["", "**Waiting in inbox/** (one question per kind: Yes, Yes and always, Not now). Suggested:", ...fix.inbox.map((i) => `- ${i.path} → ${to(i)}`)].join("\n"));
   }
   console.log(off ? "\nWhat can fix it: files at the top go in the organize plan (`organize`); for items waiting in inbox/, one question per kind; an update shows what it changes (`update`). Broken links are yours to fix; the list says where." : "\nNothing to change.");
+  // Say what this check leaves out, so "fit" is never read as more than it is.
+  console.log("\nNot checked: files inside code folders, whether a document is still current, and copies of a file with different names.");
   if (old?.length) console.log(`\n🆕 ${old.length} old ${old.length === 1 ? "note" : "notes"} (not changed for 180+ days): worth a look in the next review.`);
   for (const l of notAdoptedLines(notAdopted)) console.log(l);
   for (const l of newsLines(pj, notAdopted)) console.log(l);
@@ -333,11 +341,11 @@ function showDiff(rel, oldText, newText) {
 }
 
 // Safe start: save the folder in Git as it is before the first change (lib/safe.mjs). Stops the run if Git will not.
-async function safeStart(target) {
+async function safeStart(target, { leaveOut = [] } = {}) {
   if (process.argv.includes("--no-snapshot")) return console.log("⚠️ No snapshot (--no-snapshot): repo-fit's own undo still takes back what it changes.\n");
   const { snapshot } = await import("../lib/safe.mjs");
   // Starting Git is its own choice, never part of the one yes: --git-init.
-  const s = snapshot(resolve(target), { gitInit: process.argv.includes("--git-init") });
+  const s = snapshot(resolve(target), { gitInit: process.argv.includes("--git-init"), leaveOut });
   console.log(`${s.text}\n`);
   if (!s.ok) process.exit(1);
 }
@@ -351,6 +359,7 @@ async function update(target, apply) {
   for (const l of newsLines(pj, notAdopted)) console.log(l);
   if (!changes.length) return console.log("✅ Up to date. Nothing to change.");
   for (const c of changes) console.log(showDiff(c.rel, c.old, c.next));
+  for (const l of (await import("../lib/safe.mjs")).rulebookCopies(resolve(target), changes.map((c) => c.rel))) console.log(l);
   if (!apply) return console.log(`Dry run: ${changes.length} file(s) would change. Run again with --apply after review.\n\n${await safeLine(target)}`);
   await safeStart(target);
   const w = writeAll(resolve(target), changes.map((c) => ({ step: "update", type: existsSync(join(target, c.rel)) ? "edit" : "create", path: c.rel, old: c.old, content: c.next })));
@@ -398,6 +407,8 @@ Look (read-only):
 Change (dry run first):
   init <repo> [--dry-run] [--tool claude|codex|both] [--models a,b] [--autosave on|off] [--no-hooks] [--name N] [--owner O]
   apply <repo> [--steps A-01,...] [--tool ..] [--hooks all|brief|none] [--autosave on|off] [--claude-link merge] [--word-cap N] [--show] [--apply]
+  apply <repo> --ignore "folder/,file.md" [--apply]
+                                             keep these paths out of Git: adds them to .gitignore (undo takes it back)
   update <repo> [--apply]                    bring the adopted parts up to this playbook version
   hooks <repo> [--hooks briefing|brief|all] [--apply] turn on the start-of-session briefing (the person runs this)
   organize <repo> --apply                    organize the folder as the plan shows: moves, link updates, map; one undo
@@ -414,8 +425,9 @@ Change (dry run first):
   prefs [set <key> <value> | unset <key>]    your standing choices, kept outside repos
 
 Any command that writes accepts --pin <version>: it refuses to run unless this playbook copy is that version.
-Before apply, update, organize or remove changes anything, Git saves a snapshot of the folder. In a folder without Git
-they stop until you choose: --git-init (start Git and save a snapshot first) or --no-snapshot (go on without one;
+Before apply, update, organize or remove changes anything, Git saves a snapshot of the folder's unsaved files on a
+private reference (refs/repo-fit/snapshots/...): your branch, what you staged and your files stay as they are, and a
+normal git push does not send it. In a folder without Git they stop until you choose: --git-init (start Git and save a snapshot first) or --no-snapshot (go on without one;
 repo-fit's own undo covers its changes). --no-snapshot wins if both are given. Add the choice to every command that writes.
 Setup by an agent: see INSTALL.md.`;
 if (typeof opt0(process.argv) === "string" && ["init", "update", "apply"].includes(process.argv[2]) && opt0(process.argv).replace(/^v/, "") !== version) fail(`Pinned to ${opt0(process.argv)}, but this playbook copy is ${version}. Check out the matching tag (git checkout v${opt0(process.argv).replace(/^v/, "")}) or drop --pin.`);
@@ -454,20 +466,20 @@ switch (process.argv[2]) {
     const wordCap = opt["word-cap"] === undefined ? undefined : Number(opt["word-cap"]);
     if (wordCap !== undefined && !(Number.isInteger(wordCap) && wordCap > 0)) fail("--word-cap must be a whole number of words, for example --word-cap 1500");
     const { apply } = await import("../lib/apply.mjs");
-    if (opt.apply) await safeStart(pos[0]);
     const list = (v) => (typeof v === "string" ? v.split(",").map((s) => s.trim()).filter(Boolean) : null);
+    if (opt.apply) await safeStart(pos[0], { leaveOut: list(opt.ignore) ?? [] });
     const res = apply(pos[0], {
-      steps: list(opt.steps), tool: typeof opt.tool === "string" ? opt.tool : "both", hooks: typeof opt.hooks === "string" ? opt.hooks : "all",
+      steps: list(opt.steps), ignore: list(opt.ignore), tool: typeof opt.tool === "string" ? opt.tool : "both", hooks: typeof opt.hooks === "string" ? opt.hooks : "all",
       autosave: opt.autosave !== "off", claudeLink: opt["claude-link"], models: list(opt.models) ?? [], name: typeof opt.name === "string" ? opt.name : undefined,
       owner: typeof opt.owner === "string" ? opt.owner : undefined, dry: !opt.apply, wordCap, show: Boolean(opt.show),
     });
     console.log(res.text);
     if (!res.ok) process.exitCode = 1;
-    // A folder without Git: the dry run says so, so the Git question comes before the yes, not after it.
+    // The dry run says what the snapshot will hold (and, without Git, asks first), so it comes before the yes.
     else if (!opt.apply) {
       const { snapshotPlan } = await import("../lib/safe.mjs");
-      const s = snapshotPlan(resolve(pos[0]));
-      if (s.state === "no-repo") console.log(`\n${s.line}`);
+      const s = snapshotPlan(resolve(pos[0]), { leaveOut: list(opt.ignore) ?? [] });
+      if (s.state === "no-repo" || /would be written/.test(res.text)) console.log(`\n${s.line}`);
     }
     break;
   }

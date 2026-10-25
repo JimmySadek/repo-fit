@@ -18,8 +18,18 @@ Rules: test first, synthetic fixtures only, local commits only. VERSION bump, pu
 - [x] Docs: AGENTS.md 5 Oct rule, SKILL.md, INSTALL.md, README, CHANGELOG, HELP text
 - [x] `node --test` (275/275), `node dev/measure.mjs` (same as 0.7.3 on every row), live run on a throwaway synthetic fixture
 - [x] Fresh Opus review of S1 and S7. Fixed, each with a test that failed first: `--ignore ./x/` prefix, a path staged then deleted, an ignored file added with `-f`, a Git repo inside the folder, a subfolder of a repo as the target, a link saved twice, a tag with a branch's name. Git errors now stop the run with nothing changed
-- [ ] Local commit, report to hub
+- [x] Local commit (c58f8a9), report to hub
 
-## 0.9.0 organize inside the folders
+## 0.9.0 deep mode (two sweeps)
 
-⏳ Scope question sent to the hub: the plan was revised to D1-D8 (a deep pass that moves documents), while the brief said report-only D1-D5. Build waits for the answer.
+Jimmy's decisions of 25 Oct 2026: wait for 0.9.0 before any release; backlog B34465ca in; deep mode in a separate
+worktree, never moving the checkout's branch; unused code deleted on the deep branch; slices A, B and C in one go with
+a report after each. Design: `claudedocs/2026-10-25-deep-mode-design-note.md`.
+
+- [x] B34465ca: `update` adds a missing CLAUDE.md to a Codex-only setup made before 0.7.3 (843dc75, test first)
+- [x] Slice A, sweep 1 (documents): inventory, plan checks, screen, `--list`, `--json`, apply in a worktree on `repo-fit/deep-<date>`, one commit per step, proofs (files, links, rules, the folder's own check), take-back, yes tied to commit and plan, no second branch for the same yes
+- [x] Slice A live run on a throwaway synthetic fixture set up with repo-fit: 4 issues found and fixed, each with a test that failed first (playbook.json locked docs/, index pages counted as documents, the rebuilt map tripped the link proof, an empty last step, the same yes twice)
+- [x] Slice A: full `node --test`, measure, fresh review (9 findings fixed, each with a test that failed first; 2 left as is, see the design note), local commit
+- [ ] Slice A: report to hub
+- [ ] Slice B, sweep 2 read-only: project type, research-note check, built-in analysis (`lib/analyze.mjs`) plus the repo's own knip/jscpd/dependency-cruiser if installed, proof baseline (`lib/proof.mjs`), screen, `field-app` fixture
+- [ ] Slice C, sweep 2 apply: node_modules link into the worktree (or "proof limited"), relative import rewrites, plan edits, unused code deleted, proof per step, deliberate-break check, take-back

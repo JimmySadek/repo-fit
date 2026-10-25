@@ -426,6 +426,12 @@ Change (dry run first):
   tools <repo> --update claude [--apply]     run Claude Code's own updater
   prefs [set <key> <value> | unset <key>]    your standing choices, kept outside repos
 
+Deep mode (Git only; every change on a new branch in a separate working copy, one commit per step):
+  deep <repo> --sweep docs [--json | --list] sweep 1, everything that is not code: what is inside every folder, then the
+                                             assistant's plan from .playbook/deep/docs.json with its one yes
+  deep <repo> --sweep docs --apply --plan <code>
+                                             apply that plan on branch repo-fit/deep-<date>; this folder stays as it is
+
 Any command that writes accepts --pin <version>: it refuses to run unless this playbook copy is that version.
 Before apply, update, organize or remove changes anything, Git saves a snapshot of the folder's unsaved files on a
 private reference (refs/repo-fit/snapshots/...): your branch, what you staged and your files stay as they are, and a
@@ -594,6 +600,18 @@ switch (process.argv[2]) {
     console.log(`The map of ${basename(root)}${p.has("MAP.md") ? " as repo-fit would write it" : ""}. Nothing was written.\n\n${map.trimEnd()}`);
     const idx = [...p.keys()].filter((k) => k !== "MAP.md");
     if (idx.length) console.log(`\nIndex pages it would write: ${idx.join(", ")}`);
+    break;
+  }
+  case "deep": {
+    // Deep mode: changes go on their own branch in a separate working copy, one commit per step; this folder never changes.
+    const usage = "Usage: repo-fit deep <repo> --sweep docs [--json | --list | --apply --plan <code>]";
+    if (!pos[0] || opt.sweep !== "docs") fail(usage);
+    const root = resolve(pos[0]);
+    if (!existsSync(root)) fail(`Not a folder: ${root}`);
+    const { docsApply, docsJson, docsList, docsScreen } = await import("../lib/deep.mjs");
+    const r = opt.apply ? docsApply(root, typeof opt.plan === "string" ? opt.plan : "", pos[0]) : opt.json ? docsJson(root) : opt.list ? docsList(root) : docsScreen(root, pos[0]);
+    console.log(r.text);
+    if (!r.ok) process.exit(1);
     break;
   }
   case "detect": {

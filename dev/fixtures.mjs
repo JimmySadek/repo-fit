@@ -210,7 +210,54 @@ function tidy(dir) {
   return { code: [], referenced: [], dupGroups: [], problems: [], openItems: ["Finish the design book"], drops: [{ name: "acme-brief.md", make: "md", text: "# Acme brief\n\nA booking page.\n", anchor: "clients/acme.md" }] };
 }
 
-const BUILD = { spaghetti: (d) => spaghetti(d, { git: true }), "spaghetti-nogit": (d) => spaghetti(d, { git: false }), "code-sprawl": codeSprawl, "flat-notes": flatNotes, tidy };
+// The inside mess of a small app repo, for deep mode (sweep 1): documents in seven places, two tool-named folders, a
+// spec replaced by a newer one, specs and plans without a status line, decisions in three places, exact copies (one in
+// public/, which ships to visitors), a mockup nothing loads in public/, and a long rulebook with a design section and an
+// "explicit paths" rule. Not in FIXTURES: the outcome table stays comparable with earlier releases.
+function fieldDocs(dir) {
+  const f = {};
+  const overview = "# Overview\n\nA small shop app. The current login spec is [login v2](login-v2-spec.md).\n";
+  f["package.json"] = `${JSON.stringify({ name: "example-app", private: true, type: "module", scripts: { test: "node --test" } }, null, 2)}\n`;
+  f["src/app.js"] = 'export const greet = (name) => `Hello, ${name}`;\n';
+  f["src/app.test.js"] = 'import { test } from "node:test";\nimport assert from "node:assert/strict";\nimport { greet } from "./app.js";\n\ntest("greets", () => assert.equal(greet("Ada"), "Hello, Ada"));\n';
+  f["public/index.html"] = '<!doctype html>\n<title>Shop</title>\n<script type="module" src="../src/app.js"></script>\n';
+  f["README.md"] = "# Example app\n\nStart at [the overview](docs/overview.md).\n";
+  const rules = Array.from({ length: 120 }, (_, i) => `- Process rule ${i + 1}: keep step ${i + 1} small and say what changed.`);
+  const design = Array.from({ length: 80 }, (_, i) => `- Design rule ${i + 1}: spacing token ${i + 1} is ${(i + 1) * 4}px.`);
+  f["AGENTS.md"] = `# Example app rules\n\nStage explicit paths, never \`git add .\`.\n\n## Process\n\n${rules.join("\n")}\n\n## Design rules\n\n${design.join("\n")}\n\n## Release\n\n- Tag only after the owner says yes.\n`;
+  f["CLAUDE.md"] = "# CLAUDE.md\n\n@AGENTS.md\n";
+  f["docs/overview.md"] = overview;
+  f["docs/login-spec.md"] = "# Login spec\n\nPassword login with a remember-me box.\n";
+  f["docs/login-v2-spec.md"] = "# Login v2 spec\n\nPasskeys first, password as a fallback. Replaces [the first login spec](login-spec.md).\n";
+  f["claudedocs/2026-09-01-search-plan.md"] = "# Search plan\n\nBuild search after [login](../docs/login-spec.md).\n";
+  f["claudedocs/2026-09-10-caching-research.md"] = "# Caching research\n\nEdge caching halves the load time.\n";
+  f["claudedocs/2026-09-12-login-review.md"] = "# Login review\n\nTwo findings, both fixed.\n";
+  f["docs/superpowers/specs/2026-09-03-onboarding-design.md"] = "# Onboarding design\n\nThree screens.\n";
+  f["docs/superpowers/plans/2026-09-05-onboarding-plan.md"] = "# Onboarding plan\n\nBuild the three screens from [the design](../specs/2026-09-03-onboarding-design.md).\n";
+  f["notes/decision-use-sqlite.md"] = "# Use SQLite\n\nOne file, no server.\n";
+  f["notes/2026-09-02-meeting.md"] = "# Meeting 2 Sep\n\nAgreed on passkeys.\n";
+  f["notes/ideas.md"] = "# Ideas\n\n- Gift cards\n";
+  f["notes/overview-old.md"] = overview; // an exact copy with its own name
+  f["decisions/0001-record-decisions.md"] = "# 1. Record decisions\n\nStatus: Accepted\n\nWe write one record per decision.\n";
+  f["design/brand.md"] = "# Brand\n\nTeal and one red accent.\n";
+  f["public/notes-launch.md"] = "# Launch notes\n\nShip on a Tuesday.\n";
+  f["public/mockup-checkout.html"] = "<!doctype html>\n<title>Checkout mockup</title>\n<p>Mockup only.</p>\n";
+  f["public/overview-copy.md"] = overview; // an exact copy in a folder that ships to visitors
+  for (const [k, v] of Object.entries(f)) put(dir, k, v);
+  gitInit(dir, []);
+  return {
+    code: ["src/app.js", "src/app.test.js", "public/index.html", "package.json"],
+    referenced: ["src/app.js"],
+    dupGroups: [["docs/overview.md", "notes/overview-old.md", "public/overview-copy.md"]],
+    problems: [],
+    openItems: [],
+    drops: [],
+    places: ["(top)", "claudedocs", "decisions", "design", "docs", "notes", "public"],
+    replaced: [{ old: "docs/login-spec.md", by: "docs/login-v2-spec.md" }],
+  };
+}
+
+const BUILD = { spaghetti: (d) => spaghetti(d, { git: true }), "spaghetti-nogit": (d) => spaghetti(d, { git: false }), "code-sprawl": codeSprawl, "flat-notes": flatNotes, tidy, "field-docs": fieldDocs };
 
 // Makes one test folder under `parent` and returns its path and truth. The truth is also saved beside it as <name>.truth.json.
 export function makeFixture(name, parent) {

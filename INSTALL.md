@@ -33,11 +33,13 @@ The person should see value on the first screen, answer one question, and approv
 5. **The briefing: one line the person runs.** Claude Code's auto mode blocks an assistant from changing how sessions start, so the person turns the briefing on: `node <playbook folder>/bin/repo-fit.mjs hooks <repo> --apply`, in its own `bash` block with full paths. Explain it with their real preview: each new session starts blank today; with this line it starts with the briefing, and the assistant is reminded once to write down what matters when a reply changed files but no note (it never saves on its own); Claude Code leaves it to them because it changes how every session runs; `undo` turns it off. Codex runs it only after they allow it once with `/hooks`.
 6. **Also noticed, then recap.** Up to 5 lines of other findings, as information, never offered as edits in this run. Write only what an approved dry run shows; if a file repo-fit wrote looks wrong, say so instead of fixing it by hand. Then: what was added or fixed, what was verified, what is theirs to do, how to undo, the repo-fit version, and "repo-fit does not update itself: update it the way it was installed (`npx skills update -g -y`, `skillshare update --all`, or `git pull` in its folder)".
 
+7. **Deep mode, only when the user asks** for more than the organizing. It needs Git. `deep <repo> --sweep docs --json` lists the documents; read them, write the plan to `.playbook/deep/docs.json` (format in SKILL.md, "Deep mode"), run `deep <repo> --sweep docs` until it shows no ❌ problems, show the screen, ask once, then `deep <repo> --sweep docs --apply --plan <code>`. Everything goes on a new branch in a separate working copy; the user's folder and branch never change. Merging the branch is the user's call.
+
 ## Rules that never bend
 
 - **Never overwrite** a file. `init` skips what exists. Edits are backed up first.
-- **Never commit, never push.** Autosave commits only to a `wip/` branch, only allow-listed files, and only if it was chosen.
-- **Files move only through `organize --apply`, after the yes. Nothing is ever deleted or merged.** Secrets, big files, tool updates and adding a remote are never part of setup. `connect` and `tools --update` run only when the user asks.
+- **Never commit, never push.** Autosave commits only to a `wip/` branch, only allow-listed files, and only if it was chosen. Deep mode commits only on its own new branch, `repo-fit/deep-<date>`, in a separate working copy.
+- **Files move only through `organize --apply` or `deep --apply`, after the yes. Nothing is ever deleted or merged.** Secrets, big files, tool updates and adding a remote are never part of setup. `connect` and `tools --update` run only when the user asks.
 - **If a safety check blocks a step, do not work around it.** Say what was blocked and why, and give the person the exact command to run themselves.
 - **The repo's own rules win.** If it says "commit only when asked", the recommended flags already turn autosave off.
 - **One rulebook.** Shared rules go in `AGENTS.md`. `CLAUDE.md` imports it (`@AGENTS.md`).

@@ -35,6 +35,7 @@ You do not need to be a developer. You need an AI assistant and about 10 minutes
 | **One list of everything open** | Open tasks from all your notes, collected in `MAP.md` with links. Nothing moves out of your notes. |
 | **It stays fit** | The map follows your folder by itself, the briefing names real problems in one line each, and running repo-fit again starts with a checkup. |
 | **The same rules for every assistant** | One short rulebook that Claude Code and Codex both read. repo-fit adds five short rules after yours (write it down, search before saying "unknown", never invent agreement), and yours win where they overlap. |
+| **A deeper clean-up, when you ask** | Your assistant reads inside your documents and plans one docs/ folder by kind, a status line on every spec and plan, copies to the archive, and a shorter rulebook with every rule kept. You see it on one screen and say yes once. It all goes on a new branch, made in a separate copy: your folder stays as it is until you merge. |
 | **It fits what you already have** | Your own files stay where they are. repo-fit points at them instead of making copies. |
 
 Here is a briefing from a test folder a week after it was organized:

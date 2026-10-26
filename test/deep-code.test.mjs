@@ -153,7 +153,7 @@ test("files a framework, a config file, a document or a loader reaches are never
     "src/modules/a.ts": "export const a = 1;\n",
     "src/ctx/c.js": "export const c = 1;\n",
     "src/worker2.ts": "export const w = 1;\n",
-    // A nested app: its framework loads pages and middleware by their place.
+    // Workspace packages with their own package.json are apps of their own: sweep 2 leaves them out (checked below).
     "apps/web/package.json": JSON.stringify({ dependencies: { next: "15.0.0" } }),
     "apps/web/app/page.tsx": "import X from \"../components/X\";\nexport default function Page() { return X; }\n",
     "apps/web/components/X.tsx": "export default 1;\n",
@@ -177,6 +177,7 @@ test("files a framework, a config file, a document or a loader reaches are never
   const dir = repo(sb, "mono", { files, commit: true });
   const a = analyze(dir, Object.keys(files), projectType(dir, Object.keys(files)));
   assert.deepEqual(a.unusedFiles, ["src/old.js"]);
+  assert.deepEqual(a.apps, ["apps/web", "packages/lib"]);
 }));
 
 test("a research note dated in the future, sources that differ only in how they are written, and a folder named like a note", sandboxed((sb) => {

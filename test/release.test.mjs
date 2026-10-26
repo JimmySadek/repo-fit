@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { newest } from "../lib/versions.mjs";
 import { ROOT, cli, json, read, repo, sandboxed, script, write } from "./helpers.mjs";
 
 test("after an update, the briefing says once what is new; then it is quiet", sandboxed((sb) => {
@@ -13,8 +14,9 @@ test("after an update, the briefing says once what is new; then it is quiet", sa
   const pj = json(d, "playbook.json");
   write(d, "playbook.json", `${JSON.stringify({ ...pj, playbook: "0.5.0" }, null, 2)}\n`);
   assert.equal(cli(sb, ["update", d, "--apply"]).status, 0);
-  assert.match(script(sb, d, "brief.mjs", ["--text"]).out, /🆕 New: repo-fit can organize your folder\. Ask your assistant to run \/repo-fit to see the plan\./, "a person's look does not use it up");
-  assert.match(script(sb, d, "brief.mjs", ["--text", "--file"]).out, /🆕 New: repo-fit can organize/);
+  const line = `🆕 ${newest("0.5.0").briefing}`; // the newest release's sentence, whichever release that is
+  assert.ok(script(sb, d, "brief.mjs", ["--text"]).out.includes(line), "a person's look does not use it up");
+  assert.ok(script(sb, d, "brief.mjs", ["--text", "--file"]).out.includes(line));
   assert.doesNotMatch(script(sb, d, "brief.mjs", ["--text", "--file"]).out, /🆕 New:/, "once");
 }));
 

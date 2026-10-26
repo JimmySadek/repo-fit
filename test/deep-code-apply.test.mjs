@@ -9,7 +9,7 @@ import { chmodSync, existsSync, readFileSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { makeFixture } from "../dev/fixtures.mjs";
-import { importSites } from "../lib/analyze.mjs";
+import { analyze, importSites } from "../lib/analyze.mjs";
 import { cssNorm, planned } from "../lib/deep.mjs";
 import { cli, git, read, sandboxed, write } from "./helpers.mjs";
 
@@ -294,4 +294,114 @@ test("the plan is checked against the last commit, also for a document with unsa
   write(dir, "README.md", `${read(dir, "README.md")}Unsaved line\n`);
   only(sb, dir, base, [{ title: "Edit the readme", edits: [{ path: "README.md", find: "Unsaved line", replace: "Saved" }] }]);
   assert.match(deep(sb, dir).stdout, /README\.md: the text to change is not in it/);
+}));
+
+// From the snaprun-ui pilot: a folder with its own package.json is its own app, with its own import settings. Sweep 2
+// leaves it out and says so; the root files it imports stay in use.
+function nested(sb) {
+  const { dir } = makeFixture("field-app", sb.dir);
+  write(dir, "previews/demo/package.json", '{ "name": "demo", "private": true, "type": "module" }\n');
+  write(dir, "previews/demo/tsconfig.json", '{ "compilerOptions": { "paths": { "@core/*": ["../../src/*"] } } }\n');
+  write(dir, "previews/demo/src/App.js", 'import { Card } from "./Card.js";\nimport { tint } from "../../../src/shared/tint.js";\nimport { badge } from "@core/shared/badge.js";\n\nexport const App = () => Card(tint(badge()));\n');
+  write(dir, "previews/demo/src/Card.js", "export const Card = (x) => `<div style=\"color: #0f776e\">${x}</div>`;\n");
+  write(dir, "src/shared/tint.js", "export const tint = (x) => x;\n");
+  write(dir, "src/shared/badge.js", 'export const badge = () => "new";\n');
+  git(sb, dir, ["add", "-A"]);
+  git(sb, dir, ["commit", "-q", "-m", "a preview app"]);
+  write(dir, NOTE_PATH, NOTE);
+  return { dir, base: git(sb, dir, ["rev-parse", "HEAD"]).stdout.trim() };
+}
+
+test("a folder with its own package.json is its own app: left out of sweep 2, said on the screen, no change inside it", sandboxed((sb) => {
+  const { dir, base } = nested(sb);
+  const a = JSON.parse(deep(sb, dir, ["--json"]).stdout).analysis;
+  assert.deepEqual(a.apps, ["previews/demo"]);
+  assert.ok(a.unusedFiles.includes("src/old/legacy.js"), a.unusedFiles.join(", "));
+  assert.deepEqual(a.unusedFiles.filter((f) => f.startsWith("previews/") || f.startsWith("src/shared/")), [], "nothing inside the app, nor what it imports, is called unused");
+  assert.ok(!a.copies.some((c) => c.a.file.startsWith("previews/") || c.b.file.startsWith("previews/")));
+  assert.ok(!a.colours.values.some((v) => v.files.some((f) => f.startsWith("previews/"))));
+  only(sb, dir, base, [{ title: "Tidy the preview", delete: [{ path: "previews/demo/src/Card.js" }], moves: [{ from: "previews/demo/src/App.js", to: "previews/demo/src/Main.js" }] }]);
+  const s = deep(sb, dir).stdout;
+  assert.match(s, /previews\/demo is its own app, so it was not checked\./, s);
+  assert.match(s, /previews\/demo\/src\/Card\.js: inside previews\/demo, its own app, which sweep 2 leaves alone\./);
+  assert.match(s, /previews\/demo\/src\/App\.js: inside previews\/demo, its own app, which sweep 2 leaves alone\./);
+  assert.doesNotMatch(s, /--apply --plan/);
+}));
+
+// From the review of that change: every way an inner app reaches a file at the top keeps the file, also with knip.
+test("the top's files an inner app reaches stay: dynamic imports, pages, scripts, type files, with knip too; a plan cannot move them", sandboxed((sb) => {
+  const { dir } = nested(sb);
+  write(dir, "previews/demo/package.json", '{ "name": "demo", "private": true, "scripts": { "seed": "node ../../src/seed.js" } }\n');
+  write(dir, "previews/demo/src/i18n.js", "export const load = (l) => import(`../../../src/locales/${l}.js`);\n");
+  write(dir, "previews/demo/src/plugins.js", "export const plug = (name) => import(name);\n");
+  write(dir, "previews/demo/src/types.d.ts", 'import type { Shape } from "../../../src/shape";\nexport type Box = Shape;\n');
+  write(dir, "previews/demo/index.html", '<!doctype html>\n<script type="module" src="../../src/boot.js#start"></script>\n');
+  for (const f of ["src/locales/en.js", "src/locales/fr.js", "src/seed.js", "src/boot.js"]) write(dir, f, "export const x = 1;\n");
+  write(dir, "src/shape.ts", "export type Shape = { w: number };\n");
+  write(dir, "src/esm/package.json", '{ "type": "module" }\n');
+  write(dir, "src/shared/tint.js", 'import { mix } from "./mix.js";\nexport const tint = (x) => mix(x);\n');
+  write(dir, "src/shared/mix.js", "export const mix = (x) => x;\n");
+  write(dir, "previews/demo/vite.config.ts", 'export default { test: { setupFiles: ["../../src/setup.js"] } };\n');
+  write(dir, "src/setup.js", "export const setup = 1;\n");
+  write(dir, "previews/demo/src/style.js", 'import "../../../src/styles/base.css";\n');
+  write(dir, "src/styles/base.css", "body { margin: 0; }\n");
+  git(sb, dir, ["add", "-A"]);
+  git(sb, dir, ["commit", "-q", "-m", "more of the preview"]);
+  const base = git(sb, dir, ["rev-parse", "HEAD"]).stdout.trim();
+  const reached = ["src/locales/en.js", "src/locales/fr.js", "src/seed.js", "src/boot.js", "src/shape.ts", "src/shared/tint.js", "src/shared/badge.js", "src/setup.js", "src/styles/base.css"];
+  let a = JSON.parse(deep(sb, dir, ["--json"]).stdout).analysis;
+  assert.deepEqual(a.apps, ["previews/demo"], "a package.json that only sets the module type is not an app");
+  assert.deepEqual(a.unusedFiles.filter((f) => reached.includes(f)), []);
+  assert.ok(a.unusedFiles.includes("src/old/legacy.js"));
+  assert.ok(a.unsure.includes("previews/demo/src/plugins.js"), "an inner app that loads code by a computed name keeps deletes off");
+  assert.deepEqual(reached.filter((f) => !a.usedByApps[f]), [], "each is known as used by the app, so a plan cannot move it");
+  write(dir, "node_modules/.bin/knip", `#!/usr/bin/env node
+if (!process.argv.includes("--reporter")) process.exit(2);
+console.log(JSON.stringify({ issues: [
+  { file: "src/old/legacy.js", files: [{ name: "src/old/legacy.js" }], exports: [] },
+  { file: "src/locales/en.js", files: [{ name: "src/locales/en.js" }], exports: [] },
+  { file: "src/shared/mix.js", files: [{ name: "src/shared/mix.js" }], exports: [{ name: "mix" }] },
+  { file: "previews/demo/src/Card.js", files: [{ name: "previews/demo/src/Card.js" }], exports: [{ name: "Card" }] },
+] }));
+`);
+  chmodSync(join(dir, "node_modules/.bin/knip"), 0o755);
+  write(dir, "node_modules/.bin/jscpd", `#!/usr/bin/env node
+const out = process.argv[process.argv.indexOf("--output") + 1];
+const side = (name) => ({ name, start: 1, end: 8 });
+require("node:fs").writeFileSync(require("node:path").join(out, "jscpd-report.json"), JSON.stringify({ duplicates: [
+  { firstFile: side("previews/demo/src/Card.js"), secondFile: side("src/shared/tint.js"), lines: 8 },
+  { firstFile: side("src/old/legacy.js"), secondFile: side("src/shared/badge.js"), lines: 8 },
+] }));
+`);
+  write(dir, "node_modules/.bin/depcruise", `#!/usr/bin/env node
+console.log(JSON.stringify({ modules: [
+  { source: "previews/demo/src/App.js", dependencies: [{ resolved: "previews/demo/src/Card.js", circular: true }] },
+  { source: "previews/demo/src/Card.js", dependencies: [{ resolved: "previews/demo/src/App.js", circular: true }] },
+  { source: "src/old/legacy.js", dependencies: [{ resolved: "src/shared/tint.js", circular: false }] },
+] }));
+`);
+  for (const t of ["jscpd", "depcruise"]) chmodSync(join(dir, "node_modules/.bin", t), 0o755);
+  a = JSON.parse(deep(sb, dir, ["--json"]).stdout).analysis;
+  assert.equal(a.from.copies, "jscpd");
+  assert.deepEqual(a.copies.map((c) => [c.a.file, c.b.file]), [["src/old/legacy.js", "src/shared/badge.js"]], "a copy with a side in the inner app is not the top's to fix");
+  assert.equal(a.from.loops, "dependency-cruiser");
+  assert.deepEqual(a.cycles, [], "a loop inside the inner app is that app's");
+  assert.equal(a.from.unused, "knip");
+  assert.deepEqual(a.unusedFiles, ["src/old/legacy.js"], "knip's answer, without the inner app and what it reaches");
+  assert.deepEqual(a.unusedExports.filter((e) => e.file.startsWith("previews/") || e.file === "src/shared/mix.js"), [], "not the app's exports, nor those of top files it reaches through others");
+  only(sb, dir, base, [{ title: "Move shared code", moves: [{ from: "src/shared/tint.js", to: "src/lib/tint.js" }, { from: "src/styles/base.css", to: "src/base.css" }], add: [{ path: "Previews/Demo/extra.js", text: "x" }] }]);
+  const s = deep(sb, dir).stdout;
+  assert.match(s, /src\/shared\/tint\.js: previews\/demo uses it, and sweep 2 does not check that app, so it stays as it is\./, s);
+  assert.match(s, /src\/styles\/base\.css: previews\/demo uses it/);
+  assert.match(s, /Previews\/Demo\/extra\.js: inside previews\/demo, its own app, which sweep 2 leaves alone\./);
+  assert.doesNotMatch(s, /--apply --plan/);
+}));
+
+test("a top with no starting points calls nothing unused, even when an inner app imports one of its files", sandboxed((sb) => {
+  const dir = join(sb.dir, "loose");
+  const files = { "lib/a.js": "export const a = 1;\n", "lib/b.js": "export const b = 2;\n", "app/package.json": '{ "name": "app" }\n', "app/main.js": 'import { a } from "../lib/a.js";\n' };
+  for (const [f, t] of Object.entries(files)) write(dir, f, t);
+  const a = analyze(dir, Object.keys(files), { stack: [] });
+  assert.deepEqual(a.usedByApps, { "lib/a.js": "app" });
+  assert.deepEqual(a.unusedFiles, [], "without a starting point at the top, lib/b.js is not proven unused");
 }));

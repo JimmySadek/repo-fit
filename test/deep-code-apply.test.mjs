@@ -5,7 +5,9 @@
 // fails its proof is taken back; later steps still run. A deliberate break first shows whether the tests notice
 // anything. The person's folder, branch, files and installed packages never change. Synthetic fixtures only.
 import assert from "node:assert/strict";
-import { chmodSync, existsSync, readFileSync, symlinkSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { makeFixture } from "../dev/fixtures.mjs";
@@ -188,6 +190,20 @@ test("a step that changes the built CSS without saying so is taken back; the com
   assert.match(show(sb, dir, "repo-fit/deep-2026-10-25", "src/styles/app.css"), /#0f776e/);
 }));
 
+// Whether this machine can make a copy-on-write clone of `from` in the temp folder, where the copy goes: APFS, Btrfs and
+// XFS can; ext4 (GitHub's Linux runners) and Windows cannot. Tried with cp itself, not with repo-fit's own code.
+function canCloneHere(from) {
+  if (!["darwin", "linux"].includes(process.platform)) return false;
+  const to = mkdtempSync(join(tmpdir(), "repo-fit-clone-probe-"));
+  try {
+    if (statSync(from).dev !== statSync(to).dev) return false; // macOS cp -c would quietly make a full copy
+    const args = process.platform === "darwin" ? ["-c", "-R", from, join(to, "x")] : ["-R", "--reflink=always", from, join(to, "x")];
+    return spawnSync("cp", args, { stdio: "ignore" }).status === 0;
+  } finally {
+    rmSync(to, { recursive: true, force: true });
+  }
+}
+
 test("installed packages are cloned into the copy, so a build that writes there leaves the folder's own packages as they were; linked only where cloning is not possible", sandboxed((sb) => {
   const { dir } = setup(sb);
   write(dir, "scripts/build.mjs", `${read(dir, "scripts/build.mjs")}import { writeFileSync } from "node:fs";\nmkdirSync("node_modules/.cache", { recursive: true });\nwriteFileSync("node_modules/.cache/built", "x");\n`);
@@ -197,15 +213,19 @@ test("installed packages are cloned into the copy, so a build that writes there 
   const p = JSON.parse(read(dir, ".playbook/deep/code.json"));
   p.base = git(sb, dir, ["rev-parse", "HEAD"]).stdout.trim();
   write(dir, ".playbook/deep/code.json", JSON.stringify(p));
+  const notCloned = /⚠️ Your installed packages are linked into the copy, not cloned \(cloning is not possible here\), so a command that writes there \(a build cache\) writes into your packages\./;
+  const cloning = canCloneHere(join(dir, "node_modules"));
   const s = deep(sb, dir).stdout;
-  assert.doesNotMatch(s, /linked/, s);
+  if (cloning) assert.doesNotMatch(s, /linked/, s);
+  else assert.match(s, notCloned, s);
   const r = run(sb, dir, codeOf(s));
   assert.equal(r.status, 0, r.out);
-  assert.equal(existsSync(join(dir, "node_modules/.cache")), false, "the build wrote into the clone, not into the folder's packages");
+  if (cloning) assert.equal(existsSync(join(dir, "node_modules/.cache")), false, "the build wrote into the clone, not into the folder's packages");
+  else assert.ok(existsSync(join(dir, "node_modules/.cache/built")), "linked: the build wrote into the folder's packages, as the screen said");
   assert.ok(existsSync(join(dir, "node_modules/.bin/keep-me")));
   git(sb, dir, ["branch", "-D", "repo-fit/deep-2026-10-25"], ME);
   const off = deep(sb, dir, [], { REPO_FIT_CLONE: "off" }).stdout;
-  assert.match(off, /⚠️ Your installed packages are linked into the copy, not cloned \(cloning is not possible here\), so a command that writes there \(a build cache\) writes into your packages\./, off);
+  assert.match(off, notCloned, off);
   assert.ok(existsSync(join(dir, "node_modules/.bin/keep-me")), "removing the copy never reaches into the folder");
 }));
 

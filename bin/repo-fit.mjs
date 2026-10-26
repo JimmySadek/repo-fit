@@ -28,9 +28,10 @@ import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { defaultOwner, hookFile, mergeHooks, recordersFor, writeAll } from "../lib/apply.mjs";
+import { LEFT_OUT, defaultOwner, hookFile, mergeHooks, recordersFor, widenCodexStart, writeAll } from "../lib/apply.mjs";
 import { since } from "../lib/versions.mjs";
 import { coreBlock, repoCoreVars } from "../lib/core.mjs";
+import { pointerProblem, pointerStart } from "../scripts/playbook/map.mjs";
 
 const here = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const version = readFileSync(join(here, "VERSION"), "utf8").trim();
@@ -166,7 +167,7 @@ function init(target, opt) {
   const unknown = models.filter((m) => !g.models.has(m));
   if (unknown.length) console.log(`\n⚠️ No guidance yet for: ${unknown.join(", ")}. Add it under guidance/ after this setup.`);
   if (skipped.includes("AGENTS.md")) console.log('\n⚠️ AGENTS.md already exists. To add the managed core block, run "repo-fit audit <repo>", then "repo-fit apply <repo> --steps D-01" (dry run first).');
-  if (tools.includes("codex") && !opt["no-hooks"]) console.log("\n⏳ Codex: the hooks in .codex/hooks.json do nothing until you review and trust them with /hooks. They are untested.");
+  if (tools.includes("codex") && !opt["no-hooks"]) console.log("\n⏳ Codex: the hooks in .codex/hooks.json do nothing until then. Codex runs them only after you trust this project's .codex/ folder in Codex and allow the hooks once with /hooks. They are untested.");
   if (tools.includes("claude-code")) console.log("\n💡 Claude Code: run /context and confirm CLAUDE.md is listed. /doctor prompt-audit works on 2.1.283 or later (see `repo-fit tools`).");
 }
 
@@ -191,6 +192,15 @@ function plan(target) {
       const next = cur.replace(BLOCK_RE, () => coreBlock(repoCoreVars(target))); // with this repo's own paths and rules
       if (next !== cur) changes.push({ rel: "AGENTS.md", old: cur, next });
     } else notAdopted.push({ part: "the core block in AGENTS.md", step: "D-01", reason: skipped["D-01"] });
+    // Setups made before 0.7.3 for Codex only have no CLAUDE.md, so Claude Code missed the shared rules.
+    if (!existsSync(join(target, "CLAUDE.md"))) changes.push({ rel: "CLAUDE.md", old: "", next: readFileSync(join(here, "kits/tools/claude-code/CLAUDE.md"), "utf8") });
+  }
+  // Codex setups made before 0.9.0: the briefing also starts a forked session and the request after a compaction.
+  const codexHooks = join(target, ".codex/hooks.json");
+  if (existsSync(codexHooks)) {
+    const cur = readFileSync(codexHooks, "utf8");
+    const next = widenCodexStart(cur);
+    if (next !== cur) changes.push({ rel: ".codex/hooks.json", old: cur, next });
   }
   if (existsSync(join(target, "scripts/playbook"))) {
     for (const f of VENDORED) {
@@ -227,13 +237,13 @@ function hookNotes(target, pj) {
   return notes;
 }
 
-const notAdoptedLines = (list) => list.map((n) => (n.reason !== undefined ? `➖ Skipped on purpose: ${n.part} (${n.step}): ${n.reason || "no reason given"}` : `➖ Not adopted: ${n.part} (${n.step}). Add it with "apply --steps ${n.step}", or record why not with "skip <repo> ${n.step} --reason ..."`));
+const notAdoptedLines = (list) => list.map((n) => (n.reason?.startsWith(LEFT_OUT) ? `➖ Not chosen: ${n.part} (${n.step}), ${n.reason}. Add it any time with "apply --steps ${n.step}".` : n.reason !== undefined ? `➖ Skipped on purpose: ${n.part} (${n.step}): ${n.reason || "no reason given"}` : `➖ Not adopted: ${n.part} (${n.step}). Add it with "apply --steps ${n.step}", or record why not with "skip <repo> ${n.step} --reason ..."`));
 
 // What changed since the version this repo has, and steps it skipped that changed since: worth a second look.
 function newsLines(pj, notAdopted) {
   const { news, steps } = since(pj.playbook ?? "0.0.0");
   const out = news.length ? [`🆕 New since ${pj.playbook ?? "your version"}:`, ...news.map((n) => `   • ${n.text}`)] : [];
-  for (const n of notAdopted) if (n.reason !== undefined && steps[n.step]) out.push(`👀 Worth a second look: ${n.part} (${n.step}), skipped because "${n.reason || "no reason given"}". ${steps[n.step]} To add it: skip <repo> ${n.step} --remove --apply, then apply <repo> --steps ${n.step}.`);
+  for (const n of notAdopted) if (n.reason !== undefined && !n.reason.startsWith(LEFT_OUT) && steps[n.step]) out.push(`👀 Worth a second look: ${n.part} (${n.step}), skipped because "${n.reason || "no reason given"}". ${steps[n.step]} To add it: skip <repo> ${n.step} --remove --apply, then apply <repo> --steps ${n.step}.`);
   return out;
 }
 
@@ -257,7 +267,7 @@ function hooks(target, opt) {
   const items = [];
   const add = (rel, kitRel) => {
     const old = existsSync(join(root, rel)) ? readFileSync(join(root, rel), "utf8") : "";
-    const next = old ? mergeHooks(old, hookFile(kitRel, mode)) : `${JSON.stringify(hookFile(kitRel, mode), null, 2)}\n`;
+    const next = old ? mergeHooks(kitRel.startsWith("codex/") ? widenCodexStart(old) : old, hookFile(kitRel, mode)) : `${JSON.stringify(hookFile(kitRel, mode), null, 2)}\n`;
     if (next !== old) items.push({ step: "hooks", type: old ? "edit" : "create", path: rel, old, content: next });
   };
   if (tools.includes("claude-code")) add(".claude/settings.json", "claude-code/.claude/settings.json");
@@ -270,7 +280,7 @@ function hooks(target, opt) {
   for (const it of items) console.log(showDiff(it.path, it.old, it.content));
   if (!opt.apply) return console.log(`Dry run: ${items.length} file(s) would change. Run again with --apply to turn the briefing on.`);
   const w = writeAll(root, items);
-  console.log(`✅ The briefing is on${mode === "all" ? ", with autosave" : ""}. Every new session in this folder starts with it.${tools.includes("codex") ? " Codex: run /hooks once and allow it." : ""}\nTo turn it off: repo-fit undo ${target} --apply   Receipt: ${w.receipt}`);
+  console.log(`✅ The briefing is on${mode === "all" ? ", with autosave" : ""}. Every new session in this folder starts with it.${tools.includes("codex") ? " Codex runs them only after you trust this project's .codex/ folder in Codex and allow the hooks once with /hooks." : ""}\nTo turn it off: repo-fit undo ${target} --apply   Receipt: ${w.receipt}`);
 }
 
 // The checkup a re-run starts with: one screen, ✅ for what is fine and ⚠️ only for real problems. "Nothing to
@@ -291,6 +301,11 @@ async function status(target) {
     items.push(f.loose.length ? [false, `${f.loose.length} ${f.loose.length === 1 ? "file" : "files"} loose at the top: ${few(f.loose)}`] : [true, "0 loose files at the top"]);
     items.push(f.broken.length ? [false, `${f.broken.length} broken ${f.broken.length === 1 ? "link" : "links"}: ${few(f.broken.map((x) => `${x.file} → ${x.dest}`))}`] : [true, "Links work"]);
     if (f.offIndex.length) items.push([false, `${f.offIndex.length} ${f.offIndex.length === 1 ? "note is" : "notes are"} not on any index page: ${few(f.offIndex)}`]);
+    // The rulebook sends every session to MAP.md: say so when a fresh copy of the folder will not have it.
+    const rule = ["AGENTS.md", "CLAUDE.md"].find((n) => existsSync(join(target, n)));
+    const problem = rule ? pointerProblem(resolve(target), readFileSync(join(target, rule), "utf8")) : null;
+    if (problem === "ignored") items.push([false, `${rule} sends every session to MAP.md, but Git keeps MAP.md out, so a fresh copy has no map. ${pointerStart(resolve(target)) === "README.md" ? `Point it at README.md instead: \`repo-fit apply ${target} --steps D-11\` (a dry run first).` : "Add a README.md, or take MAP.md out of .gitignore."}`]);
+    if (problem === "missing") items.push([false, `${rule} sends every session to MAP.md, but there is no MAP.md yet. Make it: \`node scripts/playbook/map.mjs --write\`.`]);
     var old = f.old;
     var fix = f;
   }
@@ -315,6 +330,8 @@ async function status(target) {
     console.log(["", "**Waiting in inbox/** (one question per kind: Yes, Yes and always, Not now). Suggested:", ...fix.inbox.map((i) => `- ${i.path} → ${to(i)}`)].join("\n"));
   }
   console.log(off ? "\nWhat can fix it: files at the top go in the organize plan (`organize`); for items waiting in inbox/, one question per kind; an update shows what it changes (`update`). Broken links are yours to fix; the list says where." : "\nNothing to change.");
+  // Say what this check leaves out, so "fit" is never read as more than it is.
+  console.log("\nNot checked: files inside code folders, whether a document is still current, and copies of a file with different names.");
   if (old?.length) console.log(`\n🆕 ${old.length} old ${old.length === 1 ? "note" : "notes"} (not changed for 180+ days): worth a look in the next review.`);
   for (const l of notAdoptedLines(notAdopted)) console.log(l);
   for (const l of newsLines(pj, notAdopted)) console.log(l);
@@ -333,11 +350,11 @@ function showDiff(rel, oldText, newText) {
 }
 
 // Safe start: save the folder in Git as it is before the first change (lib/safe.mjs). Stops the run if Git will not.
-async function safeStart(target) {
+async function safeStart(target, { leaveOut = [] } = {}) {
   if (process.argv.includes("--no-snapshot")) return console.log("⚠️ No snapshot (--no-snapshot): repo-fit's own undo still takes back what it changes.\n");
   const { snapshot } = await import("../lib/safe.mjs");
   // Starting Git is its own choice, never part of the one yes: --git-init.
-  const s = snapshot(resolve(target), { gitInit: process.argv.includes("--git-init") });
+  const s = snapshot(resolve(target), { gitInit: process.argv.includes("--git-init"), leaveOut });
   console.log(`${s.text}\n`);
   if (!s.ok) process.exit(1);
 }
@@ -351,6 +368,7 @@ async function update(target, apply) {
   for (const l of newsLines(pj, notAdopted)) console.log(l);
   if (!changes.length) return console.log("✅ Up to date. Nothing to change.");
   for (const c of changes) console.log(showDiff(c.rel, c.old, c.next));
+  for (const l of (await import("../lib/safe.mjs")).rulebookCopies(resolve(target), changes.map((c) => c.rel))) console.log(l);
   if (!apply) return console.log(`Dry run: ${changes.length} file(s) would change. Run again with --apply after review.\n\n${await safeLine(target)}`);
   await safeStart(target);
   const w = writeAll(resolve(target), changes.map((c) => ({ step: "update", type: existsSync(join(target, c.rel)) ? "edit" : "create", path: c.rel, old: c.old, content: c.next })));
@@ -398,6 +416,8 @@ Look (read-only):
 Change (dry run first):
   init <repo> [--dry-run] [--tool claude|codex|both] [--models a,b] [--autosave on|off] [--no-hooks] [--name N] [--owner O]
   apply <repo> [--steps A-01,...] [--tool ..] [--hooks all|brief|none] [--autosave on|off] [--claude-link merge] [--word-cap N] [--show] [--apply]
+  apply <repo> --ignore "folder/,file.md" [--apply]
+                                             keep these paths out of Git: adds them to .gitignore (undo takes it back)
   update <repo> [--apply]                    bring the adopted parts up to this playbook version
   hooks <repo> [--hooks briefing|brief|all] [--apply] turn on the start-of-session briefing (the person runs this)
   organize <repo> --apply                    organize the folder as the plan shows: moves, link updates, map; one undo
@@ -413,9 +433,22 @@ Change (dry run first):
   tools <repo> --update claude [--apply]     run Claude Code's own updater
   prefs [set <key> <value> | unset <key>]    your standing choices, kept outside repos
 
+Deep mode (Git only; every change on a new branch in a separate working copy, one commit per step):
+  deep <repo> --sweep docs [--json | --list] sweep 1, everything that is not code: what is inside every folder, then the
+                                             assistant's plan from .playbook/deep/docs.json with its one yes
+  deep <repo> --sweep docs --apply --plan <code>
+                                             apply that plan on branch repo-fit/deep-<date>; this folder stays as it is
+  deep <repo> --sweep code [--json | --list] sweep 2, code and design: the project type, the best-practices note, the
+                                             tools, the repo's own checks run now in a throwaway copy, and what it found;
+                                             then the assistant's plan from .playbook/deep/code.json with its one yes
+  deep <repo> --sweep code --apply --plan <code>
+                                             apply that plan on branch repo-fit/deep-<date>, each step proven by your
+                                             own commands; this folder and its installed packages stay as they are
+
 Any command that writes accepts --pin <version>: it refuses to run unless this playbook copy is that version.
-Before apply, update, organize or remove changes anything, Git saves a snapshot of the folder. In a folder without Git
-they stop until you choose: --git-init (start Git and save a snapshot first) or --no-snapshot (go on without one;
+Before apply, update, organize or remove changes anything, Git saves a snapshot of the folder's unsaved files on a
+private reference (refs/repo-fit/snapshots/...): your branch, what you staged and your files stay as they are, and a
+normal git push does not send it. In a folder without Git they stop until you choose: --git-init (start Git and save a snapshot first) or --no-snapshot (go on without one;
 repo-fit's own undo covers its changes). --no-snapshot wins if both are given. Add the choice to every command that writes.
 Setup by an agent: see INSTALL.md.`;
 if (typeof opt0(process.argv) === "string" && ["init", "update", "apply"].includes(process.argv[2]) && opt0(process.argv).replace(/^v/, "") !== version) fail(`Pinned to ${opt0(process.argv)}, but this playbook copy is ${version}. Check out the matching tag (git checkout v${opt0(process.argv).replace(/^v/, "")}) or drop --pin.`);
@@ -454,20 +487,20 @@ switch (process.argv[2]) {
     const wordCap = opt["word-cap"] === undefined ? undefined : Number(opt["word-cap"]);
     if (wordCap !== undefined && !(Number.isInteger(wordCap) && wordCap > 0)) fail("--word-cap must be a whole number of words, for example --word-cap 1500");
     const { apply } = await import("../lib/apply.mjs");
-    if (opt.apply) await safeStart(pos[0]);
     const list = (v) => (typeof v === "string" ? v.split(",").map((s) => s.trim()).filter(Boolean) : null);
+    if (opt.apply) await safeStart(pos[0], { leaveOut: list(opt.ignore) ?? [] });
     const res = apply(pos[0], {
-      steps: list(opt.steps), tool: typeof opt.tool === "string" ? opt.tool : "both", hooks: typeof opt.hooks === "string" ? opt.hooks : "all",
+      steps: list(opt.steps), ignore: list(opt.ignore), tool: typeof opt.tool === "string" ? opt.tool : "both", hooks: typeof opt.hooks === "string" ? opt.hooks : "all",
       autosave: opt.autosave !== "off", claudeLink: opt["claude-link"], models: list(opt.models) ?? [], name: typeof opt.name === "string" ? opt.name : undefined,
       owner: typeof opt.owner === "string" ? opt.owner : undefined, dry: !opt.apply, wordCap, show: Boolean(opt.show),
     });
     console.log(res.text);
     if (!res.ok) process.exitCode = 1;
-    // A folder without Git: the dry run says so, so the Git question comes before the yes, not after it.
+    // The dry run says what the snapshot will hold (and, without Git, asks first), so it comes before the yes.
     else if (!opt.apply) {
       const { snapshotPlan } = await import("../lib/safe.mjs");
-      const s = snapshotPlan(resolve(pos[0]));
-      if (s.state === "no-repo") console.log(`\n${s.line}`);
+      const s = snapshotPlan(resolve(pos[0]), { leaveOut: list(opt.ignore) ?? [] });
+      if (s.state === "no-repo" || /would be written/.test(res.text)) console.log(`\n${s.line}`);
     }
     break;
   }
@@ -580,6 +613,19 @@ switch (process.argv[2]) {
     console.log(`The map of ${basename(root)}${p.has("MAP.md") ? " as repo-fit would write it" : ""}. Nothing was written.\n\n${map.trimEnd()}`);
     const idx = [...p.keys()].filter((k) => k !== "MAP.md");
     if (idx.length) console.log(`\nIndex pages it would write: ${idx.join(", ")}`);
+    break;
+  }
+  case "deep": {
+    // Deep mode: changes go on their own branch in a separate working copy, one commit per step; this folder never changes.
+    const usage = "Usage: repo-fit deep <repo> --sweep docs|code [--json | --list | --apply --plan <code>]";
+    if (!pos[0] || !["docs", "code"].includes(opt.sweep)) fail(usage);
+    const root = resolve(pos[0]);
+    if (!existsSync(root)) fail(`Not a folder: ${root}`);
+    const { codeApply, codeJson, codeList, codeScreen, docsApply, docsJson, docsList, docsScreen } = await import("../lib/deep.mjs");
+    const plan = typeof opt.plan === "string" ? opt.plan : "";
+    const r = opt.sweep === "code" ? (opt.apply ? codeApply(root, plan, pos[0]) : opt.json ? codeJson(root) : opt.list ? codeList(root) : codeScreen(root, pos[0])) : opt.apply ? docsApply(root, plan, pos[0]) : opt.json ? docsJson(root) : opt.list ? docsList(root) : docsScreen(root, pos[0]);
+    console.log(r.text);
+    if (!r.ok) process.exit(1);
     break;
   }
   case "detect": {

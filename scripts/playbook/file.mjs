@@ -8,7 +8,7 @@
 //   node scripts/playbook/file.mjs <item> --not-now                  the person said Not now: dry run, then --apply
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
-import { basename, dirname, join, posix, resolve } from "node:path";
+import { dirname, join, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { applyMoves, files, planMoves } from "./move.mjs";
 import { kindOf, nameWords, ownPages as pages, scan } from "./map.mjs";

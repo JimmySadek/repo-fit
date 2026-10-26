@@ -123,3 +123,16 @@ test("A-10 with --tool codex adds the missing CLAUDE.md next to an AGENTS.md tha
   assert.match(read(d, "CLAUDE.md"), /@AGENTS\.md/);
   assert.equal(read(d, "AGENTS.md"), "# Rules\n\nBe kind.\n");
 }));
+
+test("the Codex setup says both trusts the hooks need: the project's .codex/ folder, and the hooks with /hooks", sandboxed((sb) => {
+  const TRUST = /Codex runs them only after you trust this project's \.codex\/ folder in Codex and allow the hooks once with \/hooks\./;
+  const d = repo(sb, "new");
+  const r = cli(sb, ["init", d, "--tool", "codex", "--name", "Demo", "--owner", "Sam", "--autosave", "off"]);
+  assert.equal(r.status, 0, r.out);
+  assert.match(r.out, TRUST, r.out);
+  const e = repo(sb, "later", { commit: true, files: { "notes/a.md": "# A\n" } });
+  assert.equal(cli(sb, ["apply", e, "--steps", "A-01,A-10", "--tool", "codex", "--hooks", "none", "--autosave", "off", "--apply"]).status, 0);
+  const on = cli(sb, ["hooks", e, "--apply"]);
+  assert.equal(on.status, 0, on.out);
+  assert.match(on.out, TRUST, on.out);
+}));

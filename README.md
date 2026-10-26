@@ -29,12 +29,13 @@ You do not need to be a developer. You need an AI assistant and about 10 minutes
 |---|---|
 | **An organized folder, with one yes** | Loose files go into folders that fit your folder's own names. Old folders and exact copies go to an archive. Nothing is deleted, and one command undoes it all. |
 | **A map of everything** | `MAP.md` lists every area in one line, and each area has an index page. You and your assistant find any note in two steps. |
-| **A safe start** | Before any change, Git saves a snapshot of your folder, so you can always go back. No Git yet? It asks you first, as its own question, and changes nothing until you choose. |
+| **A safe start** | Before any change, Git saves a snapshot of your unsaved files, kept apart from your branches, so you can always go back. Your branch and what you staged stay as they are. No Git yet? It asks you first, as its own question, and changes nothing until you choose. |
 | **New things land in one place** | Drop things in `inbox/`. The rules you approved file them when a session starts. Anything new asks you once. |
 | **A briefing at the start of every session** | Before your assistant says a word, it reads a short summary: where you are, what is open, what to look at. |
 | **One list of everything open** | Open tasks from all your notes, collected in `MAP.md` with links. Nothing moves out of your notes. |
 | **It stays fit** | The map follows your folder by itself, the briefing names real problems in one line each, and running repo-fit again starts with a checkup. |
 | **The same rules for every assistant** | One short rulebook that Claude Code and Codex both read. repo-fit adds five short rules after yours (write it down, search before saying "unknown", never invent agreement), and yours win where they overlap. |
+| **A deeper clean-up, when you ask** | Your assistant reads inside your documents and plans one docs/ folder by kind, a status line on every spec and plan, copies to the archive, and a shorter rulebook with every rule kept. You see it on one screen and say yes once. It all goes on a new branch, made in a separate copy: your folder stays as it is until you merge. A second look covers the code: what nothing uses, copied blocks, import loops, misleading names and colours typed by hand, after your assistant reads the official guides for your kind of project. It runs your own tests once in a throwaway copy and never downloads anything. After one yes, the code changes go on a new branch one step at a time, each proven by your own tests; a step that fails is taken back. An app inside your repo with its own `package.json` is left alone, and the screen says so. |
 | **It fits what you already have** | Your own files stay where they are. repo-fit points at them instead of making copies. |
 
 Here is a briefing from a test folder a week after it was organized:
@@ -88,7 +89,7 @@ Everything else is in the [technical reference](docs/reference.md).
 
 - **It changes nothing without showing you first.** Every step is a preview, then your yes.
 - **It never deletes your files.** Old things go to an archive. Code, and every file your code or rules name, never moves.
-- **Git saves a snapshot first.** Before any change, your folder is saved as it was, so you can always go back.
+- **Git saves a snapshot first.** Before any change, your unsaved files are saved in Git, apart from your branches and on this computer only, so you can always go back. A normal `git push` does not send it.
 - **Everything it does can be undone.** It keeps a backup and a record of each change; `repo-fit undo` puts it back. To stop using repo-fit, `repo-fit remove` sets its own parts aside and leaves your files as they are.
 - **Your files never leave your computer.** It does not upload, publish, or send anything. Two small exceptions: once a day the briefing asks npm whether a newer repo-fit exists (only the name "repo-fit" is sent; turn it off with `repo-fit prefs set updateCheck off`), and, only if you ask, it creates an empty, private backup location for your project on GitHub or GitLab.
 - **It never reads the contents of files that look like secrets** (passwords, keys). It only warns you if such a file is in a risky place.
@@ -97,7 +98,7 @@ The [full list of what it reads and when it uses the network](docs/reference.md#
 
 ## Where this stands
 
-**Public beta.** This version adds organizing (see the [changelog](CHANGELOG.md)). Built and used by one person so far, on a Mac, with Claude Code, and tried on test folders, not yet on many real ones. Automated tests pass on Mac, Linux and Windows. Codex support is written to the official documentation but has not been tried live yet. If you try it, [tell us what happened](https://github.com/JimmySadek/repo-fit/issues): that is the most useful thing you can do right now.
+**Public beta.** This version adds deep mode (see the [changelog](CHANGELOG.md), with its known limits). Built and used by one person so far, on a Mac, with Claude Code, and tried on test folders, not yet on many real ones. Automated tests pass on Mac, Linux and Windows. Codex support is written to the official documentation but has not been tried live yet. If you try it, [tell us what happened](https://github.com/JimmySadek/repo-fit/issues): that is the most useful thing you can do right now.
 
 ## For developers
 

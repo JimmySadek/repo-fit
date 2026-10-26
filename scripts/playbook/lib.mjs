@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ignoredBy } from "./map.mjs";
 
 // scripts/playbook/lib.mjs -> repo root, whichever tool or folder started the session.
 // `repo-fit preview` runs the brief from the playbook folder against a repo that does not have the scripts yet:
@@ -191,11 +192,13 @@ const MD_CAP = 4000;
 
 export function markdownFiles() {
   const out = [];
+  const ignored = ignoredBy(root); // what the folder keeps out of Git is never listed
   const walk = (dir) => {
     for (const e of readdirSync(dir, { withFileTypes: true })) {
       if (out.length >= MD_CAP) return;
       if (e.name.startsWith(".") || e.name === "node_modules") continue;
       const p = join(dir, e.name);
+      if (ignored(relative(root, p).split("\\").join("/"))) continue;
       if (e.isDirectory()) walk(p);
       else if (e.name.endsWith(".md")) out.push(relative(root, p).split("\\").join("/"));
     }

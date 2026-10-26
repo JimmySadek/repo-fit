@@ -231,7 +231,7 @@ function rewrite(link, r, fromNow, target) {
     if (/%[0-9a-f]{2}/i.test(link.dest)) p = p.split("/").map((s) => encodeURIComponent(s).replace(/%2F/gi, "/")).join("/");
     p = p.replace(/ /g, "%20").replace(/\(/g, "%28").replace(/\)/g, "%29");
   }
-  if (r.folder && /\/$/.test(link.dest.split(/[#?]/)[0])) p = `${p.replace(/\/$/, "")}/`;
+  if (r.folder && link.dest.split(/[#?]/)[0].endsWith("/")) p = `${p.replace(/\/$/, "")}/`;
   return `${p}${r.frag}`;
 }
 
@@ -246,7 +246,9 @@ function gitIgnored(root, paths) {
 // Any case: on macOS and Windows, config that says TODO.md finds todo.md.
 const mentionRe = (s) => new RegExp(`(?<![\\w.-])${esc(s)}(?![\\w-])`, "i");
 
-export function planMoves(root, wanted, { protect = [] } = {}) {
+// `allow(path)` lets deep mode move a file that looks like code (a mockup page nothing loads), after its yes.
+// `skip(path)` is a file whose mentions lock nothing: deep mode keeps playbook.json current itself.
+export function planMoves(root, wanted, { protect = [], allow = () => false, skip = () => false } = {}) {
   const list = files(root);
   const index = new Map(list.map((p) => [nfc(p), p]));
   const lower = new Set(list.map((p) => nfc(p).toLowerCase()));
@@ -278,7 +280,7 @@ export function planMoves(root, wanted, { protect = [] } = {}) {
     else if (isProt(real)) no("It is in a protected path.");
     else if (lstatSync(join(root, real)).isSymbolicLink()) no("It is a shortcut (symlink); those stay where they are.");
     else if (ignored.has(real)) no("Git is told to ignore it, so it stays where it is.");
-    else if (CODE.test(real) || CONFIG.test(real)) no("It is code or configuration. Code never moves.");
+    else if ((CODE.test(real) || CONFIG.test(real)) && !allow(real)) no("It is code or configuration. Code never moves.");
     else if (projects.some((d) => real.startsWith(`${d}/`))) no(`It belongs to the program in ${projects.find((d) => real.startsWith(`${d}/`))}/, which stays as it is.`);
     else {
       seenFrom.add(real);
@@ -293,7 +295,7 @@ export function planMoves(root, wanted, { protect = [] } = {}) {
   const blocked = new Map();
   // repo-fit's own scripts and inbox rules name files and folders in general, never load one of the person's files,
   // so they are not read here.
-  const others = list.filter((p) => !moves.some((m) => m.from === p) && !p.startsWith("scripts/playbook/") && p !== "inbox/rules.json");
+  const others = list.filter((p) => !moves.some((m) => m.from === p) && !p.startsWith("scripts/playbook/") && p !== "inbox/rules.json" && !skip(p));
   for (const p of others) {
     const t = text(p);
     if (t === null) continue;
@@ -362,7 +364,7 @@ export function planMoves(root, wanted, { protect = [] } = {}) {
   }
 
   const fingerprint = shaText(JSON.stringify({ moves: moves.map((m) => [m.from, m.to]), files: [...new Set([...moves.map((m) => m.from), ...edits.map((e) => e.path)])].sort().map((p) => [p, shaFile(join(root, p))]) }));
-  return { moves, refused, edits, mentions, fingerprint, wanted, protect, keepFolders: [...keepFolders] };
+  return { moves, refused, edits, mentions, fingerprint, wanted, protect, allow, skip, keepFolders: [...keepFolders] };
 }
 
 // ---------- apply, verify, roll back, recover ----------
@@ -389,7 +391,7 @@ function ensurePlaybook(root, ts) {
 
 // Puts back every step a journal says was done, newest first. Backups and the person's files are never deleted.
 function rollback(root, j) {
-  for (const s of [...j.steps.slice(0, j.done)].reverse()) {
+  for (const s of j.steps.slice(0, j.done).reverse()) {
     try {
       if (s.t === "mkdir") rmdirSync(join(root, s.dir));
       else if (s.t === "rmdir") mkdirSync(join(root, s.dir), { recursive: true });
@@ -419,7 +421,7 @@ export function applyMoves(root, plan, { step = "organize", crashAfter, extra = 
   const out = [];
   const rec = recover(root);
   if (rec.recovered) out.push(rec.text);
-  const fresh = planMoves(root, plan.wanted, { protect: plan.protect });
+  const fresh = planMoves(root, plan.wanted, { protect: plan.protect, allow: plan.allow, skip: plan.skip });
   if (fresh.fingerprint !== plan.fingerprint) return { ok: false, text: [...out, "❌ Something in the folder changed since the plan was shown, so nothing was moved. Look at the new plan and say yes again."].join("\n") };
   if (!fresh.moves.length) return { ok: true, text: [...out, "Nothing to move."].join("\n") };
 

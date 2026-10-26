@@ -1,6 +1,6 @@
 {
   "name": "repo-fit",
-  "version": "0.7.3",
+  "version": "0.9.0",
   "description": "Give your project a memory: a session briefing, one list of everything open, safe automatic saves and one rulebook for Claude Code and Codex. Works on new and existing projects.",
   "type": "module",
   "bin": {
@@ -46,6 +46,33 @@
   "license": "MIT",
   "repoFit": {
     "releases": [
+      {
+        "version": "0.9.0",
+        "important": true,
+        "why": "Deep mode: repo-fit can now look inside your folders and, after one yes, put every document in its place on a separate branch, one proven step at a time, without touching your folder.",
+        "briefing": "repo-fit 0.9.0: ask for a deep pass, and your documents, specs and rulebook get sorted on a separate branch you merge when happy.",
+        "news": [
+          "Deep sweep 1: one docs/ folder by kind, a status line on every spec and plan, copies to the archive, and a shorter rulebook with every rule kept word for word.",
+          "Every change goes on a new branch made in a separate working copy, one commit per step. Your folder, your branch and your files stay as they are until you merge.",
+          "Each step is proven before the next: no file lost, no link broken, every rule kept, and your folder's own check still passes. A step that fails is taken back and named.",
+          "Deep sweep 2 for code: after you read the plan and say yes, unused code goes, files get names that say what they hold, and colours and spacing move to one place, each step proven by your own tests and build.",
+          "A folder set up for Codex only before 0.7.3 gets the CLAUDE.md it was missing from update."
+        ]
+      },
+      {
+        "version": "0.8.0",
+        "important": true,
+        "why": "Safety and privacy: the snapshot before a change stays off your branches, private folders stay out of Git and out of the map, and the map no longer copies your open tasks.",
+        "briefing": "repo-fit 0.8.0: the safety snapshot now stays off your branches, and MAP.md shows only how many open tasks there are, not their words.",
+        "news": [
+          "The safety snapshot before a change is now kept apart from your branches: your branch, what you staged and your files stay exactly as they are, and a normal git push does not send it.",
+          "Before it saves anything, the screen names the files it will save and warns about private folders (meeting notes, customers) that are not kept out of Git, with one command to keep them out.",
+          "Files Git ignores never reach the map, the index pages, the open-work count or the checkup.",
+          "MAP.md shows only how many open tasks there are. node scripts/playbook/map.mjs --open lists them on screen.",
+          "When MAP.md is kept out of Git, the rules point new sessions at README.md instead, and the checkup says so.",
+          "The checkup says what it does not check, and a change to the rules names your other working copies, which keep the old rules until they take it."
+        ]
+      },
       {
         "version": "0.7.3",
         "important": false,

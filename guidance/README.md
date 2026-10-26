@@ -50,5 +50,6 @@ sources (official docs)  →  guidance/*.md  →  setup interview reads it  → 
 | [codex.md](codex.md) | AGENTS.md discovery, hooks, best practices in Codex |
 | [models-claude.md](models-claude.md) | Claude model lineup and what works best with each |
 | [models-openai.md](models-openai.md) | OpenAI model lineup and Codex model guidance |
+| [code-tools.md](code-tools.md) | The code tools deep sweep 2 uses when a repo has them: knip, dependency-cruiser, jscpd |
 | [sources.json](sources.json) | Machine-readable list of every source URL |
 | [gates.json](gates.json) | Version limits the tools check against (for example the Claude Code version that reads `AGENTS.md` directly) |

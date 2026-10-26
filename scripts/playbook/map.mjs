@@ -1,10 +1,12 @@
 // The map of a folder: MAP.md (one line per area) and an index page per area (one line per note).
 // Built from the folder like a cache: each list sits between two marker lines and is rebuilt; the text above and below
 // is the person's. A MAP.md or INDEX.md without the markers is theirs and is never touched (it is used as is).
-// It never moves, renames or deletes anything.
+// It never moves, renames or deletes anything. What Git ignores stays out of every page: a page meant to be committed
+// never names or quotes a file the folder keeps out of Git.
 //   node scripts/playbook/map.mjs            what would change (nothing is written)
 //   node scripts/playbook/map.mjs --write    write MAP.md and the index pages
 //   node scripts/playbook/map.mjs --open     every open item (unchecked boxes, TODO: lines) with its note
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, realpathSync, renameSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -73,8 +75,26 @@ export function title(text, file) {
   return h ? plain(h[1]) : posix.basename(file).replace(/\.mdx?$/i, "");
 }
 
+// What Git ignores in this folder (.gitignore and the person's own excludes), as a test on a relative path. Folders Git
+// ignores whole are not walked at all. Without Git, or outside a repo: nothing is ignored.
+export function ignoredBy(root) {
+  const r = spawnSync("git", ["ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory"], { cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  if (r.error || r.status !== 0) return () => false;
+  const list = r.stdout.split("\0").filter(Boolean);
+  const files = new Set(list.filter((p) => !p.endsWith("/")));
+  const dirs = list.filter((p) => p.endsWith("/"));
+  return (p) => files.has(p) || dirs.some((d) => p === d.slice(0, -1) || p.startsWith(d));
+}
+// Of these paths (which may not exist yet), the ones Git would ignore.
+function ignoredNew(root, paths) {
+  if (!paths.length) return new Set();
+  const r = spawnSync("git", ["check-ignore", "-z", "--stdin"], { cwd: root, encoding: "utf8", input: `${paths.join("\0")}\0` });
+  return new Set(r.error ? [] : (r.stdout ?? "").split("\0").filter(Boolean));
+}
+
 // All files under root as relative paths, plus files about to be created (`virtual`: path → content).
 function listFiles(root, virtual) {
+  const ignored = ignoredBy(root);
   const out = new Set([...virtual.keys()].filter((p) => !p.split("/").some((s) => s.startsWith("."))));
   let n = 0;
   const walk = (rel) => {
@@ -88,6 +108,7 @@ function listFiles(root, virtual) {
       if (++n > LIMIT) return;
       if (SKIP.has(e.name) || e.name.startsWith(".")) continue;
       const p = rel ? `${rel}/${e.name}` : e.name;
+      if (ignored(p)) continue;
       if (e.isDirectory()) walk(p);
       else if (e.isFile()) out.add(p);
     }
@@ -212,16 +233,14 @@ function mapBlock(s) {
     lines.push("", `**Loose at the top of the folder:** ${counts(c)}.`);
     for (const n of notes) lines.push(`- ${link(n.title, n.path)}${n.summary ? `: ${n.summary}` : ""}`);
   }
+  // Open work as a count only: the items' words stay in their notes, and never reach a page meant to be committed.
   if (s.open.length) {
     const notes = new Set(s.open.map((o) => o.path)).size;
-    lines.push("", `**Open work** (${s.open.length} ${s.open.length === 1 ? "item" : "items"} in ${notes} ${notes === 1 ? "note" : "notes"}). Tick them in their notes; this list follows.`);
-    for (const o of s.open.slice(0, OPEN_SHOWN)) lines.push(`- ${o.text} (${link(o.title, o.path)})`);
-    if (s.open.length > OPEN_SHOWN) lines.push(`- and ${s.open.length - OPEN_SHOWN} more: \`node scripts/playbook/map.mjs --open\` lists them all.`);
+    lines.push("", `**Open work:** ${s.open.length} ${s.open.length === 1 ? "item" : "items"} in ${notes} ${notes === 1 ? "note" : "notes"}. \`node scripts/playbook/map.mjs --open\` lists them on screen; tick them in their notes.`);
   }
   lines.push(end("map"));
   return lines.join("\n");
 }
-const OPEN_SHOWN = 10;
 
 function indexBlock(a) {
   const lines = [begin("index")];
@@ -257,9 +276,21 @@ export function pages(root, opts = {}) {
   return out;
 }
 
-// The pointer the rulebook carries: a few lines that send every session to the map first.
-export const POINTER = `<!-- repo-fit:pointer begin -->\n**Start at [MAP.md](MAP.md).** It lists every area of this folder in one line; each area's index page lists its notes. Open only what the task needs. New things go in \`inbox/\`. **When the briefing shows 📥 items waiting:** ask the person once per kind, with exactly three choices: Yes (to the folder you suggest), Yes and always, Not now. Then run \`node scripts/playbook/file.mjs <item> --to <folder> [--always]\` or \`--not-now\`, as a dry run first, then with \`--apply\`. Never delete, merge or commit inbox items yourself. **When it suggests a review (🆕):** run \`node scripts/playbook/check.mjs --review\` and propose; nothing changes without a yes.\n<!-- repo-fit:pointer end -->`;
-export const withPointer = (text) => (MARK("pointer").test(text) ? text.replace(MARK("pointer"), () => POINTER) : `${text.trimEnd()}\n\n${POINTER}\n`);
+// The pointer the rulebook carries: a few lines that send every session to the map first. When Git ignores MAP.md (or
+// the folder has no MAP.md), a fresh copy has no map, so the pointer starts at README.md instead.
+const pointer = (start) => `<!-- repo-fit:pointer begin -->\n${start === "README.md" ? "**Start at [README.md](README.md).** This folder's map, MAP.md, is kept out of Git here, so only some copies have it: when it is there, it lists every area of this folder in one line, and each area's index page lists its notes." : "**Start at [MAP.md](MAP.md).** It lists every area of this folder in one line; each area's index page lists its notes."} Open only what the task needs. New things go in \`inbox/\`. **When the briefing shows 📥 items waiting:** ask the person once per kind, with exactly three choices: Yes (to the folder you suggest), Yes and always, Not now. Then run \`node scripts/playbook/file.mjs <item> --to <folder> [--always]\` or \`--not-now\`, as a dry run first, then with \`--apply\`. Never delete, merge or commit inbox items yourself. **When it suggests a review (🆕):** run \`node scripts/playbook/check.mjs --review\` and propose; nothing changes without a yes.\n<!-- repo-fit:pointer end -->`;
+export const POINTER = pointer("MAP.md");
+const mapIgnored = (root) => ignoredNew(root, ["MAP.md"]).has("MAP.md");
+export const pointerStart = (root) => (mapIgnored(root) && existsSync(join(root, "README.md")) ? "README.md" : "MAP.md");
+export const withPointer = (text, start = "MAP.md") => (MARK("pointer").test(text) ? text.replace(MARK("pointer"), () => pointer(start)) : `${text.trimEnd()}\n\n${pointer(start)}\n`);
+// Does the rulebook send sessions to a MAP.md that a fresh copy of the folder will not have? Null when all is well.
+export function pointerProblem(root, ruleText) {
+  const m = ruleText.match(MARK("pointer"));
+  if (!m || !m[0].includes("[MAP.md](MAP.md)")) return null;
+  if (mapIgnored(root)) return "ignored";
+  if (!existsSync(join(root, "MAP.md"))) return "missing";
+  return null;
+}
 export const hasPointer = (text) => MARK("pointer").test(text);
 
 // Run directly (not imported). The real path, because a folder can have two names (macOS: /var and /private/var).

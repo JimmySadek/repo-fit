@@ -1,7 +1,7 @@
 // How people learn about a newer repo-fit: one line in the briefing for an important release (checked at most once a
 // day, never with the network in tests), and the Claude Code plugin files that let them switch on auto-update.
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { ROOT, cli, repo, sandboxed, script, write } from "./helpers.mjs";
@@ -66,3 +66,57 @@ test("this release explains itself, and the plugin files match it", () => {
   assert.deepEqual(market.plugins.map((p) => [p.name, p.source]), [["repo-fit", "./"]]);
   assert.ok(!("version" in market.plugins[0]), "version lives in plugin.json only");
 });
+
+test("update adds the missing CLAUDE.md to a Codex-only setup made before 0.7.3, and only once", sandboxed((sb) => {
+  const d = repo(sb, "codex-only", { commit: true, files: { "notes/a.md": "# A\n" } });
+  assert.equal(cli(sb, ["apply", d, "--steps", "A-01,A-10,A-11", "--tool", "codex", "--hooks", "none", "--autosave", "off", "--apply"]).status, 0);
+  // Before 0.7.3, a Codex-only setup had AGENTS.md and no CLAUDE.md.
+  rmSync(join(d, "CLAUDE.md"));
+  write(d, "playbook.json", JSON.stringify({ ...JSON.parse(readFileSync(join(d, "playbook.json"), "utf8")), playbook: "0.7.2" }));
+  const dry = cli(sb, ["update", d]).out;
+  assert.match(dry, /^--- CLAUDE\.md \(repo\)/m, dry);
+  assert.ok(!existsSync(join(d, "CLAUDE.md")), "a dry run writes nothing");
+  const done = cli(sb, ["update", d, "--apply"]);
+  assert.equal(done.status, 0, done.out);
+  assert.match(readFileSync(join(d, "CLAUDE.md"), "utf8"), /^@AGENTS\.md$/m);
+  assert.doesNotMatch(cli(sb, ["update", d]).out, /^--- CLAUDE\.md/m, "nothing more to add the second time");
+}));
+
+test("update leaves a folder without AGENTS.md alone: no CLAUDE.md is added there", sandboxed((sb) => {
+  const d = repo(sb, "no-rulebook", { commit: true, files: { "notes/a.md": "# A\n" } });
+  assert.equal(cli(sb, ["apply", d, "--steps", "A-01,A-10", "--tool", "codex", "--hooks", "none", "--autosave", "off", "--apply"]).status, 0);
+  assert.ok(!existsSync(join(d, "AGENTS.md")));
+  cli(sb, ["update", d, "--apply"]);
+  assert.ok(!existsSync(join(d, "CLAUDE.md")));
+}));
+
+test("the Codex briefing also starts a forked session and the request after a compaction; update widens an older setup once", sandboxed((sb) => {
+  const d = repo(sb, "codex-start", { commit: true, files: { "notes/a.md": "# A\n" } });
+  assert.equal(cli(sb, ["apply", d, "--steps", "A-01,A-10,A-11", "--tool", "codex", "--hooks", "brief", "--autosave", "off", "--apply"]).status, 0);
+  const start = () => JSON.parse(readFileSync(join(d, ".codex/hooks.json"), "utf8")).hooks.SessionStart[0].matcher;
+  assert.equal(start(), "startup|resume|clear|compact|fork");
+  // Before 0.9.0 the matcher missed compact and fork.
+  write(d, ".codex/hooks.json", readFileSync(join(d, ".codex/hooks.json"), "utf8").replace("startup|resume|clear|compact|fork", "startup|resume|clear"));
+  const dry = cli(sb, ["update", d]).out;
+  assert.match(dry, /^--- \.codex\/hooks\.json \(repo\)/m, dry);
+  assert.equal(start(), "startup|resume|clear", "a dry run writes nothing");
+  assert.equal(cli(sb, ["update", d, "--apply"]).status, 0);
+  assert.equal(start(), "startup|resume|clear|compact|fork");
+  assert.doesNotMatch(cli(sb, ["update", d]).out, /^--- \.codex\/hooks\.json/m, "nothing more to change the second time");
+  // A matcher the person chose is theirs.
+  write(d, ".codex/hooks.json", readFileSync(join(d, ".codex/hooks.json"), "utf8").replace("startup|resume|clear|compact|fork", "startup"));
+  assert.doesNotMatch(cli(sb, ["update", d]).out, /^--- \.codex\/hooks\.json/m);
+  // An odd hooks file is left alone, and update still runs.
+  for (const odd of ["null", '{ "hooks": { "SessionStart": {} } }']) {
+    write(d, ".codex/hooks.json", odd);
+    assert.equal(cli(sb, ["update", d]).status, 0, odd);
+  }
+}));
+
+test("the Codex matcher change never touches Claude Code's settings", sandboxed((sb) => {
+  const d = repo(sb, "claude-start", { commit: true, files: { "notes/a.md": "# A\n" } });
+  assert.equal(cli(sb, ["apply", d, "--steps", "A-01,A-10", "--tool", "claude", "--hooks", "none", "--autosave", "off", "--apply"]).status, 0);
+  write(d, ".claude/settings.json", JSON.stringify({ hooks: { SessionStart: [{ matcher: "startup|resume|clear", hooks: [{ type: "command", command: "node scripts/playbook/brief.mjs --hook" }] }] } }));
+  assert.equal(cli(sb, ["hooks", d, "--apply"]).status, 0);
+  assert.equal(JSON.parse(readFileSync(join(d, ".claude/settings.json"), "utf8")).hooks.SessionStart[0].matcher, "startup|resume|clear");
+}));

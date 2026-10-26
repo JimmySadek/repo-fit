@@ -31,9 +31,10 @@ test("archived copies in outputs/ are neither broken links nor open work", sandb
   assert.equal(cli(sb, ["apply", d, "--steps", "A-01,A-10", "--tool", "claude", "--hooks", "none", "--autosave", "off", "--apply"], { env: ME }).status, 0);
   const c = script(sb, d, "check.mjs");
   assert.doesNotMatch(c.out, /broken link \.\/GOVERNANCE\.md/, c.out);
-  const map = pages(d).get("MAP.md");
-  assert.match(map, /Real task/);
-  assert.doesNotMatch(map, /Their task/);
+  assert.match(pages(d).get("MAP.md"), /\*\*Open work:\*\* 1 item in 1 note\./);
+  const open = script(sb, d, "map.mjs", ["--open"]).out;
+  assert.match(open, /Real task/);
+  assert.doesNotMatch(open, /Their task/);
 }));
 
 test("--hooks briefing turns on the briefing without the end-of-reply reminder, and a later run keeps it that way", sandboxed((sb) => {
@@ -55,7 +56,9 @@ test("the safety snapshot leaves tool clutter out (.serena/, caches)", sandboxed
   write(d, "loose.md", "# Loose\n\nAt the top.\n");
   const code = cli(sb, ["organize", d], { env: ME }).stdout.match(/--apply --plan (\w+)/)[1];
   assert.equal(cli(sb, ["organize", d, "--apply", "--plan", code], { env: ME }).status, 0);
-  const saved = git(sb, d, ["show", "--name-only", "--format=", "HEAD"]).stdout;
+  const snap = git(sb, d, ["for-each-ref", "--sort=-refname", "--count=1", "--format=%(refname)", "refs/repo-fit/snapshots"]).stdout.trim();
+  assert.ok(snap, "a snapshot was saved");
+  const saved = git(sb, d, ["show", "--name-only", "--format=", snap]).stdout;
   assert.match(saved, /loose\.md/);
   assert.doesNotMatch(saved, /\.serena|__pycache__/);
 }));

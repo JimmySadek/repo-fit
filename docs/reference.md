@@ -49,7 +49,7 @@ Three read-only commands to start with: `detect <repo>` (what the machine and th
 ├─ README.md · AGENTS.md (short shared rules block) · LEARNINGS.md · playbook.json
 ├─ CLAUDE.md                  always with AGENTS.md, for every tool choice: 3 lines, imports AGENTS.md
 ├─ .claude/settings.json      Claude Code hooks: session brief, autosave, capture check
-├─ .codex/hooks.json          Codex hooks (untested, needs /hooks trust)
+├─ .codex/hooks.json          Codex hooks (untested; needs the project trusted in Codex, and /hooks)
 ├─ scripts/playbook/          brief · check · autosave · lib (vendored, version-stamped)
 ├─ docs/00-home/              current · board · log · open-questions · people
 ├─ docs/decisions.md · docs/sources/founder-input/ · docs/research/ · docs/templates/
@@ -82,6 +82,10 @@ node bin/repo-fit.mjs init <repo> --dry-run --name "Name" --owner "Owner" --tool
 node bin/repo-fit.mjs status <repo>                  # the checkup: ✅ what is fine, ⚠️ only real problems, with the plan for what can be fixed
 node bin/repo-fit.mjs map <repo>                     # read-only: the folder's map (MAP.md) as repo-fit would write it
 node bin/repo-fit.mjs organize <repo>                # the plan: today → after → why; --list every move; --apply --plan <code> does it
+node bin/repo-fit.mjs deep <repo> --sweep docs      # deep sweep 1, read-only: what is inside every folder; --json for the assistant; with .playbook/deep/docs.json: the plan screen
+node bin/repo-fit.mjs deep <repo> --sweep docs --apply --plan <code>   # applies that plan on branch repo-fit/deep-<date> in a separate working copy, one commit per step
+node bin/repo-fit.mjs deep <repo> --sweep code      # deep sweep 2, read-only: project type, best-practices note, tools, the repo's own checks run once in a throwaway copy, what the analysis found; --json for the assistant; with .playbook/deep/code.json: the plan screen, --list every change
+node bin/repo-fit.mjs deep <repo> --sweep code --apply --plan <code>   # applies that plan on branch repo-fit/deep-<date>, each step proven by the repo's own commands
 node bin/repo-fit.mjs file <repo> <item> --to <dir>  # file one inbox item (--always adds a rule, --not-now); dry run, then --apply
 node bin/repo-fit.mjs remove <repo>                  # a clean way out: repo-fit's own parts set aside, your files stay; undo brings it back
 node bin/repo-fit.mjs update <repo>                  # dry run: prints the diff

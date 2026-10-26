@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFile
 import { dirname, join, posix } from "node:path";
 import { root, config, coverage, today } from "./lib.mjs";
 import { files, linkReport, planMoves } from "./move.mjs";
-import { nameWords, ownPages, scan, title } from "./map.mjs";
+import { ignoredBy, nameWords, ownPages, scan, title } from "./map.mjs";
 import { capture, readRules } from "./file.mjs";
 
 const REVIEW_DAYS = 14;
@@ -41,11 +41,12 @@ export const markReviewed = () => {
 };
 
 export function fitFacts(cfg = config()) {
+  const ignored = ignoredBy(root);
   const list = files(root);
   const { edges, broken } = linkReport(root, list);
   const s = scan(root, { protect: protect(cfg) });
   const codeAreas = new Set(s.areas.filter((a) => a.code || a.site).map((a) => a.name));
-  const live = (p) => !SKIPPED.test(p) && !codeAreas.has(p.split("/")[0]);
+  const live = (p) => !SKIPPED.test(p) && !codeAreas.has(p.split("/")[0]) && !ignored(p); // what Git ignores is not checked
 
   // Notes no one can reach within two links of the map (map → index page → note).
   let offIndex = [];

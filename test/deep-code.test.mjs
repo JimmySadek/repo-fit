@@ -5,7 +5,7 @@
 // downloaded. Synthetic fixtures only.
 import assert from "node:assert/strict";
 import { chmodSync, existsSync, rmSync, symlinkSync } from "node:fs";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { test } from "node:test";
 import { makeFixture } from "../dev/fixtures.mjs";
 import { analyze, projectType } from "../lib/analyze.mjs";
@@ -19,9 +19,11 @@ const commitAll = (sb, dir, msg) => {
   git(sb, dir, ["add", "-A"], ME);
   git(sb, dir, ["commit", "-q", "-m", msg], ME);
 };
+// A stand-in tool, the way npm installs one: a script, and on Windows a .cmd beside it that runs it with node.
 const exe = (dir, rel, body) => {
   write(dir, rel, `#!/usr/bin/env node\n${body}\n`);
   chmodSync(join(dir, rel), 0o755);
+  if (process.platform === "win32") write(dir, `${rel}.cmd`, `@node "%~dp0${rel.split("/").pop()}" %*\r\n`);
 };
 const NOTE = (date, sources) => `# Web app structure\n\nDate: ${date}\n\n## Rules for this repo\n\n- Group code by feature, not by kind.\n- No files that only re-export other files.\n- One place for colours and spacing (design tokens).\n- Name files after what they hold.\n\n## Sources\n\n${sources.map((u) => `- ${u}`).join("\n")}\n`;
 
@@ -84,7 +86,7 @@ process.exit(1);`);
   const bin = join(sb.dir, "bin");
   exe(bin, "npx", `require("node:fs").writeFileSync(${JSON.stringify(join(sb.dir, "npx-was-called"))}, "x");`);
   const before = state(sb, dir);
-  const env = { PATH: `${bin}:${process.env.PATH}` };
+  const env = { PATH: `${bin}${delimiter}${process.env.PATH}` };
   const s = deep(sb, dir, [], env).stdout;
   assert.match(s, /Tools: knip \(yours\) · repo-fit's built-in import graph and copy finder \(jscpd and dependency-cruiser are not installed\)/, s);
   assert.match(s, /🪦 1 file and 1 export that nothing uses/);

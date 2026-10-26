@@ -190,6 +190,13 @@ test("a step that changes the built CSS without saying so is taken back; the com
   assert.match(show(sb, dir, "repo-fit/deep-2026-10-25", "src/styles/app.css"), /#0f776e/);
 }));
 
+// A stand-in tool in the folder's node_modules, the way npm installs one: a script, and on Windows a .cmd beside it.
+function tool(dir, name, text) {
+  write(dir, `node_modules/.bin/${name}`, text);
+  chmodSync(join(dir, "node_modules/.bin", name), 0o755);
+  if (process.platform === "win32") write(dir, `node_modules/.bin/${name}.cmd`, `@node "%~dp0${name}" %*\r\n`);
+}
+
 // Whether this machine can make a copy-on-write clone of `from` in the temp folder, where the copy goes: APFS, Btrfs and
 // XFS can; ext4 (GitHub's Linux runners) and Windows cannot. Tried with cp itself, not with repo-fit's own code.
 function canCloneHere(from) {
@@ -375,7 +382,7 @@ test("the top's files an inner app reaches stay: dynamic imports, pages, scripts
   assert.ok(a.unusedFiles.includes("src/old/legacy.js"));
   assert.ok(a.unsure.includes("previews/demo/src/plugins.js"), "an inner app that loads code by a computed name keeps deletes off");
   assert.deepEqual(reached.filter((f) => !a.usedByApps[f]), [], "each is known as used by the app, so a plan cannot move it");
-  write(dir, "node_modules/.bin/knip", `#!/usr/bin/env node
+  tool(dir, "knip", `#!/usr/bin/env node
 if (!process.argv.includes("--reporter")) process.exit(2);
 console.log(JSON.stringify({ issues: [
   { file: "src/old/legacy.js", files: [{ name: "src/old/legacy.js" }], exports: [] },
@@ -384,8 +391,7 @@ console.log(JSON.stringify({ issues: [
   { file: "previews/demo/src/Card.js", files: [{ name: "previews/demo/src/Card.js" }], exports: [{ name: "Card" }] },
 ] }));
 `);
-  chmodSync(join(dir, "node_modules/.bin/knip"), 0o755);
-  write(dir, "node_modules/.bin/jscpd", `#!/usr/bin/env node
+  tool(dir, "jscpd", `#!/usr/bin/env node
 const out = process.argv[process.argv.indexOf("--output") + 1];
 const side = (name) => ({ name, start: 1, end: 8 });
 require("node:fs").writeFileSync(require("node:path").join(out, "jscpd-report.json"), JSON.stringify({ duplicates: [
@@ -393,14 +399,13 @@ require("node:fs").writeFileSync(require("node:path").join(out, "jscpd-report.js
   { firstFile: side("src/old/legacy.js"), secondFile: side("src/shared/badge.js"), lines: 8 },
 ] }));
 `);
-  write(dir, "node_modules/.bin/depcruise", `#!/usr/bin/env node
+  tool(dir, "depcruise", `#!/usr/bin/env node
 console.log(JSON.stringify({ modules: [
   { source: "previews/demo/src/App.js", dependencies: [{ resolved: "previews/demo/src/Card.js", circular: true }] },
   { source: "previews/demo/src/Card.js", dependencies: [{ resolved: "previews/demo/src/App.js", circular: true }] },
   { source: "src/old/legacy.js", dependencies: [{ resolved: "src/shared/tint.js", circular: false }] },
 ] }));
 `);
-  for (const t of ["jscpd", "depcruise"]) chmodSync(join(dir, "node_modules/.bin", t), 0o755);
   a = JSON.parse(deep(sb, dir, ["--json"]).stdout).analysis;
   assert.equal(a.from.copies, "jscpd");
   assert.deepEqual(a.copies.map((c) => [c.a.file, c.b.file]), [["src/old/legacy.js", "src/shared/badge.js"]], "a copy with a side in the inner app is not the top's to fix");

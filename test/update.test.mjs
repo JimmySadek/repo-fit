@@ -89,3 +89,34 @@ test("update leaves a folder without AGENTS.md alone: no CLAUDE.md is added ther
   cli(sb, ["update", d, "--apply"]);
   assert.ok(!existsSync(join(d, "CLAUDE.md")));
 }));
+
+test("the Codex briefing also starts a forked session and the request after a compaction; update widens an older setup once", sandboxed((sb) => {
+  const d = repo(sb, "codex-start", { commit: true, files: { "notes/a.md": "# A\n" } });
+  assert.equal(cli(sb, ["apply", d, "--steps", "A-01,A-10,A-11", "--tool", "codex", "--hooks", "brief", "--autosave", "off", "--apply"]).status, 0);
+  const start = () => JSON.parse(readFileSync(join(d, ".codex/hooks.json"), "utf8")).hooks.SessionStart[0].matcher;
+  assert.equal(start(), "startup|resume|clear|compact|fork");
+  // Before 0.9.0 the matcher missed compact and fork.
+  write(d, ".codex/hooks.json", readFileSync(join(d, ".codex/hooks.json"), "utf8").replace("startup|resume|clear|compact|fork", "startup|resume|clear"));
+  const dry = cli(sb, ["update", d]).out;
+  assert.match(dry, /^--- \.codex\/hooks\.json \(repo\)/m, dry);
+  assert.equal(start(), "startup|resume|clear", "a dry run writes nothing");
+  assert.equal(cli(sb, ["update", d, "--apply"]).status, 0);
+  assert.equal(start(), "startup|resume|clear|compact|fork");
+  assert.doesNotMatch(cli(sb, ["update", d]).out, /^--- \.codex\/hooks\.json/m, "nothing more to change the second time");
+  // A matcher the person chose is theirs.
+  write(d, ".codex/hooks.json", readFileSync(join(d, ".codex/hooks.json"), "utf8").replace("startup|resume|clear|compact|fork", "startup"));
+  assert.doesNotMatch(cli(sb, ["update", d]).out, /^--- \.codex\/hooks\.json/m);
+  // An odd hooks file is left alone, and update still runs.
+  for (const odd of ["null", '{ "hooks": { "SessionStart": {} } }']) {
+    write(d, ".codex/hooks.json", odd);
+    assert.equal(cli(sb, ["update", d]).status, 0, odd);
+  }
+}));
+
+test("the Codex matcher change never touches Claude Code's settings", sandboxed((sb) => {
+  const d = repo(sb, "claude-start", { commit: true, files: { "notes/a.md": "# A\n" } });
+  assert.equal(cli(sb, ["apply", d, "--steps", "A-01,A-10", "--tool", "claude", "--hooks", "none", "--autosave", "off", "--apply"]).status, 0);
+  write(d, ".claude/settings.json", JSON.stringify({ hooks: { SessionStart: [{ matcher: "startup|resume|clear", hooks: [{ type: "command", command: "node scripts/playbook/brief.mjs --hook" }] }] } }));
+  assert.equal(cli(sb, ["hooks", d, "--apply"]).status, 0);
+  assert.equal(JSON.parse(readFileSync(join(d, ".claude/settings.json"), "utf8")).hooks.SessionStart[0].matcher, "startup|resume|clear");
+}));

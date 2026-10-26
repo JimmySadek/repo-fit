@@ -28,7 +28,7 @@ import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { LEFT_OUT, defaultOwner, hookFile, mergeHooks, recordersFor, writeAll } from "../lib/apply.mjs";
+import { LEFT_OUT, defaultOwner, hookFile, mergeHooks, recordersFor, widenCodexStart, writeAll } from "../lib/apply.mjs";
 import { since } from "../lib/versions.mjs";
 import { coreBlock, repoCoreVars } from "../lib/core.mjs";
 import { pointerProblem, pointerStart } from "../scripts/playbook/map.mjs";
@@ -167,7 +167,7 @@ function init(target, opt) {
   const unknown = models.filter((m) => !g.models.has(m));
   if (unknown.length) console.log(`\n⚠️ No guidance yet for: ${unknown.join(", ")}. Add it under guidance/ after this setup.`);
   if (skipped.includes("AGENTS.md")) console.log('\n⚠️ AGENTS.md already exists. To add the managed core block, run "repo-fit audit <repo>", then "repo-fit apply <repo> --steps D-01" (dry run first).');
-  if (tools.includes("codex") && !opt["no-hooks"]) console.log("\n⏳ Codex: the hooks in .codex/hooks.json do nothing until you review and trust them with /hooks. They are untested.");
+  if (tools.includes("codex") && !opt["no-hooks"]) console.log("\n⏳ Codex: the hooks in .codex/hooks.json do nothing until then. Codex runs them only after you trust this project's .codex/ folder in Codex and allow the hooks once with /hooks. They are untested.");
   if (tools.includes("claude-code")) console.log("\n💡 Claude Code: run /context and confirm CLAUDE.md is listed. /doctor prompt-audit works on 2.1.283 or later (see `repo-fit tools`).");
 }
 
@@ -194,6 +194,13 @@ function plan(target) {
     } else notAdopted.push({ part: "the core block in AGENTS.md", step: "D-01", reason: skipped["D-01"] });
     // Setups made before 0.7.3 for Codex only have no CLAUDE.md, so Claude Code missed the shared rules.
     if (!existsSync(join(target, "CLAUDE.md"))) changes.push({ rel: "CLAUDE.md", old: "", next: readFileSync(join(here, "kits/tools/claude-code/CLAUDE.md"), "utf8") });
+  }
+  // Codex setups made before 0.9.0: the briefing also starts a forked session and the request after a compaction.
+  const codexHooks = join(target, ".codex/hooks.json");
+  if (existsSync(codexHooks)) {
+    const cur = readFileSync(codexHooks, "utf8");
+    const next = widenCodexStart(cur);
+    if (next !== cur) changes.push({ rel: ".codex/hooks.json", old: cur, next });
   }
   if (existsSync(join(target, "scripts/playbook"))) {
     for (const f of VENDORED) {
@@ -260,7 +267,7 @@ function hooks(target, opt) {
   const items = [];
   const add = (rel, kitRel) => {
     const old = existsSync(join(root, rel)) ? readFileSync(join(root, rel), "utf8") : "";
-    const next = old ? mergeHooks(old, hookFile(kitRel, mode)) : `${JSON.stringify(hookFile(kitRel, mode), null, 2)}\n`;
+    const next = old ? mergeHooks(kitRel.startsWith("codex/") ? widenCodexStart(old) : old, hookFile(kitRel, mode)) : `${JSON.stringify(hookFile(kitRel, mode), null, 2)}\n`;
     if (next !== old) items.push({ step: "hooks", type: old ? "edit" : "create", path: rel, old, content: next });
   };
   if (tools.includes("claude-code")) add(".claude/settings.json", "claude-code/.claude/settings.json");
@@ -273,7 +280,7 @@ function hooks(target, opt) {
   for (const it of items) console.log(showDiff(it.path, it.old, it.content));
   if (!opt.apply) return console.log(`Dry run: ${items.length} file(s) would change. Run again with --apply to turn the briefing on.`);
   const w = writeAll(root, items);
-  console.log(`✅ The briefing is on${mode === "all" ? ", with autosave" : ""}. Every new session in this folder starts with it.${tools.includes("codex") ? " Codex: run /hooks once and allow it." : ""}\nTo turn it off: repo-fit undo ${target} --apply   Receipt: ${w.receipt}`);
+  console.log(`✅ The briefing is on${mode === "all" ? ", with autosave" : ""}. Every new session in this folder starts with it.${tools.includes("codex") ? " Codex runs them only after you trust this project's .codex/ folder in Codex and allow the hooks once with /hooks." : ""}\nTo turn it off: repo-fit undo ${target} --apply   Receipt: ${w.receipt}`);
 }
 
 // The checkup a re-run starts with: one screen, ✅ for what is fine and ⚠️ only for real problems. "Nothing to
@@ -431,8 +438,12 @@ Deep mode (Git only; every change on a new branch in a separate working copy, on
                                              assistant's plan from .playbook/deep/docs.json with its one yes
   deep <repo> --sweep docs --apply --plan <code>
                                              apply that plan on branch repo-fit/deep-<date>; this folder stays as it is
-  deep <repo> --sweep code [--json]          sweep 2, code and design: the project type, the best-practices note, the
-                                             tools, the repo's own checks run now in a throwaway copy, and what it found
+  deep <repo> --sweep code [--json | --list] sweep 2, code and design: the project type, the best-practices note, the
+                                             tools, the repo's own checks run now in a throwaway copy, and what it found;
+                                             then the assistant's plan from .playbook/deep/code.json with its one yes
+  deep <repo> --sweep code --apply --plan <code>
+                                             apply that plan on branch repo-fit/deep-<date>, each step proven by your
+                                             own commands; this folder and its installed packages stay as they are
 
 Any command that writes accepts --pin <version>: it refuses to run unless this playbook copy is that version.
 Before apply, update, organize or remove changes anything, Git saves a snapshot of the folder's unsaved files on a
@@ -606,12 +617,13 @@ switch (process.argv[2]) {
   }
   case "deep": {
     // Deep mode: changes go on their own branch in a separate working copy, one commit per step; this folder never changes.
-    const usage = "Usage: repo-fit deep <repo> --sweep docs [--json | --list | --apply --plan <code>]\n       repo-fit deep <repo> --sweep code [--json]";
-    if (!pos[0] || !["docs", "code"].includes(opt.sweep) || (opt.sweep === "code" && (opt.apply || opt.list))) fail(usage);
+    const usage = "Usage: repo-fit deep <repo> --sweep docs|code [--json | --list | --apply --plan <code>]";
+    if (!pos[0] || !["docs", "code"].includes(opt.sweep)) fail(usage);
     const root = resolve(pos[0]);
     if (!existsSync(root)) fail(`Not a folder: ${root}`);
-    const { codeJson, codeScreen, docsApply, docsJson, docsList, docsScreen } = await import("../lib/deep.mjs");
-    const r = opt.sweep === "code" ? (opt.json ? codeJson(root) : codeScreen(root, pos[0])) : opt.apply ? docsApply(root, typeof opt.plan === "string" ? opt.plan : "", pos[0]) : opt.json ? docsJson(root) : opt.list ? docsList(root) : docsScreen(root, pos[0]);
+    const { codeApply, codeJson, codeList, codeScreen, docsApply, docsJson, docsList, docsScreen } = await import("../lib/deep.mjs");
+    const plan = typeof opt.plan === "string" ? opt.plan : "";
+    const r = opt.sweep === "code" ? (opt.apply ? codeApply(root, plan, pos[0]) : opt.json ? codeJson(root) : opt.list ? codeList(root) : codeScreen(root, pos[0])) : opt.apply ? docsApply(root, plan, pos[0]) : opt.json ? docsJson(root) : opt.list ? docsList(root) : docsScreen(root, pos[0]);
     console.log(r.text);
     if (!r.ok) process.exit(1);
     break;

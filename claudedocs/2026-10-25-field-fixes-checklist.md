@@ -33,4 +33,7 @@ a report after each. Design: `claudedocs/2026-10-25-deep-mode-design-note.md`.
 - [x] Slice A: report to hub
 - [x] Slice B, sweep 2 read-only: project type, research-note check, built-in analysis (`lib/analyze.mjs`) plus the repo's own knip/jscpd/dependency-cruiser if installed, proof baseline (`lib/proof.mjs`), screen, `field-app` fixture
 - [x] Slice B: full `node --test` (300 pass; the 5 slice C tests wait), measure unchanged, fresh review (findings fixed with tests), local commit, report to hub
-- [ ] Slice C, sweep 2 apply: node_modules link into the worktree (or "proof limited"), relative import rewrites, plan edits, unused code deleted, proof per step, deliberate-break check, take-back
+- [x] Slice C, sweep 2 apply: node_modules link into the worktree (or "proof limited"), relative import rewrites, plan edits, unused code deleted, proof per step, deliberate-break check, take-back
+- [x] Slice C hub additions: built-CSS proof (custom properties resolved, planned changes under `visible`), packages cloned copy-on-write with the link as fallback (Jimmy, 26 Oct), Codex F1 matcher, F3 trust wording, F2 models refresh
+- [x] Slice C: two fresh reviews (14 findings fixed, each with a test that failed first; one guard left, see the design note), full `node --test`, measure
+- [x] Slice C: local commit, report to hub

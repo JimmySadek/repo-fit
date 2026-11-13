@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.1 (unreleased)
+
+**Fixes from setting up a real notes folder** (13 Nov 2026). The map now links each folder's own index page by its real name, and the map script no longer writes an index page into a folder the repo keeps as a record.
+
+- **An index page in lower case is found.** A folder whose own index page is `index.md` (or `Index.md`) got a map line pointing at `INDEX.md`. A Mac finds that file, because its file system ignores case, but GitHub and Linux do not, so the link was broken there; on Linux the map script would also have written a second `INDEX.md` beside the person's page. Now the map links the page by its real name, uses it as it is (the person's own page is never changed), and does not count it as a note. A page repo-fit made earlier is rebuilt where it is, in the case it has.
+- **Delivered outputs get no index page.** The recommended set already left the outputs folder alone ("delivered outputs are a record of what was handed over"), but the map script, run later on its own or at the start of a session, did not know that rule and would write `outputs/INDEX.md`. The map script now follows the same rule: the folder `playbook.json` names as `outputs`, else `outputs/`.
+- **Folders the repo's rules protect reach an existing `playbook.json` too.** A folder the rules call append-only or read-only (`source-archive/ is append-only`) was saved in `protectedPaths` only when repo-fit wrote a new `playbook.json`. When the folder already had one, the list was not added, so the scripts in the folder never learned it and the map script could write an index page there. Now `apply` adds those folders to the existing list (shown in the dry run; the person's own entries stay first and as they are).
+
 ## 0.9.0 (26 Oct 2026)
 
 **Deep mode, decided by the maintainer on 25 Oct 2026.** `repo-fit deep` looks inside every folder. The assistant reads and writes a plan; repo-fit checks it, shows one screen, and after one yes applies it on a new branch, made in a separate working copy (a Git worktree), one commit per step, each step proven. The person's folder, branch and files never change. Design: `claudedocs/2026-10-25-deep-mode-design-note.md`. This release also carries the 0.8.0 safety and privacy fixes below.

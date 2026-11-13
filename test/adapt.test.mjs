@@ -275,3 +275,17 @@ test("the Codex session brief puts its context where Codex reads it", sandboxed(
   assert.equal(j.additionalContext, undefined);
   assert.equal(j.systemMessage, undefined, "Codex shows systemMessage as a warning");
 }));
+
+// Found on a real notes repo (13 Nov 2026) that already had a playbook.json: the recommended set left its append-only
+// folder and its outputs without an index page, but the map script, run on its own later, would have written one into
+// each, because the folders the repo's rules protect never reached playbook.json.
+test("B1: an existing playbook.json gets the folders the rules protect, so the map script leaves them alone later", sandboxed((sb) => {
+  const d = mature(sb, { playbook: { playbook: "0.4.0", profile: "knowledge", paths: { outputs: "outputs" }, protectedPaths: ["ledger/"] } });
+  const dry = apply(sb, d, "A-10,A-13");
+  assert.match(dry.out, /^\s*\+\s+"source-archive\/"/m, dry.out);
+  assert.equal(apply(sb, d, "A-10,A-13", ["--apply"]).status, 0);
+  assert.deepEqual(json(d, "playbook.json").protectedPaths, ["ledger/", "source-archive/"], "the person's own list first, nothing twice");
+  for (const p of ["source-archive/INDEX.md", "ledger/INDEX.md", "outputs/INDEX.md"]) assert.ok(!has(d, p), `${p} was written`);
+  const m = script(sb, d, "map.mjs");
+  assert.match(m.out, /up to date/, m.out);
+}));

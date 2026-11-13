@@ -165,7 +165,16 @@ export function scan(root, { virtual = new Map(), protect = [] } = {}) {
     const there = (existsSync(join(root, name)) && statSync(join(root, name)).isDirectory()) || [...virtual.keys()].some((p) => p.startsWith(`${name}/`));
     if (!areas.has(name) && there) areas.set(name, { name, files: [] });
   }
-  const isProtected = (name) => protect.some((x) => x.replace(/\/+$/, "") === name);
+  // Delivered outputs are a record of what was handed over (the same rule as `repo-fit audit`), so no index page is
+  // written there: the folder playbook.json names, else `outputs`.
+  let outputs = "outputs";
+  try {
+    const o = JSON.parse(read("playbook.json") || "{}").paths?.outputs;
+    if (typeof o === "string" && o.trim()) outputs = o.trim().replace(/^\.?\/+|\/+$/g, "");
+  } catch {
+    /* not valid JSON: the default name */
+  }
+  const isProtected = (name) => name === outputs || protect.some((x) => x.replace(/\/+$/, "") === name);
   // When the folder itself is a program (a website, an app), these folders belong to its build: repo-fit adds no
   // index page there (the build may read every file in them), and the map links the folder itself.
   const programRoot = files.some((p) => !p.includes("/") && MANIFEST.test(p));
@@ -175,19 +184,22 @@ export function scan(root, { virtual = new Map(), protect = [] } = {}) {
     const c = {};
     if (a.name === "inbox") a.files = a.files.filter((p) => p !== "inbox/rules.json");
     for (const p of a.files) c[kindOf(p)] = (c[kindOf(p)] ?? 0) + 1;
-    const notes = a.files.filter((p) => kindOf(p) === "note" && !/(^|\/)INDEX\.md$/.test(p));
+    // The area's own index page, in any case: `index.md` is the same file as `INDEX.md` on a Mac, but not on GitHub.
+    const ownIndex = a.files.find((p) => p.slice(a.name.length + 1).toLowerCase() === "index.md");
+    const notes = a.files.filter((p) => kindOf(p) === "note" && !/(^|\/)INDEX\.md$/.test(p) && p !== ownIndex);
     c.note = notes.length; // index pages are not notes
     const manifest = a.files.find((p) => MANIFEST.test(p.slice(a.name.length + 1)));
     const ownScripts = a.name === "scripts" && a.files.every((p) => p.startsWith("scripts/playbook/"));
     const code = ownScripts || Boolean(manifest) || ((c.code ?? 0) >= 2 && (c.code ?? 0) >= (c.note ?? 0));
     const readme = ["README.md", "readme.md", "index.md"].map((f) => `${a.name}/${f}`).find((f) => a.files.includes(f));
     const special = /^(archive|archives|_archive)$/i.test(a.name) ? "archive" : /^inbox$/i.test(a.name) ? "inbox" : null;
-    // The area's index page: the person's own README or index when it links every note, else their own INDEX.md, else ours.
+    // The area's index page: the person's own README or index when it links every note, else their own index page (any
+    // case, linked by its real name), else ours. Ours is rebuilt where it is, in the case it has.
     let index = null;
     let generate = false;
     const site = programRoot && SITE.test(a.name);
     if (!code && !special && !site && notes.length) {
-      const own = `${a.name}/INDEX.md`;
+      const own = ownIndex ?? `${a.name}/INDEX.md`;
       const ownText = a.files.includes(own) ? read(own) : null;
       const listsAll = (f) => {
         const t = read(f);

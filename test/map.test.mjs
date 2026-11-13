@@ -142,3 +142,41 @@ test("score: on the everything-folder, every note is within two links of MAP.md 
   const o = orient(dir, after);
   assert.ok(o.map && o.pointer && o.covered === o.entries, JSON.stringify(o));
 }));
+
+// Found on a real notes repo (13 Nov 2026): its decision register was `decisions/index.md`, lower case. The map linked
+// `decisions/INDEX.md`, which the Mac's file system found but a case-sensitive one (GitHub, Linux) did not.
+test("an area's own index.md in lower case is its index page: linked by its real name, never a second INDEX.md beside it", sandboxed((sb) => {
+  const d = repo(sb, "case", { files: {
+    "decisions/index.md": "# Decision register\n\n- [First](accepted/first.md)\n",
+    "decisions/accepted/first.md": "# First\n\nThe first decision.\n",
+    "decisions/accepted/second.md": "# Second\n\nA decision the register does not list yet.\n",
+    "notes/Index.md": `# Notes\n\n${"<!-- repo-fit:index begin: made by repo-fit -->"}\n- old\n<!-- repo-fit:index end -->\n`,
+    "notes/a.md": "# Alpha\n\nThe alpha note.\n",
+  } });
+  const p = pages(d);
+  assert.ok(!p.has("decisions/INDEX.md"), "no second index page beside the person's own");
+  assert.ok(!p.has("decisions/index.md"), "the person's own page (no markers) is never touched");
+  assert.match(p.get("MAP.md"), /\[decisions\/\]\(decisions\/index\.md\): 2 notes/, "linked by its real name; the index page is not a note");
+  assert.doesNotMatch(p.get("MAP.md"), /INDEX\.md/);
+  assert.ok(!p.has("notes/INDEX.md"), "repo-fit's own page in another case is rebuilt where it is");
+  assert.match(p.get("notes/Index.md"), /\[Alpha\]\(a\.md\)/);
+  assert.match(p.get("MAP.md"), /\[notes\/\]\(notes\/Index\.md\): 1 note\b/);
+  writeAll(d, p);
+  assert.deepEqual(brokenIn(d, ["MAP.md"]), []);
+  assert.deepEqual([...pages(d).keys()], [], "nothing left to write");
+}));
+
+// Found on the same repo: the map script, run on its own, would have written `outputs/INDEX.md` into the folder of
+// delivered work, which the recommended set had left alone. Delivered outputs are a record.
+test("the outputs folder gets no index page from the map script, by its default name or the one playbook.json names", sandboxed((sb) => {
+  const files = { "outputs/README.md": "# Outputs\n\n- 2026-report\n", "outputs/2026-report/README.md": "# Report\n\nThe report.\n", "notes/a.md": "# Alpha\n\nThe alpha note.\n" };
+  const d = repo(sb, "out", { files });
+  const p = pages(d);
+  assert.ok(!p.has("outputs/INDEX.md"), [...p.keys()].join(", "));
+  assert.ok(p.has("notes/INDEX.md"));
+  assert.match(p.get("MAP.md"), /\[outputs\/\]\(outputs\/\)/);
+  const named = repo(sb, "named", { files: { "playbook.json": `${JSON.stringify({ paths: { outputs: "deliverables" } })}\n`, "deliverables/README.md": "# Deliverables\n", "deliverables/2026-deck/notes.md": "# Deck notes\n\nNotes.\n", "outputs/x.md": "# X\n\nNot the outputs here.\n" } });
+  const q = pages(named);
+  assert.ok(!q.has("deliverables/INDEX.md"), [...q.keys()].join(", "));
+  assert.ok(q.has("outputs/INDEX.md"), "a folder playbook.json does not name is an ordinary area");
+}));

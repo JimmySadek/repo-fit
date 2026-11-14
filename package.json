@@ -1,6 +1,6 @@
 {
   "name": "repo-fit",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Give your project a memory: a session briefing, one list of everything open, safe automatic saves and one rulebook for Claude Code and Codex. Works on new and existing projects.",
   "type": "module",
   "bin": {
@@ -46,6 +46,16 @@
   "license": "MIT",
   "repoFit": {
     "releases": [
+      {
+        "version": "0.9.1",
+        "important": false,
+        "why": "Fixes from setting up a real notes folder: the map links each folder's own index page by its real name, and no index page is written into a folder your rules keep as a record.",
+        "briefing": "repo-fit 0.9.1: the map links each folder's own index page by its real name, and writes no index page into your outputs or append-only folders.",
+        "news": [
+          "A folder whose index page is named index.md in lower case is linked by that name, so the link works on GitHub too, and no second INDEX.md is written beside it.",
+          "Your outputs folder and folders your rules call append-only get no index page from the map script, also when it runs on its own later."
+        ]
+      },
       {
         "version": "0.9.0",
         "important": true,

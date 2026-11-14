@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.9.1 (unreleased)
+## 0.9.1 (14 Nov 2026)
 
 **Fixes from setting up a real notes folder** (13 Nov 2026). The map now links each folder's own index page by its real name, and the map script no longer writes an index page into a folder the repo keeps as a record.
 

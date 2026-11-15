@@ -1,6 +1,6 @@
 {
   "name": "repo-fit",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Give your project a memory: a session briefing, one list of everything open, safe automatic saves and one rulebook for Claude Code and Codex. Works on new and existing projects.",
   "type": "module",
   "bin": {
@@ -46,6 +46,15 @@
   "license": "MIT",
   "repoFit": {
     "releases": [
+      {
+        "version": "0.9.2",
+        "important": false,
+        "why": "A fix to how repo-fit itself is released: the automatic upload to npm no longer reports a failure when the release tag already exists. Nothing changes in your folder.",
+        "briefing": "repo-fit 0.9.2: a fix to how repo-fit is released. Nothing changes in your folder.",
+        "news": [
+          "The automatic upload of a new version stays green when the release on GitHub already made its tag. Nothing changes in your folder."
+        ]
+      },
       {
         "version": "0.9.1",
         "important": false,

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.2 (15 Nov 2026)
+
+**A fix to how repo-fit itself is released.** Nothing changes in a folder set up with repo-fit; `update` only brings the new version number.
+
+- **The automatic upload stays green when the release made the tag first.** After a new version is uploaded to npm, `.github/workflows/publish.yml` tags the release. The release on GitHub (`gh release create`) is usually made seconds after the merge and makes the same tag. Where that tag pointed at another commit, the tag step failed with "already exists" and the run went red after a good upload. Now the step makes the tag only when it is not on GitHub yet, and never moves a tag that is already there; a tag on another commit gets a warning in the run. A test runs the step against a local Git remote: no tag yet, the same tag, a tag on another commit, and the release making the tag during the push.
+
 ## 0.9.1 (14 Nov 2026)
 
 **Fixes from setting up a real notes folder** (13 Nov 2026). The map now links each folder's own index page by its real name, and the map script no longer writes an index page into a folder the repo keeps as a record.

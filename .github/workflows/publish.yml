@@ -41,8 +41,20 @@ jobs:
       - name: Publish
         if: steps.check.outputs.new == 'true'
         run: npm publish
+      # The release (gh release create) often makes this tag first, seconds after the merge. A tag that is
+      # already on GitHub is left as it is, so the run stays green after a good upload.
       - name: Tag the release
         if: steps.check.outputs.new == 'true'
+        env:
+          V: ${{ steps.check.outputs.version }}
         run: |
-          git tag "v${{ steps.check.outputs.version }}"
-          git push origin "v${{ steps.check.outputs.version }}"
+          if found="$(git ls-remote --exit-code --tags origin "refs/tags/v$V" "refs/tags/v$V^{}")"; then
+            echo "Tag v$V is already on GitHub: left as it is."
+            at="$(echo "$found" | tail -n 1 | cut -f 1)"
+            if [ "$at" != "$(git rev-parse HEAD)" ]; then
+              echo "::warning::Tag v$V points at $at, not at the published commit $(git rev-parse HEAD)."
+            fi
+          else
+            git tag "v$V"
+            git push origin "v$V" || git ls-remote --exit-code --tags origin "refs/tags/v$V" > /dev/null
+          fi

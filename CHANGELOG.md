@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.9.3 (unreleased)
+## 0.9.3 (21 Nov 2026)
 
 **Faster finding, less noise and fewer contradictions**, from three folders used every day (a knowledge base, lab notes and an illustrated book studio). First drafted by Gemini Neon from an open prompt, then reviewed and corrected.
 

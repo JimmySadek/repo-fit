@@ -56,16 +56,17 @@ const link = (text, p) => `[${label(text)}](${href(p)})`;
 
 const frontmatter = (t) => t.replace(/\r\n?/g, "\n").match(/^﻿?---\n([\s\S]*?)\n---[ \t]*(\n|$)/);
 const clip = (s, n = 100) => (s.length <= n ? s : `${s.slice(0, n).replace(/\s+\S*$/, "")}…`);
-// HTML comments go first (an author's hidden note never reaches a page), then real HTML tags: a lower-case element
-// name with attributes in HTML form. A placeholder like <Name> or <Book title> is not a tag and stays.
-const HTML_TAG = /<\/?[a-z][a-z0-9-]*(?:\s+[a-z_:][\w:.-]*(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*\s*\/?>/g;
-const plain = (s) => s.replace(/<!--[\s\S]*?(?:-->|$)/g, "").replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/!?\[\[([^\]|]*\|)?([^\]]*)\]\]/g, "$2").replace(/[*_`]+/g, "").replace(HTML_TAG, "").replace(/\s+/g, " ").trim();
+// HTML comments are dropped first, from the whole text (an author's hidden note never reaches a page), then known
+// HTML elements, in any case. Anything else in <...> is a placeholder (<Name>, <repo>, <your name>) and stays.
+const COMMENT = /<!--[\s\S]*?(?:-->|$)/g;
+const HTML_TAG = /<\/?(?:a|abbr|address|article|aside|audio|b|bdi|bdo|big|blockquote|br|caption|center|cite|code|dd|del|details|dfn|div|dl|dt|em|figcaption|figure|font|footer|h[1-6]|header|hr|i|iframe|img|ins|kbd|li|mark|nav|ol|p|picture|pre|q|s|samp|section|small|source|span|strike|strong|sub|summary|sup|table|tbody|td|tfoot|th|thead|tr|tt|u|ul|video|wbr)\b[^>]*>/gi;
+const plain = (s) => s.replace(COMMENT, "").replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/!?\[\[([^\]|]*\|)?([^\]]*)\]\]/g, "$2").replace(/[*_`]+/g, "").replace(HTML_TAG, "").replace(/\s+/g, " ").trim();
 // One line about a note: its description or summary in the frontmatter, else its first real paragraph.
 export function summary(text) {
   const fm = frontmatter(text);
   const d = fm?.[1].match(/^(description|summary):\s*["']?(.+?)["']?\s*$/m);
   if (d) return clip(plain(d[2]));
-  const body = fm ? text.replace(/\r\n?/g, "\n").slice(fm[0].length) : text.replace(/\r\n?/g, "\n");
+  const body = (fm ? text.replace(/\r\n?/g, "\n").slice(fm[0].length) : text.replace(/\r\n?/g, "\n")).replace(COMMENT, "");
   for (const para of body.split(/\n\s*\n/)) {
     const p = para.trim();
     if (!p || /^(#|```|~~~|\||<!--|>|[-*+] |\d+[.)] |!\[|<img|---|===|\[[^\]]+\]:)/.test(p)) continue;
@@ -78,7 +79,7 @@ export function title(text, file) {
   const fallback = posix.basename(file).replace(/\.mdx?$/i, "");
   const fm = frontmatter(text)?.[1].match(/^title:\s*["']?(.+?)["']?\s*$/m);
   if (fm) return plain(fm[1]) || fallback;
-  const h = text.match(/^#\s+(.+)$/m);
+  const h = text.replace(COMMENT, "").match(/^#\s+(.+)$/m);
   const cleaned = h ? plain(h[1]) : "";
   return cleaned && /[\p{L}\p{N}]/u.test(cleaned) ? cleaned : fallback;
 }
@@ -250,7 +251,7 @@ function mapBlock(s) {
       : a.code ? `a program (${a.manifest ?? counts(a.counts, ["code"])}). It stays where it is`
       : a.site ? `${counts(a.counts) || "empty"}; the website uses these files, so repo-fit adds no index page there`
       : counts(a.counts) || "empty";
-    lines.push(`- ${link(`${a.name}/`, target)}: ${what}.${a.about && !a.special && !a.ownScripts ? ` ${a.about}` : ""}`);
+    lines.push(`- ${link(`${a.name}/`, target)}: ${what}.${a.about && !a.special && !a.ownScripts ? ` ${md(a.about)}` : ""}`);
     // What waits in the inbox is listed here (it has no index page), so it can be found until it is filed.
     if (a.special === "inbox") for (const n of a.notes.slice(0, 10)) lines.push(`  - ${link(n.title, n.path)}`);
     if (a.special === "inbox" && a.notes.length > 10) lines.push(`  - and ${a.notes.length - 10} more in ${link("inbox/", "inbox/")}`);
@@ -333,7 +334,7 @@ export function pages(root, opts = {}) {
 // the folder has no MAP.md), a fresh copy has no map, so the pointer starts at README.md instead. It is the same in
 // every folder, with or without inbox/, so it never goes out of step when organize makes an inbox/. It keeps how to
 // file 📥 items and run a 🆕 review: a session without the briefing hook learns them only here.
-const pointer = (start) => `<!-- repo-fit:pointer begin -->\n${start === "README.md" ? "**Start at [README.md](README.md).** This folder's map, MAP.md, is kept out of Git here, so only some copies have it: when it is there, it lists every area of this folder in one line, and each area's index page lists its notes." : "**Start at [MAP.md](MAP.md).** It lists every area of this folder in one line; each area's index page lists its notes."} Open only what the task needs. **📥 Items in \`inbox/\`:** ask the person once per kind (Yes to the folder you suggest, Yes and always, Not now), then run \`node scripts/playbook/file.mjs <item> --to <folder> [--always]\` or \`--not-now\`, dry run first, then \`--apply\`. Never delete, merge or commit them yourself. **🆕 Review:** run \`node scripts/playbook/check.mjs --review\` and propose; nothing changes without a yes.\n<!-- repo-fit:pointer end -->`;
+const pointer = (start) => `<!-- repo-fit:pointer begin -->\n${start === "README.md" ? "**Start at [README.md](README.md).** This folder's map, MAP.md, is kept out of Git here, so only some copies have it: when it is there, it lists every area of this folder in one line, and each area's index page lists its notes." : "**Start at [MAP.md](MAP.md).** It lists every area of this folder in one line; each area's index page lists its notes."} Open only what the task needs. New things go in \`inbox/\`. **📥 Items waiting there:** ask the person once per kind, with exactly three choices (Yes to the folder you suggest, Yes and always, Not now), then run \`node scripts/playbook/file.mjs <item> --to <folder> [--always]\` or \`--not-now\`, dry run first, then \`--apply\`. Never delete, merge or commit them yourself. **🆕 Review:** run \`node scripts/playbook/check.mjs --review\` and propose; nothing changes without a yes.\n<!-- repo-fit:pointer end -->`;
 export const POINTER = pointer("MAP.md");
 const mapIgnored = (root) => ignoredNew(root, ["MAP.md"]).has("MAP.md");
 export const pointerStart = (root) => (mapIgnored(root) && existsSync(join(root, "README.md")) ? "README.md" : "MAP.md");

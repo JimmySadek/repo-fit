@@ -345,7 +345,7 @@ async function status(target) {
   if (fix?.inbox.length) hints.push("for items waiting in inbox/, one question per kind (`file`)");
   if (fix?.mapStale.length) hints.push("the map updates at the next session start (`node scripts/playbook/map.mjs --write` now)");
   if (fix?.broken.length) hints.push("broken links are yours to fix (listed above)");
-  if (fix?.offIndex.length) hints.push("for a note not on an index page, add a link to it on its folder's index page");
+  if (fix?.offIndex.length && !fix?.mapStale.length) hints.push("for a note not on an index page, add a link to it on its folder's index page");
   if (managed.length) hints.push("an update shows what it changes (`update`)");
   console.log(off ? (hints.length ? `\nWhat can fix it: ${hints.join("; ")}.` : "\nFix the items above, then run status again.") : "\nNothing to change.");
   // Say what this check leaves out, so "fit" is never read as more than it is.

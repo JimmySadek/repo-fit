@@ -77,7 +77,7 @@ test("the map pointer is the same in every folder, so organize never leaves the 
   assert.match(POINTER, /ask the person once per kind.*file\.mjs <item> --to <folder>/s, "a session without the briefing hook still learns how to file");
   assert.match(POINTER, /check\.mjs --review/, "the review keeps its line");
   const n = POINTER.replace(/<!--[^>]*-->/g, "").split(/\s+/).filter(Boolean).length;
-  assert.ok(n <= 85, `the pointer stays short: ${n} words`);
+  assert.ok(n <= 95, `the pointer stays short: ${n} words`);
   git(sb, d, ["add", "-A"], ME);
   git(sb, d, ["commit", "-q", "-m", "setup"], ME);
   // organize makes inbox/ (its rules file): the pointer must not change with it.
@@ -236,4 +236,25 @@ test("status distinguishes same-version out-of-step from behind and prints only 
   assert.doesNotMatch(sameVer, /Behind:/);
   assert.match(sameVer, /What can fix it: an update shows what it changes \(`update`\)\./);
   assert.doesNotMatch(sameVer, /organize plan|items waiting in inbox|Broken links are yours/, "only relevant fix hints are shown");
+}));
+
+test("index lines keep lower-case placeholders and never leak a hidden comment across paragraphs", () => {
+  assert.equal(summary("Run `repo-fit apply <repo>` first, then check the receipt.\n"), "Run repo-fit apply <repo> first, then check the receipt.");
+  assert.equal(summary("Replace <your name> and <project-name> in this template before use.\n"), "Replace <your name> and <project-name> in this template before use.");
+  assert.equal(title("# Notes on <topic>\n", "a.md"), "Notes on <topic>");
+  assert.equal(title("# <BR>Up<br>per\n", "a.md"), "Upper", "real tags go in any case");
+  assert.equal(summary("<!-- private\n\nask Sam about the budget of 40k\n-->\n\nPublic intro paragraph here.\n"), "Public intro paragraph here.");
+  assert.equal(title("<!--\n# Secret working title\n-->\n# Real\n", "a.md"), "Real");
+});
+
+test("status names the map fix, not the index-page fix, when a new note is only waiting for the map", sandboxed((sb) => {
+  const d = repo(sb, "offindex", { commit: true, files: {
+    "AGENTS.md": "# Rules\n",
+    "notes/a.md": "# A\n\nNote.\n",
+  } });
+  assert.equal(cli(sb, ["apply", d, "--steps", "A-01,A-10,A-13,D-01,D-11", ...SETUP], { env: ME }).status, 0);
+  write(d, "notes/b.md", "# B\n\nA new note the map has not seen yet.\n");
+  const out = cli(sb, ["status", d], { env: ME }).out;
+  assert.match(out, /the map updates at the next session start/, out);
+  assert.doesNotMatch(out, /add a link to it on its folder's index page/, out);
 }));

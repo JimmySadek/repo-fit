@@ -192,7 +192,7 @@ node dev/measure.mjs --ref 3fed971    # 0.6.0, the starting score of the redesig
 
 `node dev/score.mjs <folder>` scores any folder read-only: the map, notes reachable from it, and loose files at the top.
 
-A GitHub Actions workflow (`.github/workflows/test.yml`) runs them on macOS, Linux and Windows with Node 18, 20 and 22. First run, 30 Sep 2026: **macOS and Linux green** on all three Node versions. **Windows failed 2 of 43** for one reason, Windows line endings in the guidance dates. That is fixed, but the Windows job is still allowed to fail until a run confirms it.
+A GitHub Actions workflow (`.github/workflows/test.yml`) runs them on macOS, Linux and Windows with Node 18, 20 and 22. First run, 30 Sep 2026: **macOS and Linux green** on all three Node versions. **Windows failed 2 of 43** for one reason, Windows line endings in the guidance dates. That is fixed, and Windows passes too: all nine jobs were green for 0.9.3 (21 Nov 2026). The Windows job is still allowed to fail, so a Windows break would not stop a merge.
 
 ## Scope, in one line
 
@@ -226,4 +226,3 @@ A GitHub Actions workflow (`.github/workflows/test.yml`) runs them on macOS, Lin
 - The terminal `claude` (2.1.270): its login had expired, so nothing ran there. Only 2.1.284 (desktop app) is proven.
 - Everything Codex-specific (hooks, trust review). Drafted from documentation only.
 - `connect` with a real GitLab host. Only the `gh` path ran for real.
-- Windows. The tests pass on macOS and Linux (Node 18, 20, 22) in CI. On Windows, 41 of 43 passed before the line-ending fix; the run after the fix is not in yet.

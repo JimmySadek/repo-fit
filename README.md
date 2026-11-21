@@ -8,37 +8,94 @@
 
 **From chaos to progress.**
 
-repo-fit organizes your project folder, so you and your AI assistant can find anything, then keeps it organized. You see the before and after first. Nothing moves without your yes, and everything can be undone.
+Every new AI chat starts from zero. Meanwhile, your project folder fills up with loose screenshots, PDFs, `notes-final-v2.md`, and folders named `old` or `New Folder`. You spend the start of every session hunting for files and re-explaining where things live.
 
-It is for people who do real work with an AI assistant such as Claude Code or Codex: notes, research, plans, decisions, client work, a product, a company. It works with a brand-new project and with a folder that grew for years. It looks at what you already have, designs the structure that fits it, and changes nothing without showing you first.
+**repo-fit** organizes your project folder so you and your AI assistant can find anything in two steps, then keeps it organized. It works on a brand-new project and on a folder that grew for years. You see the before and after first. Nothing moves without your yes, nothing is deleted during organizing, and one command undoes it all.
+
+It uses plain files and folders only. There is no database, no search server, and no cloud upload. It sets up **Claude Code** and **Codex**. Everything is plain Markdown (`MAP.md`, index pages and `AGENTS.md`), so any assistant that can read files can open the map and follow it.
+
+**Try it:** [Start in 2 minutes](#start-in-2-minutes). Nothing changes until you say yes.
+
+## See what happens before you say yes
+
+Here is the actual preview `repo-fit` shows on a messy sample folder (`spaghetti`) with 32 loose files, two old folders, a duplicate note, and a small website inside it. Nothing has changed yet:
+
+```text
+Your folder today                             After one yes (undo any time)
+32 things loose at the top                    MAP.md: start here, it says what lives where
+  12 images and screenshots                   notes/: your 12 notes
+  5 documents (PDFs and similar)              media/: your 11 images
+  14 notes                                    documents/: your 5 documents
+  1 data file                                 inbox/: new things land here (1 waiting now)
+Old-looking folders: "old/", "New Folder/"    archive/: "old/", "New Folder/", 1 copy, dated 2026-10-05. Nothing deleted
+1 exact copy of another file                  website/: the program stays exactly where it is
+website/ (a program)
+```
+
+In short:
+- **14 loose notes** get sorted: 12 move into `notes/` (groups of 3 or more matching files, such as `japan-trip-*` or `client-acme-*`, get their own subfolders), 1 exact copy goes to `archive/`, and 1 empty note waits in `inbox/`.
+- **4 links inside your notes** update automatically so none of them break.
+- **Code and files your code uses** (`website/`, `logo.png`, `prices-2026.csv`) stay right where they are.
 
 ## Is this for you?
 
-- You are a **founder, product manager, designer, marketer or consultant**, and you use an AI assistant to think and write, not only to code.
-- You keep **notes, research and decisions** for a project, and you are tired of re-explaining everything at the start of each session.
-- You have a **project folder that grew without structure** (photos, PDFs, notes, a bit of code), and you want it organized, after seeing the before and after.
-- You work with **both Claude Code and Codex**, and you want them to follow the same rules.
+- You are a **founder, product manager, designer, marketer, writer, or consultant** using an AI assistant to think, write, and plan.
+- You keep **notes, research, and decisions** in a folder and are tired of re-explaining everything at the start of every session.
+- You have a **folder that grew without structure** (photos, PDFs, notes, maybe some code) and want it sorted after seeing the before and after.
+- You switch between **Claude Code and Codex** (or other AI tools) and want them to follow the same rules and start from the same map.
 
-You do not need to be a developer. You need an AI assistant and about 10 minutes.
+You do not need to be a developer. You need an AI assistant and [Node.js](https://nodejs.org) (version 18 or newer, free; your assistant checks for it). It takes 2 minutes to start and about 10 for the full setup.
 
-**It is not** a search engine or a database. It works with plain files and folders, and it does not replace your assistant. It gives you both a tidy place to work.
+**It is not** a search engine, a database, or a replacement for your assistant. It gives you both a tidy folder to work in.
+
+## Start in 2 minutes
+
+Open your project folder in **Claude Code** or **Codex** and paste this:
+
+```text
+Install the repo-fit skill with `npx skills add JimmySadek/repo-fit -g -a claude-code codex -y`, then use it to organize this project. Before you change anything, show me the before and after and explain it in plain words.
+```
+
+Here is what happens next:
+
+```text
+1. LOOK              2. SEE                      3. CHOOSE ONCE               4. KEEP FIT
+Reads your folder    Shows your folder today,    Organize it all, see the     New files get sorted,
+silently. Changes    after, and why it helps     full move list first, or     the map updates itself,
+nothing.             in plain words.             just add the map for now.    and every session starts briefed.
+```
+
+**One last step is yours.** Your assistant gives you one line to run in your terminal to turn on the start-of-session briefing (plus a gentle end-of-reply reminder when files changed but nothing was written down). Claude Code does not let an assistant change how your sessions start, so it leaves that switch to you. **Next session**, open the folder again and the briefing appears by itself. (In Codex, you approve this once too: trust the project's `.codex/` folder, then type `/hooks` and allow it.)
+
+<details>
+<summary><strong>Other ways to install, try in the terminal, or update</strong></summary>
+
+- **Claude Code plugin (supports auto-update):** run `/plugin marketplace add JimmySadek/repo-fit`, then `/plugin install repo-fit@repo-fit`. To turn on auto-update: `/plugin` -> **Marketplaces** -> **repo-fit** -> **Enable auto-update** (off by default). The skill is then `/repo-fit:repo-fit`.
+- **Try in your terminal (read-only, nothing is set up in your folder):**
+  ```bash
+  npx repo-fit organize .   # preview the before-and-after plan
+  npx repo-fit audit .      # full read-only report on your folder
+  ```
+- **Another AI assistant (Gemini, Cursor, or any other agent):** point it at [INSTALL.md](INSTALL.md) and ask it to show a dry run first, or run `npx repo-fit` in your terminal.
+- **Updates:** repo-fit does not update itself (unless you use the Claude Code plugin with auto-update on). When a newer release matters for your folder, the briefing tells you in one line with why. Update the way you installed it (`npx skills update -g -y`, `skillshare update --all`, or `git pull` in your clone), then run `/repo-fit` in your folder.
+
+</details>
 
 ## What you get
 
-| In plain words | What it looks like |
+| What it gives you | How it works in your folder |
 |---|---|
-| **An organized folder, with one yes** | Loose files go into folders that fit your folder's own names. Old folders and exact copies go to an archive. Nothing is deleted, and one command undoes it all. |
-| **A map of everything** | `MAP.md` lists every area in one line, and each area has an index page (grouped by subfolder when an area grows large). You and your assistant find any note in two steps. |
-| **A safe start** | Before any change, Git saves a snapshot of your unsaved files, kept apart from your branches, so you can always go back. Your branch and what you staged stay as they are. No Git yet? It asks you first, as its own question, and changes nothing until you choose. |
-| **New things land in one place** | Drop things in `inbox/`. The rules you approved file them when a session starts. Anything new asks you once. |
-| **A briefing at the start of every session** | Before your assistant says a word, it reads a short summary: where you are, what is open, what to look at. |
-| **One list of everything open** | Open tasks from all your notes, collected in `MAP.md` with links. Nothing moves out of your notes. |
-| **It stays fit** | The map follows your folder by itself, the briefing names real problems in one line each, and running repo-fit again starts with a checkup. |
-| **The same rules for every assistant** | One short rulebook that Claude Code and Codex both read. repo-fit adds five short rules after yours (write it down, search before saying "unknown", never invent agreement), and yours win where they overlap. |
-| **A deeper clean-up, when you ask** | Your assistant reads inside your documents and plans one docs/ folder by kind, a status line on every spec and plan, copies to the archive, and a shorter rulebook with every rule kept. You see it on one screen and say yes once. It all goes on a new branch, made in a separate copy: your folder stays as it is until you merge. A second look covers the code: what nothing uses, copied blocks, import loops, misleading names and colours typed by hand, after your assistant reads the official guides for your kind of project. It runs your own tests once in a throwaway copy and never downloads anything. After one yes, the code changes go on a new branch one step at a time, each proven by your own tests; a step that fails is taken back. An app inside your repo with its own `package.json` is left alone, and the screen says so. |
-| **It fits what you already have** | Your own files stay where they are. repo-fit points at them instead of making copies. |
+| **One-yes folder cleanup** | Loose files move into folders by kind (reusing your own folder names first). Old folders and exact copies move to `archive/`. Links inside notes update automatically. |
+| **A two-step map (`MAP.md`)** | `MAP.md` lists every area in one line, and each area gets an index page. You and your assistant reach any note in two steps. The map points at your files where they are; it never copies them. |
+| **One drop-off spot (`inbox/`)** | Drop new screenshots, PDFs, or notes into `inbox/`. Rules you approved file matching items when a session starts (with undo). Anything without a rule waits and asks you once: Yes, Yes and always, or Not now. |
+| **A briefing every session** | Before your assistant says a word, it gets a short summary: your Git status, what just got filed, items waiting in `inbox/`, broken links, old notes, and how many open tasks you have. |
+| **Open tasks tracked in place** | Unchecked boxes (`- [ ]`) and `TODO:` lines stay inside your notes. `MAP.md` and the briefing show the count (so private task text stays out of the map), and your assistant can list them all. |
+| **One rulebook for your assistants** | Claude Code and Codex read the same rules (`AGENTS.md`; `CLAUDE.md` imports it). repo-fit adds five short rules after yours (write it down, start from the files, search before saying "unknown", keep what matters, never invent agreement). Where rules overlap, yours win. |
+| **Stays tidy on its own** | When you add, rename, or remove notes, `MAP.md` and index pages update at the next session start. About every two weeks, the briefing suggests a quick review for near-duplicates and old notes. Re-running `/repo-fit` starts with a plain-English checkup. |
 
-Here is a briefing from a test folder a week after it was organized:
+*(Optional: turn on `repo-fit prefs set improve on`, and repo-fit can propose a one-line preference when you give your assistant the same correction twice, or a filing rule when you file the same kind of item twice. It never reads chat logs and never writes a rule without your yes.)*
+
+Here is the kind of briefing you see at the start of a session, on that same sample folder:
 
 ```text
 spaghetti · branch main · 4 changes not saved in Git yet · last save 2026-10-05
@@ -48,64 +105,38 @@ spaghetti · branch main · 4 changes not saved in Git yet · last save 2026-10-
 ✅ Open work: 10 items in 4 notes (see MAP.md)
 ```
 
-## How it works
+## Want to go deeper later? (Optional deep mode)
 
-```
-1. LOOK          2. SEE                    3. CHOOSE ONCE           4. KEEP FIT
-It reads your    Your folder today →       Organize it all, see     New things get filed,
-folder. It       after → why it is         the full list first, or  the map follows, and a
-changes nothing. better for you.           not now, just the map.   re-run starts with a checkup.
-```
+When you explicitly ask your assistant for a deeper clean-up ("clean up my docs", "sort out the specs", "a deep pass"), repo-fit can look inside your folders too. Deep mode needs Git and **always works in a separate copy, on its own new Git branch**. Your own folder, branch and files stay untouched until you decide to merge.
 
-Every change is shown to you first, keeps a backup, and can be undone with one command. It never uploads your files anywhere.
+- **Sweep 1: Documents and rulebooks.** One organized `docs/` layout, status lines (`Current`, `Draft`, `Done` and similar) on specs and plans, old copies archived, and an oversized rulebook split into linked docs word for word. No code moves.
+- **Sweep 2: Code and styles (for code projects).** Clean-ups for unused code, copied blocks, misleading names and repeated hand-typed colors. Your project's own checks (tests, build and the like) prove each step, and a step that fails is undone.
 
-## Start in 2 minutes
+Deep mode is new in 0.9.x; see [CHANGELOG.md](CHANGELOG.md) for its current known limits.
 
-Open your project in **Claude Code** or **Codex** and paste this:
+## Safety and privacy
 
-```text
-Install the repo-fit skill with `npx skills add JimmySadek/repo-fit -g -a claude-code codex -y`, then use it to organize this project. Before you change anything, show me the before and after and explain it in plain words.
-```
+- **Preview first.** Every change is shown first and waits for your yes. The only exceptions are ones you approved once: your filing rules, and the map keeping itself up to date.
+- **Nothing is deleted during organizing.** Old folders and exact copies go to `archive/`. Code, and every file your code or rules name, never moves during organizing or deep sweep 1. (Only deep sweep 2 for code can remove or move unused code, on its own Git branch after your yes, verified by your own tests.)
+- **A private Git snapshot before changes.** Before changing anything, Git saves a snapshot of your unsaved files on a private local reference (`refs/repo-fit/snapshots/...`). Your branch, staged files, and working files stay as they are, and a normal `git push` does not send it. Before saving, repo-fit lists what it will snapshot and warns about untracked private folders (such as `meetings/`, `transcripts/`, or `customers/`) with one command to keep them out of Git first. **No Git yet?** repo-fit stops and asks you separately whether to start Git or continue with repo-fit's own backup and undo.
+- **Undo and clean exit.** Every change keeps a backup and receipt. `repo-fit undo` puts things back. To stop using repo-fit, `repo-fit remove` sets repo-fit's own files and blocks aside while keeping your organized folders intact.
+- **Your files never leave your computer.** repo-fit does not upload, publish, or send your files anywhere. Files ignored by Git stay out of `MAP.md`, index pages, and checkups. Notes named `secret`, `private`, `confidential`, `password`, or `credential` are listed by filename only, and repo-fit never reads the contents of secret-like files (it only warns if one sits in a risky place).
+- **Minimal network use.** Once a day, the briefing asks npm whether an important newer repo-fit release exists (only the package name `repo-fit` is sent; turn it off with `repo-fit prefs set updateCheck off`). Other network calls run only when you ask: `connect` creates an empty private repo on GitHub or GitLab (never pushes), and `tools` checks or updates tool versions.
 
-That's it. Your assistant installs repo-fit, looks at your folder, shows you your folder today, after, and why it is better, and asks you one question: organize it all, see the full list first, or not now. Code and the files it uses never move, and your own rules stay as they are.
-
-**One step is yours:** your assistant gives you one line to run that turns on the briefing, and a short reminder at the end of each reply when something changed but was not written down. Claude Code does not let an assistant change how your sessions start, so it asks you. **Next session,** open the project again and the briefing appears by itself.
-
-**Updates:** repo-fit does not update itself. When a release matters for your project, the briefing tells you in one line, with why. Then update repo-fit the way you installed it (`npx skills update -g -y`, `skillshare update --all`, or `git pull` in its folder) and run `/repo-fit` here.
-
-**Using Claude Code? Install it as a plugin instead,** and it can update itself. In Claude Code, run `/plugin marketplace add JimmySadek/repo-fit`, then `/plugin install repo-fit@repo-fit`. To get new versions automatically: `/plugin` → **Marketplaces** → **repo-fit** → **Enable auto-update** (it is off until you turn it on). The skill is then `/repo-fit:repo-fit`.
-
-**What your computer needs:** [Node.js](https://nodejs.org), version 18 or newer. It is a free program; if it is missing, your assistant will tell you.
-
-**Prefer the terminal?** One line looks at any project and changes nothing:
-
-```bash
-npx repo-fit audit .
-```
-
-Everything else is in the [technical reference](docs/reference.md).
-
-## A few words on safety
-
-- **It changes nothing without showing you first.** Every step is a preview, then your yes.
-- **It never deletes your files.** Old things go to an archive. Code, and every file your code or rules name, never moves.
-- **Git saves a snapshot first.** Before any change, your unsaved files are saved in Git, apart from your branches and on this computer only, so you can always go back. A normal `git push` does not send it.
-- **Everything it does can be undone.** It keeps a backup and a record of each change; `repo-fit undo` puts it back. To stop using repo-fit, `repo-fit remove` sets its own parts aside and leaves your files as they are.
-- **Your files never leave your computer.** It does not upload, publish, or send anything. Two small exceptions: once a day the briefing asks npm whether a newer repo-fit exists (only the name "repo-fit" is sent; turn it off with `repo-fit prefs set updateCheck off`), and, only if you ask, it creates an empty, private backup location for your project on GitHub or GitLab.
-- **It never reads the contents of files that look like secrets** (passwords, keys). It only warns you if such a file is in a risky place.
-
-The [full list of what it reads and when it uses the network](docs/reference.md#security-and-privacy) is in the reference.
+See the [full list of what repo-fit reads and when it uses the network](docs/reference.md#security-and-privacy).
 
 ## Where this stands
 
-**Public beta.** This version adds deep mode (see the [changelog](CHANGELOG.md), with its known limits). Built and used by one person so far, on a Mac, with Claude Code, and tried on test folders, not yet on many real ones. Automated tests pass on Mac, Linux and Windows. Codex support is written to the official documentation but has not been tried live yet. If you try it, [tell us what happened](https://github.com/JimmySadek/repo-fit/issues): that is the most useful thing you can do right now.
+**Public beta.** Used every day by its one maintainer, on a Mac with Claude Code, in a knowledge base, lab notes and a book project. Not yet tried by many other people. Automated tests pass on macOS, Linux, and Windows. Codex support is written to the official documentation and has not been tested live yet. Deep mode has known limits listed in [CHANGELOG.md](CHANGELOG.md).
+
+If you try it, [open an issue and tell us what happened](https://github.com/JimmySadek/repo-fit/issues). Real-world feedback is the most useful thing right now.
 
 ## For developers
 
-Everything technical lives in one page: commands, the scripts, how it adapts to a repo that has its own system, the review queue, autosave rules, security details, tests, and what is not built yet.
+Everything technical lives in one place: all commands, vendored scripts, how repo-fit adapts to existing rules and checks, autosave rules, security details, tests, and what is not built yet.
 
 - [Technical reference](docs/reference.md)
-- [INSTALL.md](INSTALL.md): the step-by-step an AI assistant follows
+- [INSTALL.md](INSTALL.md): the step-by-step instructions any AI assistant can follow
 - [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md)
 
-MIT licence. Made by [Jimmy Sadek](https://github.com/JimmySadek).
+MIT license. Made by [Jimmy Sadek](https://github.com/JimmySadek).

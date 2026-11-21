@@ -80,7 +80,7 @@ test("status notices drift and update fixes it", sandboxed((sb) => {
   write(d, "scripts/playbook/lib.mjs", `${read(d, "scripts/playbook/lib.mjs")}\n// a local edit\n`);
   const behind = cli(sb, ["status", d]);
   assert.equal(behind.status, 1);
-  assert.match(behind.out, /Behind/);
+  assert.match(behind.out, /Out of step/);
   const dry = cli(sb, ["update", d]);
   assert.equal(dry.status, 0);
   assert.match(read(d, "scripts/playbook/lib.mjs"), /a local edit/, "a dry run changes nothing");

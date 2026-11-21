@@ -51,9 +51,7 @@
         "important": false,
         "why": "A fix to how repo-fit itself is released: the automatic upload to npm no longer reports a failure when the release tag already exists. Nothing changes in your folder.",
         "briefing": "repo-fit 0.9.2: a fix to how repo-fit is released. Nothing changes in your folder.",
-        "news": [
-          "The automatic upload of a new version stays green when the release on GitHub already made its tag. Nothing changes in your folder."
-        ]
+        "news": []
       },
       {
         "version": "0.9.1",

@@ -28,7 +28,7 @@ You do not need to be a developer. You need an AI assistant and about 10 minutes
 | In plain words | What it looks like |
 |---|---|
 | **An organized folder, with one yes** | Loose files go into folders that fit your folder's own names. Old folders and exact copies go to an archive. Nothing is deleted, and one command undoes it all. |
-| **A map of everything** | `MAP.md` lists every area in one line, and each area has an index page. You and your assistant find any note in two steps. |
+| **A map of everything** | `MAP.md` lists every area in one line, and each area has an index page (grouped by subfolder when an area grows large). You and your assistant find any note in two steps. |
 | **A safe start** | Before any change, Git saves a snapshot of your unsaved files, kept apart from your branches, so you can always go back. Your branch and what you staged stay as they are. No Git yet? It asks you first, as its own question, and changes nothing until you choose. |
 | **New things land in one place** | Drop things in `inbox/`. The rules you approved file them when a session starts. Anything new asks you once. |
 | **A briefing at the start of every session** | Before your assistant says a word, it reads a short summary: where you are, what is open, what to look at. |

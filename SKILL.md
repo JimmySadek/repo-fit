@@ -39,7 +39,7 @@ node "$SKILL_DIR/bin/repo-fit.mjs" organize <repo>    # the organize plan: today
 node "$SKILL_DIR/bin/repo-fit.mjs" organize <repo> --list   # every move with its reason, and what stays and why
 ```
 
-- **A folder already set up** (it has `playbook.json`): run `status <repo>` **first**. It prints the checkup: ✅ for what is fine, ⚠️ only for real problems. **If it says the folder is fit, show it and stop: "Nothing to change" is a good result.** If not, **show its output as printed, even for one small thing**: it already holds the before → after → why for what can be fixed. Then ask once. Run `update` as a dry run only when it says "Behind".
+- **A folder already set up** (it has `playbook.json`): run `status <repo>` **first**. It prints the checkup: ✅ for what is fine, ⚠️ only for real problems. **If it says the folder is fit, show it and stop: "Nothing to change" is a good result.** If not, **show its output as printed, even for one small thing**: it already holds the before → after → why for what can be fixed. Then ask once. Run `update` as a dry run only when it says "Behind" or "Out of step".
 - **They want to stop using repo-fit:** run `remove <repo>` (a dry run), show it as printed, ask once, then add `--apply`. It sets repo-fit's own parts aside and never touches their files. Never delete anything by hand.
 - **Empty or new folder:** run `detect <repo>` and `init <repo> --dry-run --tool <tools> --no-hooks` instead.
 

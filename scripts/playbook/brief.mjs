@@ -7,7 +7,7 @@
 //   node scripts/playbook/brief.mjs --hook --format codex   Codex SessionStart hook (JSON)
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { root, git, config, readBoard, analyseBoard, paths, preview, updateNotice } from "./lib.mjs";
+import { root, git, config, readBoard, analyseBoard, paths, preview, updateNotice, bodyWords, logHasDate } from "./lib.mjs";
 import { capture } from "./file.mjs";
 import { fitFacts, fitLines, rebuildMap } from "./fit.mjs";
 import { hasOwnMap, scan } from "./map.mjs";
@@ -123,12 +123,12 @@ if (existsSync(oq)) {
 // Up to 3 notes are named. More than that is a count only, so the brief stays short every session; check lists them all.
 // 📝 log and current view
 const logPath = join(root, P.log);
-if (existsSync(logPath) && lastDate && !readFileSync(logPath, "utf8").includes(`- ${lastDate}`)) {
+if (existsSync(logPath) && lastDate && !logHasDate(readFileSync(logPath, "utf8"), lastDate)) {
   out.push(`⚠️ The last commit (${lastDate}) has no line in ${P.log}.`);
 }
 const cur = join(root, P.current);
 if (existsSync(cur)) {
-  const words = readFileSync(cur, "utf8").split(/\s+/).filter(Boolean).length;
+  const words = bodyWords(readFileSync(cur, "utf8"));
   if (words > cfg.currentWordCap) out.push(`⚠️ ${P.current} is ${words} words (cap ${cfg.currentWordCap}). Trim it.`);
 }
 

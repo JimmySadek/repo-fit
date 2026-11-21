@@ -31,7 +31,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { LEFT_OUT, defaultOwner, hookFile, mergeHooks, recordersFor, widenCodexStart, writeAll } from "../lib/apply.mjs";
 import { since } from "../lib/versions.mjs";
 import { coreBlock, repoCoreVars } from "../lib/core.mjs";
-import { pointerProblem, pointerStart } from "../scripts/playbook/map.mjs";
+import { hasInbox, hasPointer, pointerProblem, pointerStart, withPointer } from "../scripts/playbook/map.mjs";
 
 const here = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const version = readFileSync(join(here, "VERSION"), "utf8").trim();
@@ -188,12 +188,19 @@ function plan(target) {
   const agents = join(target, "AGENTS.md");
   if (existsSync(agents)) {
     const cur = readFileSync(agents, "utf8");
-    if (BLOCK_RE.test(cur)) {
-      const next = cur.replace(BLOCK_RE, () => coreBlock(repoCoreVars(target))); // with this repo's own paths and rules
-      if (next !== cur) changes.push({ rel: "AGENTS.md", old: cur, next });
-    } else notAdopted.push({ part: "the core block in AGENTS.md", step: "D-01", reason: skipped["D-01"] });
+    let next = cur;
+    if (BLOCK_RE.test(next)) next = next.replace(BLOCK_RE, () => coreBlock(repoCoreVars(target))); // with this repo's own paths and rules
+    else notAdopted.push({ part: "the core block in AGENTS.md", step: "D-01", reason: skipped["D-01"] });
+    if (hasPointer(next)) next = withPointer(next, pointerStart(target), { inbox: hasInbox(target) });
+    if (next !== cur) changes.push({ rel: "AGENTS.md", old: cur, next });
     // Setups made before 0.7.3 for Codex only have no CLAUDE.md, so Claude Code missed the shared rules.
     if (!existsSync(join(target, "CLAUDE.md"))) changes.push({ rel: "CLAUDE.md", old: "", next: readFileSync(join(here, "kits/tools/claude-code/CLAUDE.md"), "utf8") });
+  } else if (existsSync(join(target, "CLAUDE.md"))) {
+    const cur = readFileSync(join(target, "CLAUDE.md"), "utf8");
+    if (hasPointer(cur)) {
+      const next = withPointer(cur, pointerStart(target), { inbox: hasInbox(target) });
+      if (next !== cur) changes.push({ rel: "CLAUDE.md", old: cur, next });
+    }
   }
   // Codex setups made before 0.9.0: the briefing also starts a forked session and the request after a compaction.
   const codexHooks = join(target, ".codex/hooks.json");
@@ -309,7 +316,10 @@ async function status(target) {
     var old = f.old;
     var fix = f;
   }
-  items.push(managed.length ? [false, `Behind: this folder has repo-fit ${pj.playbook}, and ${version} is ready`] : [true, `repo-fit ${version}: Up to date`]);
+  const behindMsg = pj.playbook === version
+    ? `Out of step with repo-fit ${version}: ${managed.map((c) => c.rel).join(", ")} (run \`update\` to refresh)`
+    : `Behind: this folder has repo-fit ${pj.playbook}, and ${version} is ready`;
+  items.push(managed.length ? [false, behindMsg] : [true, `repo-fit ${version}: Up to date`]);
   const off = items.filter(([ok]) => !ok).length;
   console.log([off ? `⚠️ Your folder needs a look: ${off} ${off === 1 ? "thing" : "things"}` : "✅ Your folder is fit", ...items.map(([ok, s]) => `   ${ok ? "✅" : "⚠️"} ${s}`)].join("\n"));
   // Not fit: the before → after → why for what repo-fit can fix, on the same screen, so it is shown before any question.
@@ -329,7 +339,13 @@ async function status(target) {
     const to = (i) => `${rules.find((r) => r.kind === i.kind && !r.starts)?.to ?? HOME[i.kind] ?? "notes"}/${basename(i.path)}`;
     console.log(["", "**Waiting in inbox/** (one question per kind: Yes, Yes and always, Not now). Suggested:", ...fix.inbox.map((i) => `- ${i.path} → ${to(i)}`)].join("\n"));
   }
-  console.log(off ? "\nWhat can fix it: files at the top go in the organize plan (`organize`); for items waiting in inbox/, one question per kind; an update shows what it changes (`update`). Broken links are yours to fix; the list says where." : "\nNothing to change.");
+  const hints = [];
+  if (fix?.loose.length) hints.push("files at the top go in the organize plan (`organize`)");
+  if (fix?.inbox.length) hints.push("for items waiting in inbox/, one question per kind (`file`)");
+  if (fix?.mapStale.length && !fix?.loose.length) hints.push("the map updates at the next session start (`node scripts/playbook/map.mjs --write` now)");
+  if (fix?.broken.length) hints.push("broken links are yours to fix (listed above)");
+  if (managed.length) hints.push("an update shows what it changes (`update`)");
+  console.log(off ? (hints.length ? `\nWhat can fix it: ${hints.join("; ")}.` : "\nFix the items above, then run status again.") : "\nNothing to change.");
   // Say what this check leaves out, so "fit" is never read as more than it is.
   console.log("\nNot checked: files inside code folders, whether a document is still current, and copies of a file with different names.");
   if (old?.length) console.log(`\n🆕 ${old.length} old ${old.length === 1 ? "note" : "notes"} (not changed for 180+ days): worth a look in the next review.`);

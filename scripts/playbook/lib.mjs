@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ignoredBy } from "./map.mjs";
+import { ignoredBy, scan } from "./map.mjs";
 
 // scripts/playbook/lib.mjs -> repo root, whichever tool or folder started the session.
 // `repo-fit preview` runs the brief from the playbook folder against a repo that does not have the scripts yet:
@@ -72,6 +72,23 @@ export function config() {
 
 // Words in a Markdown file's body. YAML frontmatter at the top is metadata, so it does not count toward a word cap.
 export const bodyWords = (text) => text.replace(/^\uFEFF?---\r?\n(?:[\s\S]*?\r?\n)?---[ \t]*(?:\r?\n|$)/, "").split(/\s+/).filter(Boolean).length;
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+// Does a log's body mention this date (YYYY-MM-DD, "13 November 2026", "13 Nov 2026", or "November 13, 2026")?
+// Frontmatter is stripped so metadata dates never count as a log entry.
+export function logHasDate(text, isoDate) {
+  const m = String(isoDate ?? "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return false;
+  const body = text.replace(/^\uFEFF?---\r?\n(?:[\s\S]*?\r?\n)?---[ \t]*(?:\r?\n|$)/, "");
+  if (body.includes(isoDate)) return true;
+  const [, year, mon, day] = m;
+  const full = MONTHS[Number(mon) - 1];
+  if (!full) return false;
+  const d = Number(day);
+  const monRe = `(?:${full}|${full.slice(0, 3)}\\.?)`;
+  const dayRe = d < 10 ? `0?${d}` : `${d}`;
+  return new RegExp(`\\b(?:${dayRe}\\s+${monRe},?\\s+${year}|${monRe}\\s+${dayRe},?\\s+${year})\\b`, "i").test(body);
+}
 
 export const paths = () => ({ ...PATH_DEFAULTS, ...Object.fromEntries(Object.entries(config().paths ?? {}).filter(([, v]) => v)) });
 
@@ -297,7 +314,8 @@ export function coverage(cfg = config()) {
     }
   }
   const roles = new Set(Object.values(paths()));
-  const skip = (f) => ROOT_NAMES.has(f) || /(^|\/)(AGENTS|CLAUDE|GEMINI)\.md$/.test(f) || EXPECTED_UNLINKED.test(f) || /(^|\/)README\.md$/i.test(f) || matchesAny(f, cfg.reviewIgnore ?? []) || matchesAny(f, (cfg.protectedPaths ?? []).map((p) => (p.endsWith("/") ? `${p}**` : p)));
+  const codeAreas = new Set(scan(root, { protect: cfg.protectedPaths ?? [] }).areas.filter((a) => a.code || a.site).map((a) => a.name));
+  const skip = (f) => ROOT_NAMES.has(f) || /(^|\/)(AGENTS|CLAUDE|GEMINI)\.md$/.test(f) || EXPECTED_UNLINKED.test(f) || /(^|\/)README\.md$/i.test(f) || codeAreas.has(f.split("/")[0]) || matchesAny(f, cfg.reviewIgnore ?? []) || matchesAny(f, (cfg.protectedPaths ?? []).map((p) => (p.endsWith("/") ? `${p}**` : p)));
   const orphans = files.filter((f) => inbound.get(f) === 0 && !skip(f) && !roles.has(f) && !generated.has(f));
 
   // Last commit date per file, one git call. An uncommitted edit counts as today. A repo-fit snapshot ("saved as it

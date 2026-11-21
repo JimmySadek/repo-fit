@@ -31,7 +31,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { LEFT_OUT, defaultOwner, hookFile, mergeHooks, recordersFor, widenCodexStart, writeAll } from "../lib/apply.mjs";
 import { since } from "../lib/versions.mjs";
 import { coreBlock, repoCoreVars } from "../lib/core.mjs";
-import { hasInbox, hasPointer, pointerProblem, pointerStart, withPointer } from "../scripts/playbook/map.mjs";
+import { hasPointer, pointerProblem, pointerStart, pointerStartIn, withPointer } from "../scripts/playbook/map.mjs";
 
 const here = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const version = readFileSync(join(here, "VERSION"), "utf8").trim();
@@ -191,14 +191,15 @@ function plan(target) {
     let next = cur;
     if (BLOCK_RE.test(next)) next = next.replace(BLOCK_RE, () => coreBlock(repoCoreVars(target))); // with this repo's own paths and rules
     else notAdopted.push({ part: "the core block in AGENTS.md", step: "D-01", reason: skipped["D-01"] });
-    if (hasPointer(next)) next = withPointer(next, pointerStart(target), { inbox: hasInbox(target) });
+    // The pointer's words are refreshed with the scripts; its start page stays (a switch to README.md is step D-11).
+    if (hasPointer(next)) next = withPointer(next, pointerStartIn(next));
     if (next !== cur) changes.push({ rel: "AGENTS.md", old: cur, next });
     // Setups made before 0.7.3 for Codex only have no CLAUDE.md, so Claude Code missed the shared rules.
     if (!existsSync(join(target, "CLAUDE.md"))) changes.push({ rel: "CLAUDE.md", old: "", next: readFileSync(join(here, "kits/tools/claude-code/CLAUDE.md"), "utf8") });
   } else if (existsSync(join(target, "CLAUDE.md"))) {
     const cur = readFileSync(join(target, "CLAUDE.md"), "utf8");
     if (hasPointer(cur)) {
-      const next = withPointer(cur, pointerStart(target), { inbox: hasInbox(target) });
+      const next = withPointer(cur, pointerStartIn(cur));
       if (next !== cur) changes.push({ rel: "CLAUDE.md", old: cur, next });
     }
   }
@@ -317,7 +318,7 @@ async function status(target) {
     var fix = f;
   }
   const behindMsg = pj.playbook === version
-    ? `Out of step with repo-fit ${version}: ${managed.map((c) => c.rel).join(", ")} (run \`update\` to refresh)`
+    ? `Out of step with repo-fit ${version}: ${managed.map((c) => c.rel).join(", ")}`
     : `Behind: this folder has repo-fit ${pj.playbook}, and ${version} is ready`;
   items.push(managed.length ? [false, behindMsg] : [true, `repo-fit ${version}: Up to date`]);
   const off = items.filter(([ok]) => !ok).length;
@@ -342,8 +343,9 @@ async function status(target) {
   const hints = [];
   if (fix?.loose.length) hints.push("files at the top go in the organize plan (`organize`)");
   if (fix?.inbox.length) hints.push("for items waiting in inbox/, one question per kind (`file`)");
-  if (fix?.mapStale.length && !fix?.loose.length) hints.push("the map updates at the next session start (`node scripts/playbook/map.mjs --write` now)");
+  if (fix?.mapStale.length) hints.push("the map updates at the next session start (`node scripts/playbook/map.mjs --write` now)");
   if (fix?.broken.length) hints.push("broken links are yours to fix (listed above)");
+  if (fix?.offIndex.length) hints.push("for a note not on an index page, add a link to it on its folder's index page");
   if (managed.length) hints.push("an update shows what it changes (`update`)");
   console.log(off ? (hints.length ? `\nWhat can fix it: ${hints.join("; ")}.` : "\nFix the items above, then run status again.") : "\nNothing to change.");
   // Say what this check leaves out, so "fit" is never read as more than it is.

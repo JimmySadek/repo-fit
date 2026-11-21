@@ -47,15 +47,19 @@ const end = (kind) => `<!-- repo-fit:${kind} end -->`;
 
 // A link that works for any file name: names with spaces or brackets go inside <...>.
 const href = (p) => (/[\s()<>]/.test(p) ? `<${p}>` : p);
-const label = (t) => t.replace(/([[\]])/g, "\\$1");
+// A literal "<" is escaped, so a placeholder such as <Name> shows as text on GitHub and in Obsidian instead of
+// being read as an HTML tag (which hides it, or hides the rest of the page when it is cut short).
+const md = (t) => t.replace(/</g, "\\<");
+const label = (t) => md(t).replace(/([[\]])/g, "\\$1");
+const note = (n, p) => `- ${link(n.title, p)}${n.summary ? `: ${md(n.summary)}` : ""}`;
 const link = (text, p) => `[${label(text)}](${href(p)})`;
 
 const frontmatter = (t) => t.replace(/\r\n?/g, "\n").match(/^﻿?---\n([\s\S]*?)\n---[ \t]*(\n|$)/);
 const clip = (s, n = 100) => (s.length <= n ? s : `${s.slice(0, n).replace(/\s+\S*$/, "")}…`);
-// Strip real HTML tags while keeping template placeholders like <Name> or <Book title> readable.
-const HTML_TAG = /<\/?(?:a|abbr|b|br|code|del|div|em|font|h[1-6]|hr|i|img|ins|kbd|li|mark|ol|p|pre|q|s|small|span|strong|sub|sup|table|tbody|td|th|thead|tr|u|ul)\b[^>]*>/gi;
-const plain = (s) => s.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/!?\[\[([^\]|]*\|)?([^\]]*)\]\]/g, "$2").replace(/[*_`]+/g, "").replace(HTML_TAG, "").replace(/\s+/g, " ").trim();
-
+// HTML comments go first (an author's hidden note never reaches a page), then real HTML tags: a lower-case element
+// name with attributes in HTML form. A placeholder like <Name> or <Book title> is not a tag and stays.
+const HTML_TAG = /<\/?[a-z][a-z0-9-]*(?:\s+[a-z_:][\w:.-]*(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*\s*\/?>/g;
+const plain = (s) => s.replace(/<!--[\s\S]*?(?:-->|$)/g, "").replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/!?\[\[([^\]|]*\|)?([^\]]*)\]\]/g, "$2").replace(/[*_`]+/g, "").replace(HTML_TAG, "").replace(/\s+/g, " ").trim();
 // One line about a note: its description or summary in the frontmatter, else its first real paragraph.
 export function summary(text) {
   const fm = frontmatter(text);
@@ -254,14 +258,14 @@ function mapBlock(s) {
   const keyNotes = (s.keyFiles ?? []).filter((l) => l.kind === "note");
   if (keyNotes.length) {
     lines.push("", "**Key files at the top:**");
-    for (const n of keyNotes) lines.push(`- ${link(n.title, n.path)}${n.summary ? `: ${n.summary}` : ""}`);
+    for (const n of keyNotes) lines.push(note(n, n.path));
   }
   const notes = s.loose.filter((l) => l.kind === "note");
   if (s.loose.length) {
     const c = {};
     for (const l of s.loose) c[l.kind] = (c[l.kind] ?? 0) + 1;
     lines.push("", `**At the top of the folder:** ${counts(c)}.`);
-    for (const n of notes) lines.push(`- ${link(n.title, n.path)}${n.summary ? `: ${n.summary}` : ""}`);
+    for (const n of notes) lines.push(note(n, n.path));
   }
   // Open work as a count only: the items' words stay in their notes, and never reach a page meant to be committed.
   if (s.open.length) {
@@ -275,7 +279,7 @@ function mapBlock(s) {
 function indexBlock(a) {
   const lines = [begin("index")];
   const rel = (n) => posix.relative(a.name, n.path);
-  const fmt = (n) => `- ${link(n.title, rel(n))}${n.summary ? `: ${n.summary}` : ""}`;
+  const fmt = (n) => note(n, rel(n));
   const groups = new Map();
   for (const n of a.notes) {
     const r = rel(n);
@@ -326,22 +330,16 @@ export function pages(root, opts = {}) {
 }
 
 // The pointer the rulebook carries: a few lines that send every session to the map first. When Git ignores MAP.md (or
-// the folder has no MAP.md), a fresh copy has no map, so the pointer starts at README.md instead. Inbox filing rules
-// appear only in folders that actually have an inbox/, keeping always-loaded rulebooks short.
-const pointer = (start, { inbox = false } = {}) => {
-  const head = start === "README.md"
-    ? "**Start at [README.md](README.md).** This folder's map, MAP.md, is kept out of Git here, so only some copies have it: when it is there, it lists every area of this folder in one line, and each area's index page lists its notes."
-    : "**Start at [MAP.md](MAP.md).** It lists every area of this folder in one line; each area's index page lists its notes.";
-  const body = inbox
-    ? " Open only what the task needs. New things go in `inbox/`. **When the briefing shows 📥 items waiting:** ask the person once per kind, with exactly three choices: Yes (to the folder you suggest), Yes and always, Not now. Then run `node scripts/playbook/file.mjs <item> --to <folder> [--always]` or `--not-now`, as a dry run first, then with `--apply`. Never delete, merge or commit inbox items yourself. **When it suggests a review (🆕):** run `node scripts/playbook/check.mjs --review` and propose; nothing changes without a yes."
-    : " Open only what the task needs.";
-  return `<!-- repo-fit:pointer begin -->\n${head}${body}\n<!-- repo-fit:pointer end -->`;
-};
-export const POINTER = pointer("MAP.md", { inbox: true });
-export const hasInbox = (root) => existsSync(join(root, "inbox"));
+// the folder has no MAP.md), a fresh copy has no map, so the pointer starts at README.md instead. It is the same in
+// every folder, with or without inbox/, so it never goes out of step when organize makes an inbox/. It keeps how to
+// file 📥 items and run a 🆕 review: a session without the briefing hook learns them only here.
+const pointer = (start) => `<!-- repo-fit:pointer begin -->\n${start === "README.md" ? "**Start at [README.md](README.md).** This folder's map, MAP.md, is kept out of Git here, so only some copies have it: when it is there, it lists every area of this folder in one line, and each area's index page lists its notes." : "**Start at [MAP.md](MAP.md).** It lists every area of this folder in one line; each area's index page lists its notes."} Open only what the task needs. **📥 Items in \`inbox/\`:** ask the person once per kind (Yes to the folder you suggest, Yes and always, Not now), then run \`node scripts/playbook/file.mjs <item> --to <folder> [--always]\` or \`--not-now\`, dry run first, then \`--apply\`. Never delete, merge or commit them yourself. **🆕 Review:** run \`node scripts/playbook/check.mjs --review\` and propose; nothing changes without a yes.\n<!-- repo-fit:pointer end -->`;
+export const POINTER = pointer("MAP.md");
 const mapIgnored = (root) => ignoredNew(root, ["MAP.md"]).has("MAP.md");
 export const pointerStart = (root) => (mapIgnored(root) && existsSync(join(root, "README.md")) ? "README.md" : "MAP.md");
-export const withPointer = (text, start = "MAP.md", opts = {}) => (MARK("pointer").test(text) ? text.replace(MARK("pointer"), () => pointer(start, opts)) : `${text.trimEnd()}\n\n${pointer(start, opts)}\n`);
+export const withPointer = (text, start = "MAP.md") => (MARK("pointer").test(text) ? text.replace(MARK("pointer"), () => pointer(start)) : `${text.trimEnd()}\n\n${pointer(start)}\n`);
+// The start page an existing pointer uses (MAP.md or README.md), so a refresh of its words keeps it.
+export const pointerStartIn = (text) => (/repo-fit:pointer begin[^>]*-->\s*\*\*Start at \[README\.md\]/.test(text) ? "README.md" : "MAP.md");
 // Does the rulebook send sessions to a MAP.md that a fresh copy of the folder will not have? Null when all is well.
 export function pointerProblem(root, ruleText) {
   const m = ruleText.match(MARK("pointer"));

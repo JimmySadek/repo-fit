@@ -1,11 +1,12 @@
 // Field improvements grounded in daily use of repo-fit on real notes and book folders (synthetic fixtures only).
 import assert from "node:assert/strict";
-import { readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { find, orient, snapshot } from "../dev/score.mjs";
 import { logHasDate } from "../scripts/playbook/lib.mjs";
-import { pages, scan, title } from "../scripts/playbook/map.mjs";
+import { POINTER, pages, scan, summary, title, withPointer } from "../scripts/playbook/map.mjs";
 import { ROOT, cli, git, has, read, repo, sandboxed, script, write } from "./helpers.mjs";
 
 const ME = { REPO_FIT_TODAY: "2026-11-21", GIT_AUTHOR_NAME: "Test Person", GIT_AUTHOR_EMAIL: "test@example.com", GIT_COMMITTER_NAME: "Test Person", GIT_COMMITTER_EMAIL: "test@example.com" };
@@ -41,8 +42,8 @@ test("template placeholder headings stay readable and never produce empty link l
     "worlds/_template/world.md": "# <World name>: story bible\n\nMain rules.\n",
   } });
   const idx = pages(d).get("worlds/INDEX.md");
-  assert.match(idx, /\[<Name>\]\(_template\/character\.md\)/);
-  assert.match(idx, /\[<World name>: story bible\]\(_template\/world\.md\)/);
+  assert.match(idx, /\[\\<Name>\]\(_template\/character\.md\)/, "a placeholder is escaped, so GitHub shows it as text");
+  assert.match(idx, /\[\\<World name>: story bible\]\(_template\/world\.md\)/);
   assert.doesNotMatch(idx, /\[\]\(/, "no empty link text");
 }));
 
@@ -68,23 +69,55 @@ test("configured root role files (like TASKS.md) are listed as key files, not lo
   assert.equal(f.found, f.total);
 }));
 
-test("the map pointer omits inbox instructions in repos without inbox/, and update trims older bloated pointers", sandboxed((sb) => {
-  const d = repo(sb, "noinbox", { commit: true, files: { "AGENTS.md": "# Rules\n\nBe clear.\n", "notes/a.md": "# A\n\nNote.\n" } });
+test("the map pointer is the same in every folder, so organize never leaves the rulebook out of step", sandboxed((sb) => {
+  const d = repo(sb, "noinbox", { commit: true, files: { "AGENTS.md": "# Rules\n\nBe clear.\n", "notes/a.md": "# A\n\nNote.\n", "loose-idea.md": "# Idea\n\nA loose note at the top.\n" } });
   assert.equal(cli(sb, ["apply", d, "--steps", "A-01,A-10,A-13,D-11", ...SETUP], { env: ME }).status, 0);
   const agents = read(d, "AGENTS.md");
-  assert.match(agents, /\*\*Start at \[MAP\.md\]\(MAP\.md\)\.\*\*/);
-  assert.doesNotMatch(agents, /inbox\/|file\.mjs/, "no inbox ceremony when there is no inbox/");
+  assert.ok(agents.includes(POINTER), "the pointer is the one POINTER text");
+  assert.match(POINTER, /ask the person once per kind.*file\.mjs <item> --to <folder>/s, "a session without the briefing hook still learns how to file");
+  assert.match(POINTER, /check\.mjs --review/, "the review keeps its line");
+  const n = POINTER.replace(/<!--[^>]*-->/g, "").split(/\s+/).filter(Boolean).length;
+  assert.ok(n <= 85, `the pointer stays short: ${n} words`);
+  git(sb, d, ["add", "-A"], ME);
+  git(sb, d, ["commit", "-q", "-m", "setup"], ME);
+  // organize makes inbox/ (its rules file): the pointer must not change with it.
+  const code = cli(sb, ["organize", d], { env: ME }).stdout.match(/--apply --plan (\w+)/)?.[1];
+  assert.ok(code, "organize offers a plan for the loose note");
+  assert.equal(cli(sb, ["organize", d, "--apply", "--plan", code], { env: ME }).status, 0);
+  assert.ok(has(d, "inbox"), "organize made inbox/");
+  const st = cli(sb, ["status", d], { env: ME }).out;
+  assert.doesNotMatch(st, /Out of step|Behind/, st);
+}));
 
-  // Simulate an older bloated pointer left by an earlier repo-fit version: update trims it.
-  write(d, "AGENTS.md", agents.replace(
-    /<!-- repo-fit:pointer begin -->[\s\S]*?<!-- repo-fit:pointer end -->/,
-    "<!-- repo-fit:pointer begin -->\n**Start at [MAP.md](MAP.md).** New things go in `inbox/`. Never delete, merge or commit inbox items yourself.\n<!-- repo-fit:pointer end -->",
-  ));
+test("update refreshes an older pointer to the short one and keeps the page it starts at", sandboxed((sb) => {
+  const d = repo(sb, "oldpointer", { commit: true, files: { "AGENTS.md": "# Rules\n\nBe clear.\n", "README.md": "# Readme\n\nAbout.\n", "notes/a.md": "# A\n\nNote.\n" } });
+  assert.equal(cli(sb, ["apply", d, "--steps", "A-01,A-10,A-13,D-11", ...SETUP], { env: ME }).status, 0);
+  const older = "<!-- repo-fit:pointer begin -->\n**Start at [README.md](README.md).** Older words. New things go in `inbox/`. Never delete, merge or commit inbox items yourself.\n<!-- repo-fit:pointer end -->";
+  write(d, "AGENTS.md", read(d, "AGENTS.md").replace(/<!-- repo-fit:pointer begin -->[\s\S]*?<!-- repo-fit:pointer end -->/, older));
   git(sb, d, ["add", "-A"], ME);
   git(sb, d, ["commit", "-q", "-m", "older pointer"], ME);
   assert.equal(cli(sb, ["update", d, "--apply"], { env: ME }).status, 0);
-  assert.doesNotMatch(read(d, "AGENTS.md"), /inbox\/|commit inbox/, "update trims the pointer when there is no inbox/");
+  const now = read(d, "AGENTS.md");
+  assert.ok(now.includes(withPointer("", "README.md").trim()), now);
+  assert.doesNotMatch(now, /Older words/);
 }));
+
+test("index lines drop HTML comments and real tags, and never leave an open tag or comment", () => {
+  assert.equal(summary("Short intro line here. <!-- private: ask Sam about the budget --> More words follow after it.\n"), "Short intro line here. More words follow after it.");
+  assert.equal(summary("<details><summary>Click</summary> The hidden part is long enough.</details>\n"), "Click The hidden part is long enough.");
+  assert.equal(summary(`Intro text that is long enough. <!-- ${words(40)}\n`), "Intro text that is long enough.");
+  assert.equal(title('# <center>Centered</center> <img src="x.png" alt="x">\n', "a.md"), "Centered");
+  const d = mkdtempSync(join(tmpdir(), "rf-esc-"));
+  try {
+    writeFileSync(join(d, "a.md"), "# A\n\nUse <Name> for the hero, and keep it short.\n");
+    mkdirSync(join(d, "notes"));
+    writeFileSync(join(d, "notes", "b.md"), "# <Book title>\n\nAn outline with <Chapter> markers.\n");
+    const idx = pages(d).get("notes/INDEX.md");
+    assert.match(idx, /\[\\<Book title>\]\(b\.md\): An outline with \\<Chapter> markers\./, idx);
+  } finally {
+    rmSync(d, { recursive: true, force: true });
+  }
+});
 
 test("briefing counts current.md body words only (ignoring YAML frontmatter), matching check and audit", sandboxed((sb) => {
   const d = repo(sb, "frontmatter-cap", { commit: true, files: {

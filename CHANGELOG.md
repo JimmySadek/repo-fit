@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.9.3 (21 Nov 2026)
+
+**Faster finding, less noise and fewer contradictions**, from three folders used every day (a knowledge base, lab notes and an illustrated book studio). First drafted by Gemini Neon from an open prompt, then reviewed and corrected.
+
+- **Large area index pages group notes by subfolder.** When an area has more than 12 notes spread across two or more subfolders, its `INDEX.md` now groups links under `## <subfolder>/` headings instead of one flat wall of links. Small folders stay a compact flat list, and every note remains within two steps of `MAP.md`.
+- **Template placeholder headings stay readable in `INDEX.md`.** Headings such as `# <Name>` or `# <Book title>: outline` were stripped by the HTML tag cleaner, leaving empty links (`[]()`) or broken labels (`[: outline]`). Only known HTML elements are stripped now, in any case; anything else in `<...>`, such as `<repo>` or `<your name>`, stays as written. HTML comments are dropped from the whole note first, even when they span paragraphs or sit before the title (an author's hidden note never reaches a page), a leftover `<` is written as `\<` so GitHub and Obsidian show it as text, and a heading with no letters falls back to the file name.
+- **Configured root files are not called "loose".** Top-level files configured in `playbook.json` (`paths` or `required`, such as `TASKS.md`) are listed under **Key files at the top** in `MAP.md` instead of **Loose at the top of the folder**, and stay out of the loose-files list, so `organize` and inbox filing never offer to move them. Remaining top-level notes appear under **At the top of the folder**.
+- **A shorter pointer to the map in the rulebook, the same in every folder.** The always-loaded pointer in `AGENTS.md` (or `CLAUDE.md`) is 91 words instead of about 102, with the same steps for 📥 inbox items and 🆕 reviews, written tighter. It no longer depends on whether `inbox/` exists, so organizing a folder (which makes `inbox/`) never leaves the rulebook out of step. `update` refreshes an older pointer and keeps the page it starts at (MAP.md or README.md).
+- **The briefing counts `current.md` body words only**, ignoring YAML frontmatter, so `brief.mjs`, `check.mjs` and `audit` agree.
+- **Log date checks accept real log formats.** `brief.mjs` and `autosave.mjs` now recognize ISO dates anywhere in the log body (`- 2026-11-13`, `## 2026-11-13`, `| 2026-11-13 |`) and human-readable dates (`13 November 2026`, `Nov 13, 2026`), while ignoring dates inside YAML frontmatter.
+- **Repo-fit no longer reads its own pointer as the repo's commit rules.** `adapt` now blanks out `<!-- repo-fit:pointer -->` and `<!-- playbook:commands -->` alongside the core block, so the pointer text never triggers "Its commit rules" in `audit`.
+- **`audit` and `check.mjs` agree with `status` and `brief.mjs`.** `audit` now skips Git-ignored files, template placeholder links and inline code, handles `<...>` destinations, resolves parent-folder asset links (such as book chapters linking `art/...`), counts `[[wiki links]]` as inbound links, and skips code areas when listing unlinked notes. `check.mjs` (`coverage`) skips code areas too.
+- **`apply` leaves zero broken links in `README.md` and keeps the folder in step.** Step `A-12` builds the `Start here` line from pages that actually exist or are created in the same run. Adding role pages to a repo that already has the core block or repo-fit's `MAP.md` refreshes `AGENTS.md` and the map in the same run (undoable in one step).
+- **Clearer, shorter `status` output.** When managed files drift at the same version, `status` says `Out of step with repo-fit <version>` (naming the files) instead of `Behind: this folder has X, and X is ready`. The `What can fix it:` line now names only the fixes that apply to what is actually off, including notes that are not on an index page (named only when rebuilding the map would not already list them).
+- **The 0.9.2 release note no longer shows in the briefing's list of news,** because that release changed nothing in a folder.
+
 ## 0.9.2 (15 Nov 2026)
 
 **A fix to how repo-fit itself is released.** Nothing changes in a folder set up with repo-fit; `update` only brings the new version number.

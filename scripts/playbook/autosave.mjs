@@ -7,7 +7,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { root, today, git, run, config, changedFiles, matchesAny, slug, paths, ownChanges } from "./lib.mjs";
+import { root, today, git, run, config, changedFiles, matchesAny, slug, paths, ownChanges, logHasDate } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const arg = (name, fallback) => {
@@ -90,7 +90,7 @@ const logRel = paths().log;
 const log = join(root, logRel);
 const committedToday = (git(["log", "--since=midnight", "--format=%h"]) ?? "").split("\n").filter(Boolean);
 const workedToday = before.length > 0 || committedToday.length > 0;
-if (workedToday && existsSync(log) && !readFileSync(log, "utf8").includes(`- ${today()}`)) {
+if (workedToday && existsSync(log) && !logHasDate(readFileSync(log, "utf8"), today())) {
   left.set("nolog", `no line for ${today()} in ${logRel}`);
 }
 

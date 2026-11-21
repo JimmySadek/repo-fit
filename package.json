@@ -1,6 +1,6 @@
 {
   "name": "repo-fit",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "description": "Give your project a memory: a session briefing, one list of everything open, safe automatic saves and one rulebook for Claude Code and Codex. Works on new and existing projects.",
   "type": "module",
   "bin": {
@@ -47,13 +47,22 @@
   "repoFit": {
     "releases": [
       {
+        "version": "0.9.3",
+        "important": false,
+        "why": "Fewer false alarms and easier finding, from three folders used every day: the checks agree with each other, large index pages are grouped by subfolder, and the rulebook's pointer to the map is shorter.",
+        "briefing": "repo-fit 0.9.3: fewer false warnings, index pages grouped by subfolder, and a shorter pointer to the map in your rulebook.",
+        "news": [
+          "The briefing, the checkup and the audit now agree: no more warnings about words in a note's header, links inside code, or notes in code folders.",
+          "An index page with many notes in several subfolders lists them under one heading per subfolder.",
+          "The rulebook's pointer to the map is shorter (91 words instead of about 102) and the same in every folder."
+        ]
+      },
+      {
         "version": "0.9.2",
         "important": false,
         "why": "A fix to how repo-fit itself is released: the automatic upload to npm no longer reports a failure when the release tag already exists. Nothing changes in your folder.",
         "briefing": "repo-fit 0.9.2: a fix to how repo-fit is released. Nothing changes in your folder.",
-        "news": [
-          "The automatic upload of a new version stays green when the release on GitHub already made its tag. Nothing changes in your folder."
-        ]
+        "news": []
       },
       {
         "version": "0.9.1",

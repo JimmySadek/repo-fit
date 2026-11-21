@@ -47,19 +47,26 @@ const end = (kind) => `<!-- repo-fit:${kind} end -->`;
 
 // A link that works for any file name: names with spaces or brackets go inside <...>.
 const href = (p) => (/[\s()<>]/.test(p) ? `<${p}>` : p);
-const label = (t) => t.replace(/([[\]])/g, "\\$1");
+// A literal "<" is escaped, so a placeholder such as <Name> shows as text on GitHub and in Obsidian instead of
+// being read as an HTML tag (which hides it, or hides the rest of the page when it is cut short).
+const md = (t) => t.replace(/</g, "\\<");
+const label = (t) => md(t).replace(/([[\]])/g, "\\$1");
+const note = (n, p) => `- ${link(n.title, p)}${n.summary ? `: ${md(n.summary)}` : ""}`;
 const link = (text, p) => `[${label(text)}](${href(p)})`;
 
 const frontmatter = (t) => t.replace(/\r\n?/g, "\n").match(/^﻿?---\n([\s\S]*?)\n---[ \t]*(\n|$)/);
 const clip = (s, n = 100) => (s.length <= n ? s : `${s.slice(0, n).replace(/\s+\S*$/, "")}…`);
-const plain = (s) => s.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/!?\[\[([^\]|]*\|)?([^\]]*)\]\]/g, "$2").replace(/[*_`]+/g, "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-
+// HTML comments are dropped first, from the whole text (an author's hidden note never reaches a page), then known
+// HTML elements, in any case. Anything else in <...> is a placeholder (<Name>, <repo>, <your name>) and stays.
+const COMMENT = /<!--[\s\S]*?(?:-->|$)/g;
+const HTML_TAG = /<\/?(?:a|abbr|address|article|aside|audio|b|bdi|bdo|big|blockquote|br|caption|center|cite|code|dd|del|details|dfn|div|dl|dt|em|figcaption|figure|font|footer|h[1-6]|header|hr|i|iframe|img|ins|kbd|li|mark|nav|ol|p|picture|pre|q|s|samp|section|small|source|span|strike|strong|sub|summary|sup|table|tbody|td|tfoot|th|thead|tr|tt|u|ul|video|wbr)\b[^>]*>/gi;
+const plain = (s) => s.replace(COMMENT, "").replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/!?\[\[([^\]|]*\|)?([^\]]*)\]\]/g, "$2").replace(/[*_`]+/g, "").replace(HTML_TAG, "").replace(/\s+/g, " ").trim();
 // One line about a note: its description or summary in the frontmatter, else its first real paragraph.
 export function summary(text) {
   const fm = frontmatter(text);
   const d = fm?.[1].match(/^(description|summary):\s*["']?(.+?)["']?\s*$/m);
   if (d) return clip(plain(d[2]));
-  const body = fm ? text.replace(/\r\n?/g, "\n").slice(fm[0].length) : text.replace(/\r\n?/g, "\n");
+  const body = (fm ? text.replace(/\r\n?/g, "\n").slice(fm[0].length) : text.replace(/\r\n?/g, "\n")).replace(COMMENT, "");
   for (const para of body.split(/\n\s*\n/)) {
     const p = para.trim();
     if (!p || /^(#|```|~~~|\||<!--|>|[-*+] |\d+[.)] |!\[|<img|---|===|\[[^\]]+\]:)/.test(p)) continue;
@@ -69,10 +76,12 @@ export function summary(text) {
   return "";
 }
 export function title(text, file) {
+  const fallback = posix.basename(file).replace(/\.mdx?$/i, "");
   const fm = frontmatter(text)?.[1].match(/^title:\s*["']?(.+?)["']?\s*$/m);
-  if (fm) return plain(fm[1]);
-  const h = text.match(/^#\s+(.+)$/m);
-  return h ? plain(h[1]) : posix.basename(file).replace(/\.mdx?$/i, "");
+  if (fm) return plain(fm[1]) || fallback;
+  const h = text.replace(COMMENT, "").match(/^#\s+(.+)$/m);
+  const cleaned = h ? plain(h[1]) : "";
+  return cleaned && /[\p{L}\p{N}]/u.test(cleaned) ? cleaned : fallback;
 }
 
 // What Git ignores in this folder (.gitignore and the person's own excludes), as a test on a relative path. Folders Git
@@ -148,12 +157,24 @@ export function scan(root, { virtual = new Map(), protect = [] } = {}) {
     }
   };
   const files = listFiles(root, virtual);
+  let pj = {};
+  try {
+    pj = JSON.parse(read("playbook.json") || "{}");
+  } catch {
+    /* not valid JSON: defaults */
+  }
+  const configuredRoot = new Set(
+    [...Object.values(pj.paths ?? {}), ...(Array.isArray(pj.required) ? pj.required : [])].filter((x) => typeof x === "string" && !x.includes("/")),
+  );
   const areas = new Map();
+  const keyFiles = [];
   const loose = [];
   for (const p of files) {
     const i = p.indexOf("/");
     if (i < 0) {
-      if (!FRONT.test(p) && !STANDARD.test(p) && !MANIFEST.test(p)) loose.push(p);
+      if (FRONT.test(p) || STANDARD.test(p) || MANIFEST.test(p)) continue;
+      if (configuredRoot.has(p)) keyFiles.push(p);
+      else loose.push(p);
       continue;
     }
     const name = p.slice(0, i);
@@ -168,12 +189,8 @@ export function scan(root, { virtual = new Map(), protect = [] } = {}) {
   // Delivered outputs are a record of what was handed over (the same rule as `repo-fit audit`), so no index page is
   // written there: the folder playbook.json names, else `outputs`.
   let outputs = "outputs";
-  try {
-    const o = JSON.parse(read("playbook.json") || "{}").paths?.outputs;
-    if (typeof o === "string" && o.trim()) outputs = o.trim().replace(/^\.?\/+|\/+$/g, "");
-  } catch {
-    /* not valid JSON: the default name */
-  }
+  const o = pj.paths?.outputs;
+  if (typeof o === "string" && o.trim()) outputs = o.trim().replace(/^\.?\/+|\/+$/g, "");
   const isProtected = (name) => name === outputs || protect.some((x) => x.replace(/\/+$/, "") === name);
   // When the folder itself is a program (a website, an app), these folders belong to its build: repo-fit adds no
   // index page there (the build may read every file in them), and the map links the folder itself.
@@ -218,7 +235,8 @@ export function scan(root, { virtual = new Map(), protect = [] } = {}) {
   const order = (a) => (a.special ? 3 : a.code ? 2 : a.notes.length ? 0 : 1);
   out.sort((x, y) => order(x) - order(y) || byPath(x.name, y.name));
   const rootManifest = files.find((p) => !p.includes("/") && MANIFEST.test(p)) ?? null;
-  return { areas: out, open: openItems(files, read), rootManifest, readme: files.includes("README.md"), loose: loose.map((p) => ({ path: p, kind: kindOf(p), title: kindOf(p) === "note" && !SECRET_NAME.test(p) ? title(read(p), p) : p, summary: kindOf(p) === "note" && !SECRET_NAME.test(p) ? summary(read(p)) : "" })) };
+  const toTop = (p) => ({ path: p, kind: kindOf(p), title: kindOf(p) === "note" && !SECRET_NAME.test(p) ? title(read(p), p) : p, summary: kindOf(p) === "note" && !SECRET_NAME.test(p) ? summary(read(p)) : "" });
+  return { areas: out, open: openItems(files, read), rootManifest, readme: files.includes("README.md"), keyFiles: keyFiles.map(toTop), loose: loose.map(toTop) };
 }
 
 function mapBlock(s) {
@@ -233,17 +251,22 @@ function mapBlock(s) {
       : a.code ? `a program (${a.manifest ?? counts(a.counts, ["code"])}). It stays where it is`
       : a.site ? `${counts(a.counts) || "empty"}; the website uses these files, so repo-fit adds no index page there`
       : counts(a.counts) || "empty";
-    lines.push(`- ${link(`${a.name}/`, target)}: ${what}.${a.about && !a.special && !a.ownScripts ? ` ${a.about}` : ""}`);
+    lines.push(`- ${link(`${a.name}/`, target)}: ${what}.${a.about && !a.special && !a.ownScripts ? ` ${md(a.about)}` : ""}`);
     // What waits in the inbox is listed here (it has no index page), so it can be found until it is filed.
     if (a.special === "inbox") for (const n of a.notes.slice(0, 10)) lines.push(`  - ${link(n.title, n.path)}`);
     if (a.special === "inbox" && a.notes.length > 10) lines.push(`  - and ${a.notes.length - 10} more in ${link("inbox/", "inbox/")}`);
+  }
+  const keyNotes = (s.keyFiles ?? []).filter((l) => l.kind === "note");
+  if (keyNotes.length) {
+    lines.push("", "**Key files at the top:**");
+    for (const n of keyNotes) lines.push(note(n, n.path));
   }
   const notes = s.loose.filter((l) => l.kind === "note");
   if (s.loose.length) {
     const c = {};
     for (const l of s.loose) c[l.kind] = (c[l.kind] ?? 0) + 1;
-    lines.push("", `**Loose at the top of the folder:** ${counts(c)}.`);
-    for (const n of notes) lines.push(`- ${link(n.title, n.path)}${n.summary ? `: ${n.summary}` : ""}`);
+    lines.push("", `**At the top of the folder:** ${counts(c)}.`);
+    for (const n of notes) lines.push(note(n, n.path));
   }
   // Open work as a count only: the items' words stay in their notes, and never reach a page meant to be committed.
   if (s.open.length) {
@@ -256,7 +279,26 @@ function mapBlock(s) {
 
 function indexBlock(a) {
   const lines = [begin("index")];
-  for (const n of a.notes) lines.push(`- ${link(n.title, posix.relative(a.name, n.path))}${n.summary ? `: ${n.summary}` : ""}`);
+  const rel = (n) => posix.relative(a.name, n.path);
+  const fmt = (n) => note(n, rel(n));
+  const groups = new Map();
+  for (const n of a.notes) {
+    const r = rel(n);
+    const i = r.indexOf("/");
+    const dir = i >= 0 ? r.slice(0, i) : "";
+    if (!groups.has(dir)) groups.set(dir, []);
+    groups.get(dir).push(n);
+  }
+  const subs = [...groups.keys()].filter(Boolean);
+  if (a.notes.length > 12 && subs.length >= 2) {
+    if (groups.has("")) lines.push(...groups.get("").map(fmt));
+    for (const dir of subs) {
+      if (lines.length > 1) lines.push("");
+      lines.push(`## ${dir}/`, "", ...groups.get(dir).map(fmt));
+    }
+  } else {
+    for (const n of a.notes) lines.push(fmt(n));
+  }
   const others = counts(a.counts, ["image", "document", "media", "data", "code"]);
   if (others) lines.push("", `Also in this folder: ${others}.`);
   lines.push(end("index"));
@@ -289,12 +331,16 @@ export function pages(root, opts = {}) {
 }
 
 // The pointer the rulebook carries: a few lines that send every session to the map first. When Git ignores MAP.md (or
-// the folder has no MAP.md), a fresh copy has no map, so the pointer starts at README.md instead.
-const pointer = (start) => `<!-- repo-fit:pointer begin -->\n${start === "README.md" ? "**Start at [README.md](README.md).** This folder's map, MAP.md, is kept out of Git here, so only some copies have it: when it is there, it lists every area of this folder in one line, and each area's index page lists its notes." : "**Start at [MAP.md](MAP.md).** It lists every area of this folder in one line; each area's index page lists its notes."} Open only what the task needs. New things go in \`inbox/\`. **When the briefing shows 📥 items waiting:** ask the person once per kind, with exactly three choices: Yes (to the folder you suggest), Yes and always, Not now. Then run \`node scripts/playbook/file.mjs <item> --to <folder> [--always]\` or \`--not-now\`, as a dry run first, then with \`--apply\`. Never delete, merge or commit inbox items yourself. **When it suggests a review (🆕):** run \`node scripts/playbook/check.mjs --review\` and propose; nothing changes without a yes.\n<!-- repo-fit:pointer end -->`;
+// the folder has no MAP.md), a fresh copy has no map, so the pointer starts at README.md instead. It is the same in
+// every folder, with or without inbox/, so it never goes out of step when organize makes an inbox/. It keeps how to
+// file 📥 items and run a 🆕 review: a session without the briefing hook learns them only here.
+const pointer = (start) => `<!-- repo-fit:pointer begin -->\n${start === "README.md" ? "**Start at [README.md](README.md).** This folder's map, MAP.md, is kept out of Git here, so only some copies have it: when it is there, it lists every area of this folder in one line, and each area's index page lists its notes." : "**Start at [MAP.md](MAP.md).** It lists every area of this folder in one line; each area's index page lists its notes."} Open only what the task needs. New things go in \`inbox/\`. **📥 Items waiting there:** ask the person once per kind, with exactly three choices (Yes to the folder you suggest, Yes and always, Not now), then run \`node scripts/playbook/file.mjs <item> --to <folder> [--always]\` or \`--not-now\`, dry run first, then \`--apply\`. Never delete, merge or commit them yourself. **🆕 Review:** run \`node scripts/playbook/check.mjs --review\` and propose; nothing changes without a yes.\n<!-- repo-fit:pointer end -->`;
 export const POINTER = pointer("MAP.md");
 const mapIgnored = (root) => ignoredNew(root, ["MAP.md"]).has("MAP.md");
 export const pointerStart = (root) => (mapIgnored(root) && existsSync(join(root, "README.md")) ? "README.md" : "MAP.md");
 export const withPointer = (text, start = "MAP.md") => (MARK("pointer").test(text) ? text.replace(MARK("pointer"), () => pointer(start)) : `${text.trimEnd()}\n\n${pointer(start)}\n`);
+// The start page an existing pointer uses (MAP.md or README.md), so a refresh of its words keeps it.
+export const pointerStartIn = (text) => (/repo-fit:pointer begin[^>]*-->\s*\*\*Start at \[README\.md\]/.test(text) ? "README.md" : "MAP.md");
 // Does the rulebook send sessions to a MAP.md that a fresh copy of the folder will not have? Null when all is well.
 export function pointerProblem(root, ruleText) {
   const m = ruleText.match(MARK("pointer"));

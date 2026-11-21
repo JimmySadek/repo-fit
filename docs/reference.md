@@ -104,8 +104,8 @@ Copied into every repo (`scripts/playbook/`), so they work without repo-fit inst
 
 | Script | Job | Runs |
 |---|---|---|
-| `brief.mjs` | Prints where things stand: branch, inbox, problems (one line each), open work, the task list. At session start it also files inbox items by the approved rules and rebuilds repo-fit's own map | SessionStart hook, or by hand (`--text` only looks) |
-| `map.mjs` | Builds `MAP.md` and the index pages; `--open` lists every open item | By hand, or the briefing |
+| `brief.mjs` | Prints where things stand: branch, inbox, problems (one line each), open work, the task list, log check (ISO or human dates) and current-view body word cap. At session start it also files inbox items by the approved rules and rebuilds repo-fit's own map | SessionStart hook, or by hand (`--text` only looks) |
+| `map.mjs` | Builds `MAP.md` and the index pages (grouped by subfolder for large areas, keeping configured root role files out of loose files); `--open` lists every open item | By hand, or the briefing |
 | `move.mjs` | The safe move engine: refuses what must stay, rewrites links, journal, check after, undo | Used by organize and filing |
 | `file.mjs` | Files inbox items by `inbox/rules.json`; takes the person's answer for one item | The briefing, or by hand |
 | `fit.mjs` | The fit check shared by the briefing and the checkup | Imported |
